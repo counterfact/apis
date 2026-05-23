@@ -174,7 +174,7 @@ export type getUserByName_Path = {
 
 export type updateUser_Path = {
   /**
-   * name that need to be deleted
+   * name that needs to be deleted
    */
   username: string;
 };
