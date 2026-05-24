@@ -4,7 +4,9 @@
   "description": "Counterfact simulator package for the Petstore OpenAPI API",
   "scripts": {
     "generate": "counterfact openapi.yaml . --generate",
-    "serve": "counterfact openapi.yaml . --serve"
+    "serve": "counterfact openapi.yaml . --serve",
+    "lint": "eslint . && prettier --check .",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +14,8 @@
   "type": "commonjs",
   "private": true,
   "devDependencies": {
-    "counterfact": "^2.12.0"
+    "counterfact": "^2.12.0",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.3"
   }
 }
