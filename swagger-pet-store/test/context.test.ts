@@ -26,7 +26,7 @@ test("Context.savePet assigns ids and defaults status", () => {
     photoUrls: [],
   });
   assert.equal(thirdPet.id, 6);
-  assert.equal(context.petsById.get(6)?.name, "bird");
+  assert.equal(context.getPet(6)?.name, "bird");
 });
 
 test("Context.saveOrder assigns ids and stores orders", () => {
@@ -71,7 +71,7 @@ test("Context.saveUser assigns username and updates id sequence", () => {
   });
   assert.equal(secondUser.id, 7);
   assert.equal(secondUser.username, "alice");
-  assert.equal(context.usersByUsername.get("alice")?.firstName, "Alice");
+  assert.equal(context.getUser("alice")?.firstName, "Alice");
 
   const thirdUser = context.saveUser({
     firstName: "Bob",

@@ -6,7 +6,7 @@ export const PUT: updatePet = async ($) => {
     return $.response[400].empty();
   }
 
-  if (!$.context.petsById.has($.body.id)) {
+  if (!$.context.hasPet($.body.id)) {
     return $.response[404].empty();
   }
 

@@ -7,7 +7,7 @@ export const GET: getPetById = async ($) => {
     return $.response[400].empty();
   }
 
-  const pet = $.context.petsById.get($.path.petId);
+  const pet = $.context.getPet($.path.petId);
   if (!pet) {
     return $.response[404].empty();
   }
@@ -16,7 +16,7 @@ export const GET: getPetById = async ($) => {
 };
 
 export const POST: updatePetWithForm = async ($) => {
-  const pet = $.context.petsById.get($.path.petId);
+  const pet = $.context.getPet($.path.petId);
   if (!pet) {
     return $.response[400].empty();
   }
@@ -38,9 +38,9 @@ export const POST: updatePetWithForm = async ($) => {
 };
 
 export const DELETE: deletePet = async ($) => {
-  if (!$.context.petsById.has($.path.petId)) {
+  if (!$.context.hasPet($.path.petId)) {
     return $.response[404].empty();
   }
-  $.context.petsById.delete($.path.petId);
+  $.context.deletePet($.path.petId);
   return $.response[200].empty();
 };

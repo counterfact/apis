@@ -1,7 +1,7 @@
 import type { uploadFile } from "../../../types/paths/pet/{petId}/uploadImage.types.js";
 
 export const POST: uploadFile = async ($) => {
-  if (!$.context.petsById.has($.path.petId)) {
+  if (!$.context.hasPet($.path.petId)) {
     return $.response[404].empty();
   }
 
