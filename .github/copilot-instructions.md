@@ -29,8 +29,9 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
    - Add direct unit tests for `Context` class behavior in `routes/**/_.context.ts`.
    - Cover state transitions and core business logic independently of HTTP tests.
 
-5. **Use scenarios only for seed/setup data**
-   - Add seed data in scenario files.
+5. **Use scenarios for startup init and REPL setup flows**
+   - Use `startup` to initialize simulator state when the server starts.
+   - Use other scenario functions for REPL-invoked setup/actions after startup.
    - Keep scenarios simple and declarative.
    - Scenario code is intentionally lightweight and **does not require unit tests**.
 
@@ -39,5 +40,5 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
 - Tests fail first, then pass after implementation.
 - HTTP-level tests verify externally visible API behavior and state effects.
 - Context unit tests verify internal logic.
-- Scenario updates are limited to seeding/setup concerns.
+- Scenario updates follow the startup-init and REPL-invoked scenario model.
 - Scope remains limited to one API/subset per iteration.
