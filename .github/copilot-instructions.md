@@ -20,12 +20,13 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      - response body/headers as applicable
      - resulting state changes
 
-3. **Implement state and business logic in context files**
-   - Put simulator state and business rules in `_.context.ts` files.
+3. **Implement state and business logic in route context files**
+   - Put simulator state and business rules in `routes/**/_.context.ts`.
+   - Do not edit generated `types/_.context.ts` files.
    - Keep route handlers thin by delegating behavior to context classes/methods.
 
 4. **Unit test Context classes directly**
-   - Add direct unit tests for `Context` class behavior in `_.context.ts`.
+   - Add direct unit tests for `Context` class behavior in `routes/**/_.context.ts`.
    - Cover state transitions and core business logic independently of HTTP tests.
 
 5. **Use scenarios only for seed/setup data**
