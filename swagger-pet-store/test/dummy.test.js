@@ -2,9 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
 const net = require("node:net");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 
 let port;
 let server;
+const petImagesDirectory = path.join(process.cwd(), "pet-images");
 
 const request = async (pathname, init) => {
   const response = await fetch(`http://127.0.0.1:${port}${pathname}`, init);
@@ -62,10 +65,14 @@ test.before(async () => {
   }
 });
 
-test.after(() => {
+test.after(async () => {
   if (server && !server.killed) {
     server.kill("SIGTERM");
   }
+  await fs.rm(petImagesDirectory, {
+    recursive: true,
+    force: true,
+  });
 });
 
 test("pet store API supports core CRUD flows", async () => {
@@ -89,6 +96,38 @@ test("pet store API supports core CRUD flows", async () => {
   assert.equal(getPetResponse.status, 200);
   const fetchedPet = await getPetResponse.json();
   assert.equal(fetchedPet.id, createdPet.id);
+
+  const imageFileName = `pet-${createdPet.id}.png`;
+  const imageBody = "image-content";
+  const uploadImageResponse = await request(
+    `/pet/${createdPet.id}/uploadImage`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-disposition": `attachment; filename="${imageFileName}"`,
+      },
+      body: imageBody,
+    },
+  );
+  assert.equal(uploadImageResponse.status, 200);
+
+  const petWithPhotoResponse = await request(`/pet/${createdPet.id}`);
+  assert.equal(petWithPhotoResponse.status, 200);
+  const petWithPhoto = await petWithPhotoResponse.json();
+  assert.ok(
+    petWithPhoto.photoUrls.includes(
+      `/photos/${createdPet.id}/${imageFileName}`,
+    ),
+  );
+
+  const savedImagePath = path.join(
+    petImagesDirectory,
+    String(createdPet.id),
+    imageFileName,
+  );
+  const savedImageStats = await fs.stat(savedImagePath);
+  assert.ok(savedImageStats.isFile());
 
   const filterByStatusResponse = await request(
     "/pet/findByStatus?status=available",
