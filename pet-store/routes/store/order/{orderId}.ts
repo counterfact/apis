@@ -2,7 +2,7 @@ import type { getOrderById } from "../../../types/paths/store/order/{orderId}.ty
 import type { deleteOrder } from "../../../types/paths/store/order/{orderId}.types.js";
 
 export const GET: getOrderById = async ($) => {
-  if (!Number.isInteger($.path.orderId) || $.path.orderId <= 0) {
+  if ($.path.orderId <= 0) {
     return $.response[400].empty();
   }
 
@@ -15,7 +15,7 @@ export const GET: getOrderById = async ($) => {
 };
 
 export const DELETE: deleteOrder = async ($) => {
-  if (!Number.isInteger($.path.orderId) || $.path.orderId <= 0) {
+  if ($.path.orderId <= 0) {
     return $.response[400].empty();
   }
   if (!$.context.ordersById.has($.path.orderId)) {

@@ -3,7 +3,7 @@ import type { updatePetWithForm } from "../../types/paths/pet/{petId}.types.js";
 import type { deletePet } from "../../types/paths/pet/{petId}.types.js";
 
 export const GET: getPetById = async ($) => {
-  if (!Number.isInteger($.path.petId) || $.path.petId <= 0) {
+  if ($.path.petId <= 0) {
     return $.response[400].empty();
   }
 
@@ -28,7 +28,7 @@ export const POST: updatePetWithForm = async ($) => {
   }
 
   const updatedPet = { ...pet };
-  if (typeof $.query.name === "string") {
+  if ($.query.name !== undefined) {
     updatedPet.name = $.query.name;
   }
   if ($.query.status) {
