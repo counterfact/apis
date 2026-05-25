@@ -28,9 +28,7 @@ export const POST: updatePetWithForm = async ($) => {
   }
 
   const updatedPet = { ...pet };
-  if ($.query.name !== undefined) {
-    updatedPet.name = $.query.name;
-  }
+  updatedPet.name = $.query.name ?? updatedPet.name;
   if ($.query.status) {
     updatedPet.status = $.query.status as "available" | "pending" | "sold";
   }
