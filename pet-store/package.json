@@ -6,7 +6,7 @@
     "generate": "counterfact openapi.yaml . --generate",
     "serve": "counterfact openapi.yaml . --serve",
     "lint": "eslint . && prettier --check .",
-    "test": "node --test"
+    "test": "node --import tsx --test"
   },
   "keywords": [],
   "author": "",
