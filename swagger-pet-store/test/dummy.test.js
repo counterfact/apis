@@ -69,6 +69,34 @@ test.after(() => {
 });
 
 test("pet store API supports core CRUD flows", async () => {
+  const seededInventoryResponse = await request("/store/inventory");
+  assert.equal(seededInventoryResponse.status, 200);
+  const seededInventory = await seededInventoryResponse.json();
+  assert.deepEqual(seededInventory, {
+    available: 1,
+    pending: 1,
+    sold: 1,
+  });
+
+  const seededUserResponse = await request("/user/jane.doe");
+  assert.equal(seededUserResponse.status, 200);
+  const seededUser = await seededUserResponse.json();
+  assert.equal(seededUser.username, "jane.doe");
+
+  const seededLoginQuery = new URLSearchParams({
+    username: "jane.doe",
+    password: "pass123",
+  });
+  const seededLoginResponse = await request(
+    `/user/login?${seededLoginQuery.toString()}`,
+  );
+  assert.equal(seededLoginResponse.status, 200);
+
+  const seededOrderResponse = await request("/store/order/1");
+  assert.equal(seededOrderResponse.status, 200);
+  const seededOrder = await seededOrderResponse.json();
+  assert.equal(seededOrder.petId, 1);
+
   const createPetResponse = await request("/pet", {
     method: "POST",
     headers: { "content-type": "application/json" },
