@@ -6,7 +6,7 @@ export const GET: getOrderById = async ($) => {
     return $.response[400].empty();
   }
 
-  const order = $.context.ordersById.get($.path.orderId);
+  const order = $.context.getOrder($.path.orderId);
   if (!order) {
     return $.response[404].empty();
   }
@@ -18,9 +18,9 @@ export const DELETE: deleteOrder = async ($) => {
   if ($.path.orderId <= 0) {
     return $.response[400].empty();
   }
-  if (!$.context.ordersById.has($.path.orderId)) {
+  if (!$.context.hasOrder($.path.orderId)) {
     return $.response[404].empty();
   }
-  $.context.ordersById.delete($.path.orderId);
+  $.context.deleteOrder($.path.orderId);
   return $.response[200].empty();
 };

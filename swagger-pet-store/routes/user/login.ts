@@ -8,7 +8,7 @@ export const GET: loginUser = async ($) => {
     return $.response[400].empty();
   }
 
-  const user = $.context.usersByUsername.get($.query.username);
+  const user = $.context.getUser($.query.username);
   if (!user || user.password !== $.query.password) {
     return $.response[400].empty();
   }

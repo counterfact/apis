@@ -3,7 +3,7 @@ import type { updateUser } from "../../types/paths/user/{username}.types.js";
 import type { deleteUser } from "../../types/paths/user/{username}.types.js";
 
 export const GET: getUserByName = async ($) => {
-  const user = $.context.usersByUsername.get($.path.username);
+  const user = $.context.getUser($.path.username);
   if (!user) {
     return $.response[404].empty();
   }
@@ -11,7 +11,7 @@ export const GET: getUserByName = async ($) => {
 };
 
 export const PUT: updateUser = async ($) => {
-  if (!$.context.usersByUsername.has($.path.username)) {
+  if (!$.context.hasUser($.path.username)) {
     return $.response[404].empty();
   }
   if ($.body.username && $.body.username !== $.path.username) {
@@ -23,9 +23,9 @@ export const PUT: updateUser = async ($) => {
 };
 
 export const DELETE: deleteUser = async ($) => {
-  if (!$.context.usersByUsername.has($.path.username)) {
+  if (!$.context.hasUser($.path.username)) {
     return $.response[404].empty();
   }
-  $.context.usersByUsername.delete($.path.username);
+  $.context.deleteUser($.path.username);
   return $.response[200].empty();
 };

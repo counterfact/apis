@@ -15,9 +15,9 @@ import type { User } from "../types/components/schemas/User.js";
  */
 
 export class Context {
-  public petsById = new Map<number, Pet>();
-  public ordersById = new Map<number, Order>();
-  public usersByUsername = new Map<string, User>();
+  private petsById = new Map<number, Pet>();
+  private ordersById = new Map<number, Order>();
+  private usersByUsername = new Map<string, User>();
   private nextPetId = 1;
   private nextOrderId = 1;
   private nextUserId = 1;
@@ -38,6 +38,22 @@ export class Context {
     return normalizedPet;
   }
 
+  getPet(id: number): Pet | undefined {
+    return this.petsById.get(id);
+  }
+
+  hasPet(id: number): boolean {
+    return this.petsById.has(id);
+  }
+
+  deletePet(id: number): boolean {
+    return this.petsById.delete(id);
+  }
+
+  listPets(): Pet[] {
+    return [...this.petsById.values()];
+  }
+
   saveOrder(order: Order): Order {
     const id = order.id ?? this.nextOrderId;
     const normalizedOrder = {
@@ -47,6 +63,18 @@ export class Context {
     this.ordersById.set(id, normalizedOrder);
     this.nextOrderId = Math.max(this.nextOrderId, id + 1);
     return normalizedOrder;
+  }
+
+  getOrder(id: number): Order | undefined {
+    return this.ordersById.get(id);
+  }
+
+  hasOrder(id: number): boolean {
+    return this.ordersById.has(id);
+  }
+
+  deleteOrder(id: number): boolean {
+    return this.ordersById.delete(id);
   }
 
   saveUser(user: User): User {
@@ -60,5 +88,17 @@ export class Context {
     this.usersByUsername.set(username, normalizedUser);
     this.nextUserId = Math.max(this.nextUserId, id + 1);
     return normalizedUser;
+  }
+
+  getUser(username: string): User | undefined {
+    return this.usersByUsername.get(username);
+  }
+
+  hasUser(username: string): boolean {
+    return this.usersByUsername.has(username);
+  }
+
+  deleteUser(username: string): boolean {
+    return this.usersByUsername.delete(username);
   }
 }
