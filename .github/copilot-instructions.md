@@ -24,10 +24,13 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
    - Put simulator state and business rules in `routes/**/_.context.ts`.
    - Do not edit generated `types/_.context.ts` files.
    - Keep route handlers thin by delegating behavior to context classes/methods.
+   - Treat `Context` storage as encapsulated implementation detail: keep backing maps/private fields private.
+   - When routes or tests need state access, add/extend intent-level `Context` methods instead of reading or mutating storage collections directly.
 
 4. **Unit test Context classes directly**
    - Add direct unit tests for `Context` class behavior in `routes/**/_.context.ts`.
    - Cover state transitions and core business logic independently of HTTP tests.
+   - Assert through the public `Context` API, not through private storage internals.
 
 5. **Use scenarios for startup init and REPL setup flows**
    - Use `startup` to initialize simulator state when the server starts.
