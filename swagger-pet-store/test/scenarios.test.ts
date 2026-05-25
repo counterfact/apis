@@ -4,9 +4,13 @@ import { createRequire } from "node:module";
 import { Context } from "../routes/_.context.ts";
 
 const require = createRequire(import.meta.url);
-const { orders, petStore, pets, startup, users } = require(
-  "../scenarios/index.ts",
-);
+const {
+  orders,
+  petStore,
+  pets,
+  startup,
+  users,
+} = require("../scenarios/index.ts");
 
 const createScenario$ = () => {
   const context = new Context({} as never);
