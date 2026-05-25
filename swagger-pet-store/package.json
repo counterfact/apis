@@ -1,7 +1,7 @@
 {
-  "name": "@counterfact/pet-store",
+  "name": "@counterfact/swagger-pet-store",
   "version": "1.0.0",
-  "description": "Counterfact simulator package for the Petstore OpenAPI API",
+  "description": "Counterfact simulator package for the Swagger Petstore API",
   "scripts": {
     "generate": "counterfact openapi.yaml . --generate",
     "serve": "counterfact openapi.yaml . --serve",

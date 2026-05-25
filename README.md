@@ -4,4 +4,4 @@ This repository hosts API simulation packages built with [`counterfact`](https:/
 
 ## Packages
 
-- [`@counterfact/pet-store`](./pet-store): simulator package generated from the Swagger Petstore OpenAPI spec.
+- [`@counterfact/swagger-pet-store`](./swagger-pet-store): simulator package generated from the Swagger Petstore OpenAPI spec.
