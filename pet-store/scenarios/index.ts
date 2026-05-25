@@ -1,5 +1,3 @@
-import type { Scenario } from "../types/_.context.js";
-
 /**
  * Scenario scripts are plain TypeScript functions that receive the live REPL
  * environment and can read or mutate server state. Run them from the REPL with:
@@ -28,7 +26,7 @@ import type { Scenario } from "../types/_.context.js";
  *
  * If you don't need a startup scenario, delete this function or leave it empty.
  */
-export const startup: Scenario = ($) => {
+const startup = ($) => {
   void $;
 };
 
@@ -36,7 +34,7 @@ export const startup: Scenario = ($) => {
  * An example scenario. To use it in the REPL, type:
  *   .scenario help
  */
-export const help: Scenario = ($) => {
+const help = ($) => {
   void $;
 
   console.log(
@@ -51,4 +49,9 @@ export const help: Scenario = ($) => {
   console.log(
     "\nScenarios (including this one) are defined in the ./scenarios directory.",
   );
+};
+
+module.exports = {
+  startup,
+  help,
 };
