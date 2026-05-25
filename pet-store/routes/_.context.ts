@@ -27,7 +27,7 @@ export class Context {
   }
 
   savePet(pet: Pet): Pet {
-    const id = pet.id ?? this.nextPetId++;
+    const id = pet.id ?? this.nextPetId;
     const normalizedPet = {
       status: "available" as const,
       ...pet,
@@ -39,7 +39,7 @@ export class Context {
   }
 
   saveOrder(order: Order): Order {
-    const id = order.id ?? this.nextOrderId++;
+    const id = order.id ?? this.nextOrderId;
     const normalizedOrder = {
       ...order,
       id,
@@ -49,9 +49,9 @@ export class Context {
     return normalizedOrder;
   }
 
-  saveUser(user: User, fallbackUsername?: string): User {
-    const id = user.id ?? this.nextUserId++;
-    const username = user.username ?? fallbackUsername ?? `user-${id}`;
+  saveUser(user: User): User {
+    const id = user.id ?? this.nextUserId;
+    const username = user.username ?? `user-${id}`;
     const normalizedUser = {
       ...user,
       id,

@@ -3,7 +3,7 @@ import type { updatePetWithForm } from "../../types/paths/pet/{petId}.types.js";
 import type { deletePet } from "../../types/paths/pet/{petId}.types.js";
 
 export const GET: getPetById = async ($) => {
-  if (!Number.isFinite($.path.petId) || $.path.petId <= 0) {
+  if (!Number.isInteger($.path.petId) || $.path.petId <= 0) {
     return $.response[400].empty();
   }
 
@@ -20,22 +20,28 @@ export const POST: updatePetWithForm = async ($) => {
   if (!pet) {
     return $.response[400].empty();
   }
+  if (
+    $.query.status &&
+    !["available", "pending", "sold"].includes($.query.status)
+  ) {
+    return $.response[400].empty();
+  }
 
-  const updatedPet = $.context.savePet({
-    ...pet,
-    ...(typeof $.query.name === "string" ? { name: $.query.name } : {}),
-    ...(typeof $.query.status === "string"
-      ? {
-          status: $.query.status as "available" | "pending" | "sold",
-        }
-      : {}),
-  });
-  return $.response[200].json(updatedPet);
+  const updatedPet = { ...pet };
+  if (typeof $.query.name === "string") {
+    updatedPet.name = $.query.name;
+  }
+  if ($.query.status) {
+    updatedPet.status = $.query.status as "available" | "pending" | "sold";
+  }
+
+  const savedPet = $.context.savePet(updatedPet);
+  return $.response[200].json(savedPet);
 };
 
 export const DELETE: deletePet = async ($) => {
   if (!$.context.petsById.has($.path.petId)) {
-    return $.response[400].empty();
+    return $.response[404].empty();
   }
   $.context.petsById.delete($.path.petId);
   return $.response[200].empty();

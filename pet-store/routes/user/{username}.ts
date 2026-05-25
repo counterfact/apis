@@ -14,15 +14,11 @@ export const PUT: updateUser = async ($) => {
   if (!$.context.usersByUsername.has($.path.username)) {
     return $.response[404].empty();
   }
+  if ($.body.username && $.body.username !== $.path.username) {
+    return $.response[400].empty();
+  }
 
-  $.context.usersByUsername.delete($.path.username);
-  $.context.saveUser(
-    {
-      ...$.body,
-      username: $.body.username ?? $.path.username,
-    },
-    $.path.username,
-  );
+  $.context.saveUser({ ...$.body, username: $.path.username });
   return $.response[200].empty();
 };
 

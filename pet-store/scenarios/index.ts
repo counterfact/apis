@@ -26,17 +26,13 @@
  *
  * If you don't need a startup scenario, delete this function or leave it empty.
  */
-const startup = ($) => {
-  void $;
-};
+const startup = () => {};
 
 /**
  * An example scenario. To use it in the REPL, type:
  *   .scenario help
  */
-const help = ($) => {
-  void $;
-
+const help = () => {
   console.log(
     [
       "Scenarios are functions that populate the context object",
