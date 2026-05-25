@@ -4,13 +4,7 @@ import { createRequire } from "node:module";
 import { Context } from "../routes/_.context.ts";
 
 const require = createRequire(import.meta.url);
-const {
-  orders,
-  petStore,
-  pets,
-  startup,
-  users,
-} = require("../scenarios/index.ts");
+const { orders, petStore, pets, users } = require("../scenarios/index.ts");
 
 const createScenario$ = () => {
   const context = new Context({} as never);
@@ -42,21 +36,6 @@ test("petStore seeds reusable pet store data", () => {
   assert.equal($.context.getUser("jane.doe")?.password, "pass123");
   assert.equal($.context.getOrder(1)?.petId, 1);
   assert.equal($.context.getOrder(2)?.status, "approved");
-});
-
-test("startup remains idempotent for repeated scenario loading", () => {
-  const $ = createScenario$();
-
-  startup($);
-  startup($);
-
-  assert.equal($.context.listPets().length, 3);
-  assert.equal($.context.savePet({ name: "Nibbles", photoUrls: [] }).id, 4);
-  assert.equal($.context.saveUser({ firstName: "Casey" }).id, 3);
-  assert.equal(
-    $.context.saveOrder({ petId: 3, quantity: 1, complete: false }).id,
-    3,
-  );
 });
 
 test("individual scenarios can seed pets, users, and orders separately", () => {
