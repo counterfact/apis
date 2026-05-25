@@ -13,7 +13,6 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "private": true,
   "dependencies": {
     "counterfact": "^2.12.0"
   },
