@@ -1,0 +1,24 @@
+{
+  "name": "@counterfact/github",
+  "version": "1.0.0",
+  "description": "Counterfact simulator package for the GitHub API",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --import tsx --test",
+    "start": "counterfact openapi.yaml .",
+    "generate": "counterfact openapi.yaml . --generate",
+    "serve": "counterfact openapi.yaml . --serve",
+    "lint": "eslint . && prettier --check ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "counterfact": "^2.12.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.3"
+  }
+}
