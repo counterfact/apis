@@ -17,7 +17,19 @@ test("Context.saveGist assigns an id and sets URL fields", () => {
   assert.equal(gist.description, "Hello World");
   assert.equal(gist.public, true);
   assert.ok(gist.url?.includes(gist.id!), "url should contain the gist id");
+  assert.ok(
+    gist.html_url?.startsWith("https://gist.github.com/"),
+    "html_url should point at gist.github.com",
+  );
   assert.ok(gist.html_url?.includes(gist.id!));
+  assert.ok(
+    gist.git_pull_url?.startsWith("https://gist.github.com/"),
+    "git_pull_url should point at gist.github.com",
+  );
+  assert.ok(
+    gist.git_push_url?.startsWith("https://gist.github.com/"),
+    "git_push_url should point at gist.github.com",
+  );
   assert.ok(gist.created_at);
   assert.ok(gist.updated_at);
 });
@@ -218,4 +230,151 @@ test("Context.listComments returns all comments for a gist", () => {
 test("Context.listComments returns empty array for unknown gist", () => {
   const context = new Context({} as never);
   assert.deepEqual(context.listComments("nonexistent"), []);
+});
+
+test("Context stores repositories, issues, pull requests, and workflows with stable lookup", () => {
+  const context = new Context({} as never);
+
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+  });
+  context.saveRepository({
+    id: 101,
+    owner: "counterfact",
+    name: "platform-api",
+    readme: "# Platform API\n",
+    branches: ["main", "feature-routing"],
+  });
+  context.saveIssue("counterfact", "platform-api", {
+    number: 1,
+    title: "Support repository fixtures",
+    user: context.getUser("octocat"),
+  });
+  context.saveIssueComment("counterfact", "platform-api", 1, {
+    body: "Need one more assertion.",
+    user: context.getUser("octocat"),
+  });
+  context.savePullRequest("counterfact", "platform-api", {
+    number: 1,
+    title: "Add stateful routes",
+    head: "octocat:feature-routing",
+    base: "main",
+    user: context.getUser("octocat"),
+  });
+  context.savePullRequestReview("counterfact", "platform-api", 1, {
+    body: "Looks good.",
+    user: context.getUser("octocat"),
+  });
+  context.saveWorkflow("counterfact", "platform-api", {
+    id: 301,
+    name: "CI",
+    path: ".github/workflows/ci.yml",
+  });
+  context.saveWorkflowRun("counterfact", "platform-api", {
+    id: 401,
+    workflow_id: 301,
+    head_branch: "main",
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+    display_title: "CI on main",
+    actor: context.getUser("octocat"),
+  });
+  context.saveWorkflowJob("counterfact", "platform-api", 401, {
+    id: 501,
+    name: "test",
+    status: "completed",
+    conclusion: "success",
+  });
+
+  assert.equal(context.getOrganization("counterfact")?.login, "counterfact");
+  assert.equal(context.getRepository("counterfact", "platform-api")?.id, 101);
+  assert.equal(
+    context.getRepositoryReadme("counterfact", "platform-api")?.name,
+    "README.md",
+  );
+  assert.equal(
+    context.getRepositoryBranch(
+      "counterfact",
+      "platform-api",
+      "feature-routing",
+    )?.name,
+    "feature-routing",
+  );
+  assert.equal(context.getIssue("counterfact", "platform-api", 1)?.comments, 1);
+  assert.equal(
+    context.listIssueComments("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(
+    context.getPullRequest("counterfact", "platform-api", 1)?.title,
+    "Add stateful routes",
+  );
+  assert.equal(
+    context.listPullRequestReviews("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(context.listWorkflows("counterfact", "platform-api").length, 1);
+  assert.equal(
+    context.listWorkflowRuns("counterfact", "platform-api").length,
+    1,
+  );
+  assert.equal(
+    context.listWorkflowJobs("counterfact", "platform-api", 401).length,
+    1,
+  );
+});
+
+test("Context.savePullRequest correctly parses owner:branch format for head and base", () => {
+  const context = new Context({} as never);
+
+  // Setup users and repository
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveUser({ id: 2, login: "mona", name: "Mona" });
+  context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+  });
+  context.saveRepository({
+    id: 101,
+    owner: "counterfact",
+    name: "platform-api",
+    default_branch: "main",
+  });
+
+  // Create a pull request with "owner:branch" format for head
+  const pr = context.savePullRequest("counterfact", "platform-api", {
+    number: 1,
+    title: "Test PR",
+    head: "mona:feature-routing",
+    base: "main",
+  });
+
+  // Verify head is parsed correctly
+  assert.equal(
+    pr.head.ref,
+    "feature-routing",
+    "head.ref should be just the branch name",
+  );
+  assert.equal(
+    pr.head.label,
+    "mona:feature-routing",
+    "head.label should be owner:branch",
+  );
+  assert.equal(
+    pr.head.user.login,
+    "mona",
+    "head.user should be parsed from owner:branch",
+  );
+
+  // Verify base is set correctly
+  assert.equal(pr.base.ref, "main", "base.ref should be the branch name");
+  assert.ok(
+    pr.base.label.includes("main"),
+    "base.label should include the branch name",
+  );
 });

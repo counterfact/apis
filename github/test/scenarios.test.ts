@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Context } from "../routes/_.context.ts";
-import { gists, gistComments, seedGitHub } from "../scenarios/index.ts";
+import {
+  actions,
+  gistComments,
+  gists,
+  identities,
+  issues,
+  pullRequests,
+  repositories,
+  seedGitHub,
+} from "../scenarios/index.ts";
 
 const createScenario$ = () => {
   const context = new Context({} as never);
@@ -61,22 +70,85 @@ test("gistComments scenario seeds comments on existing gists", () => {
   assert.equal(pythonComments[0].body, "Classic Python example.");
 });
 
-test("gistComments updates comment count on gist", () => {
+test("identity and repository scenarios seed users, orgs, and repos", () => {
   const $ = createScenario$();
 
-  gists($);
-  gistComments($);
+  identities($);
+  repositories($);
 
-  assert.equal($.context.getGist("aa5a315d61ae9438b18d")?.comments, 1);
-  assert.equal($.context.getGist("b5a5ce3049c14e426f30")?.comments, 1);
+  assert.equal($.context.getUser("octocat")?.name, "The Octocat");
+  assert.equal(
+    $.context.getOrganization("counterfact")?.description,
+    "API simulator fixtures for local integration testing",
+  );
+  assert.equal($.context.listRepositories().length, 3);
+  assert.equal(
+    $.context.getRepository("counterfact", "platform-api")?.default_branch,
+    "main",
+  );
 });
 
-test("seedGitHub seeds all gists and comments together", () => {
+test("issues, pull requests, and actions scenarios seed related data", () => {
+  const $ = createScenario$();
+
+  identities($);
+  repositories($);
+  issues($);
+  pullRequests($);
+  actions($);
+
+  assert.equal(
+    $.context.listIssues("counterfact", "platform-api", { state: "all" })
+      .length,
+    2,
+  );
+  assert.equal(
+    $.context.listIssueComments("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(
+    $.context.listPullRequests("counterfact", "platform-api").length,
+    1,
+  );
+  assert.equal(
+    $.context.listPullRequestReviews("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(
+    $.context.listWorkflows("counterfact", "actions-demo").length,
+    2,
+  );
+  assert.equal(
+    $.context.listWorkflowRuns("counterfact", "actions-demo").length,
+    2,
+  );
+  assert.equal(
+    $.context.listWorkflowJobs("counterfact", "actions-demo", 401).length,
+    2,
+  );
+});
+
+test("seedGitHub seeds all new GitHub domains together", () => {
   const $ = createScenario$();
 
   seedGitHub($);
 
   assert.equal($.context.listGists().length, 3);
+  assert.equal($.context.listRepositories().length, 3);
+  assert.equal(
+    $.context.listIssues("counterfact", "platform-api", { state: "all" })
+      .length,
+    2,
+  );
+  assert.equal(
+    $.context.listPullRequests("counterfact", "platform-api").length,
+    1,
+  );
+  assert.equal(
+    $.context.listWorkflows("counterfact", "actions-demo").length,
+    2,
+  );
+  assert.equal($.context.getUser("mona")?.login, "mona");
+  assert.equal($.context.getOrganization("counterfact")?.login, "counterfact");
   assert.equal($.context.listComments("aa5a315d61ae9438b18d").length, 1);
-  assert.equal($.context.listComments("b5a5ce3049c14e426f30").length, 1);
 });

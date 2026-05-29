@@ -1,34 +1,5 @@
 import type { Scenario } from "../types/_.context.js";
 
-/**
- * Scenario scripts are plain TypeScript functions that receive the live REPL
- * environment and can read or mutate server state. Run them from the REPL with:
- *   .scenario <functionName>
- */
-
-/**
- * Read or mutate the root context (same object routes see as $.context):
- *   $.context.<property> = <value>;
- *
- * Load a context for a specific path:
- *   const gistsCtx = $.loadContext("/gists");
- *
- * Store a pre-configured route builder for later use in the REPL:
- *   $.routes.myRequest = $.route("/gists").method("get");
- */
-
-/**
- * startup() runs automatically when the server initializes, right before the
- * REPL starts. Use it to seed dummy data so the server is ready to use
- * immediately. It receives the same $ argument as all other scenario functions.
- *
- * Tip: delegate to other scenario functions and pass $ along so each function
- * stays focused on a single concern. You can also pass additional arguments to
- * configure them, e.g. addGists($, 5).
- *
- * If you don't need a startup scenario, delete this function or leave it empty.
- */
-
 export const gists: Scenario = ($) => {
   $.context.saveGist({
     id: "aa5a315d61ae9438b18d",
@@ -96,7 +67,183 @@ export const gistComments: Scenario = ($) => {
   });
 };
 
+export const identities: Scenario = ($) => {
+  $.context.saveUser({
+    id: 1,
+    login: "octocat",
+    name: "The Octocat",
+    company: "GitHub",
+    location: "San Francisco",
+    bio: "Mascot and sample user",
+    public_gists: 8,
+  });
+  $.context.saveUser({
+    id: 2,
+    login: "mona",
+    name: "Mona Lisa",
+    company: "Counterfact",
+    location: "Paris",
+    bio: "Maintains the sample repositories",
+  });
+  $.context.saveUser({
+    id: 3,
+    login: "hubot",
+    name: "Hubot",
+    company: "GitHub",
+    location: "ChatOps",
+    bio: "Automates pull requests and workflows",
+  });
+
+  $.context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+    company: "Counterfact",
+    description: "API simulator fixtures for local integration testing",
+    location: "Remote",
+    blog: "https://counterfact.dev",
+  });
+};
+
+export const repositories: Scenario = ($) => {
+  $.context.saveRepository({
+    id: 101,
+    owner: "octocat",
+    name: "hello-world",
+    description: "Classic sample repository",
+    language: "TypeScript",
+    default_branch: "main",
+    branches: ["main", "docs"],
+    readme: "# Hello World\n\nSample repository used in simulator tests.\n",
+  });
+
+  $.context.saveRepository({
+    id: 102,
+    owner: "counterfact",
+    name: "platform-api",
+    description: "Stateful API simulator fixtures",
+    language: "TypeScript",
+    default_branch: "main",
+    branches: ["main", "feature-routing"],
+    readme: "# Platform API\n\nCounterfact platform API sample repository.\n",
+  });
+
+  $.context.saveRepository({
+    id: 103,
+    owner: "counterfact",
+    name: "actions-demo",
+    description: "Repository with sample GitHub Actions runs",
+    language: "JavaScript",
+    default_branch: "main",
+    branches: ["main", "release"],
+    readme: "# Actions Demo\n\nRepository for CI workflow fixtures.\n",
+  });
+};
+
+export const issues: Scenario = ($) => {
+  $.context.saveIssue("counterfact", "platform-api", {
+    number: 1,
+    title: "Support stateful repository reads",
+    body: "Replace random responses with context-backed repository data.",
+    labels: [{ name: "enhancement", color: "84b6eb", default: false }],
+    user: $.context.getUser("mona"),
+  });
+
+  $.context.saveIssue("counterfact", "platform-api", {
+    number: 2,
+    title: "Search should find open work",
+    body: "Add lightweight issue discovery for the seeded repository data.",
+    state: "closed",
+    state_reason: "completed",
+    labels: [{ name: "search", color: "0e8a16", default: false }],
+    user: $.context.getUser("hubot"),
+  });
+
+  $.context.saveIssueComment("counterfact", "platform-api", 1, {
+    id: 11,
+    body: "Repository routes are the best first slice.",
+    user: $.context.getUser("octocat"),
+  });
+};
+
+export const pullRequests: Scenario = ($) => {
+  $.context.savePullRequest("counterfact", "platform-api", {
+    number: 1,
+    title: "Implement stateful repository fixtures",
+    body: "Adds repository reads and issue seeding for the simulator.",
+    head: "mona:feature-routing",
+    base: "main",
+    draft: false,
+    user: $.context.getUser("mona"),
+  });
+
+  $.context.savePullRequestReview("counterfact", "platform-api", 1, {
+    id: 21,
+    body: "Looks good. Please add one more route assertion.",
+    state: "COMMENTED",
+    user: $.context.getUser("hubot"),
+  });
+};
+
+export const actions: Scenario = ($) => {
+  $.context.saveWorkflow("counterfact", "actions-demo", {
+    id: 301,
+    name: "CI",
+    path: ".github/workflows/ci.yml",
+  });
+  $.context.saveWorkflow("counterfact", "actions-demo", {
+    id: 302,
+    name: "Release",
+    path: ".github/workflows/release.yml",
+  });
+
+  $.context.saveWorkflowRun("counterfact", "actions-demo", {
+    id: 401,
+    workflow_id: 301,
+    head_branch: "main",
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+    display_title: "CI on main",
+    actor: $.context.getUser("hubot"),
+  });
+  $.context.saveWorkflowRun("counterfact", "actions-demo", {
+    id: 402,
+    workflow_id: 301,
+    head_branch: "release",
+    event: "pull_request",
+    status: "completed",
+    conclusion: "failure",
+    display_title: "CI on release branch",
+    actor: $.context.getUser("mona"),
+  });
+
+  $.context.saveWorkflowJob("counterfact", "actions-demo", 401, {
+    id: 501,
+    name: "lint",
+    status: "completed",
+    conclusion: "success",
+  });
+  $.context.saveWorkflowJob("counterfact", "actions-demo", 401, {
+    id: 502,
+    name: "test",
+    status: "completed",
+    conclusion: "success",
+  });
+  $.context.saveWorkflowJob("counterfact", "actions-demo", 402, {
+    id: 503,
+    name: "test",
+    status: "completed",
+    conclusion: "failure",
+  });
+};
+
 export const seedGitHub: Scenario = ($) => {
+  identities($);
+  repositories($);
+  issues($);
+  pullRequests($);
+  actions($);
   gists($);
   gistComments($);
 };
@@ -105,10 +252,6 @@ export const startup: Scenario = ($) => {
   seedGitHub($);
 };
 
-/**
- * An example scenario. To use it in the REPL, type:
- *   .scenario help
- */
 export const help: Scenario = ($) => {
   void $;
 
@@ -124,5 +267,7 @@ export const help: Scenario = ($) => {
   console.log(
     "\nScenarios (including this one) are defined in the ./scenarios directory.",
   );
-  console.log("\nTry .scenario seedGitHub to load sample gists and comments.");
+  console.log(
+    "\nTry .scenario seedGitHub to load users, repos, issues, pull requests, workflows, gists, and comments.",
+  );
 };
