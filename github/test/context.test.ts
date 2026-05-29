@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Context } from "../routes/_.context.ts";
+import { createContext } from "../test-support/create-context.ts";
 
 test("Context.saveGist assigns an id and sets URL fields", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     description: "Hello World",
@@ -35,7 +35,7 @@ test("Context.saveGist assigns an id and sets URL fields", () => {
 });
 
 test("Context.saveGist preserves an explicit id", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     id: "abc123",
@@ -51,7 +51,7 @@ test("Context.saveGist preserves an explicit id", () => {
 });
 
 test("Context.saveGist auto-increments ids for subsequent gists", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const first = context.saveGist({
     files: { "a.txt": { filename: "a.txt", content: "a" } },
@@ -64,7 +64,7 @@ test("Context.saveGist auto-increments ids for subsequent gists", () => {
 });
 
 test("Context.getGist and hasGist work correctly", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   assert.equal(context.hasGist("missing"), false);
   assert.equal(context.getGist("missing"), undefined);
@@ -78,7 +78,7 @@ test("Context.getGist and hasGist work correctly", () => {
 });
 
 test("Context.deleteGist removes the gist", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -91,7 +91,7 @@ test("Context.deleteGist removes the gist", () => {
 });
 
 test("Context.listGists returns all gists", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   context.saveGist({
     files: { "a.txt": { filename: "a.txt", content: "a" } },
@@ -104,7 +104,7 @@ test("Context.listGists returns all gists", () => {
 });
 
 test("Context.listPublicGists returns only public gists", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   context.saveGist({
     public: true,
@@ -121,7 +121,7 @@ test("Context.listPublicGists returns only public gists", () => {
 });
 
 test("Context star/unstar/isGistStarred work correctly", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -135,7 +135,7 @@ test("Context star/unstar/isGistStarred work correctly", () => {
 });
 
 test("Context.listStarredGists returns only starred gists", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const g1 = context.saveGist({
     files: { "a.txt": { filename: "a.txt", content: "a" } },
@@ -153,7 +153,7 @@ test("Context.listStarredGists returns only starred gists", () => {
 });
 
 test("Context.saveComment creates a comment and updates gist comment count", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -167,7 +167,7 @@ test("Context.saveComment creates a comment and updates gist comment count", () 
 });
 
 test("Context.saveComment preserves explicit comment id", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -179,7 +179,7 @@ test("Context.saveComment preserves explicit comment id", () => {
 });
 
 test("Context.saveComment (update) preserves created_at and updates body", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -197,7 +197,7 @@ test("Context.saveComment (update) preserves created_at and updates body", () =>
 });
 
 test("Context.deleteComment removes a comment and updates gist count", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -212,7 +212,7 @@ test("Context.deleteComment removes a comment and updates gist count", () => {
 });
 
 test("Context.listComments returns all comments for a gist", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   const gist = context.saveGist({
     files: { "x.txt": { filename: "x.txt", content: "x" } },
@@ -228,12 +228,12 @@ test("Context.listComments returns all comments for a gist", () => {
 });
 
 test("Context.listComments returns empty array for unknown gist", () => {
-  const context = new Context({} as never);
+  const context = createContext();
   assert.deepEqual(context.listComments("nonexistent"), []);
 });
 
 test("Context stores repositories, issues, pull requests, and workflows with stable lookup", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
   context.saveOrganization({
@@ -329,7 +329,7 @@ test("Context stores repositories, issues, pull requests, and workflows with sta
 });
 
 test("Context.savePullRequest correctly parses owner:branch format for head and base", () => {
-  const context = new Context({} as never);
+  const context = createContext();
 
   // Setup users and repository
   context.saveUser({ id: 1, login: "octocat", name: "Octocat" });

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Context } from "../routes/_.context.ts";
 import {
   actions,
   gistComments,
@@ -11,12 +10,13 @@ import {
   repositories,
   seedGitHub,
 } from "../scenarios/index.ts";
+import { createContextHarness } from "../test-support/create-context.ts";
 
 const createScenario$ = () => {
-  const context = new Context({} as never);
+  const { context, loadContext } = createContextHarness();
   return {
     context,
-    loadContext: (path: string) => (path === "/" ? context : {}),
+    loadContext,
     routes: {},
     route: () => ({}),
   };

@@ -47,6 +47,7 @@ import {
 } from "../routes/user/repos.ts";
 import { GET as getUser } from "../routes/users/{username}.ts";
 import { seedGitHub } from "../scenarios/index.ts";
+import { createContextHarness } from "../test-support/create-context.ts";
 
 type RouteResult = { status: number; body?: unknown };
 
@@ -81,10 +82,10 @@ const create$ = ({
 });
 
 const createSeededContext = () => {
-  const context = new Context({} as never);
+  const { context, loadContext } = createContextHarness();
   seedGitHub({
     context,
-    loadContext: () => context,
+    loadContext,
     routes: {},
     route: () => ({}),
   });

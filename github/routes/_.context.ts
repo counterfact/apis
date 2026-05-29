@@ -16,6 +16,11 @@ import type { pull_request_review } from "../types/components/schemas/pull-reque
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { workflow } from "../types/components/schemas/workflow.js";
 import type { workflow_run } from "../types/components/schemas/workflow-run.js";
+import type { Context as GistsContext } from "./gists/_.context.js";
+import {
+  toSimpleUser,
+  type Context as UsersContext,
+} from "./users/_.context.js";
 
 type RepoKey = `${string}/${string}`;
 
@@ -36,7 +41,6 @@ type RepoState = {
 
 const API_URL = "https://api.github.com";
 const APP_URL = "https://github.com";
-const GIST_URL = "https://gist.github.com";
 const DEFAULT_USER_LOGIN = "octocat";
 const DEFAULT_PAGE_SIZE = 30;
 
@@ -124,159 +128,6 @@ const makeSimpleUser = (
   site_admin: false,
   name,
   email: name ? `${login}@example.com` : undefined,
-});
-
-const makePublicUser = (
-  login: string,
-  id: number,
-  overrides: Partial<public_user> = {},
-): public_user => {
-  const simple = makeSimpleUser(
-    login,
-    id,
-    overrides.type ?? "User",
-    overrides.name,
-  );
-  const now = isoNow();
-
-  return {
-    ...simple,
-    user_view_type: overrides.user_view_type ?? "public",
-    name: overrides.name ?? login,
-    company: overrides.company ?? "Counterfact",
-    blog: overrides.blog ?? "",
-    location: overrides.location ?? "Internet",
-    email: overrides.email ?? `${login}@example.com`,
-    notification_email: overrides.notification_email ?? `${login}@example.com`,
-    hireable: overrides.hireable ?? false,
-    bio: overrides.bio ?? `Sample profile for ${login}`,
-    twitter_username: overrides.twitter_username,
-    public_repos: overrides.public_repos ?? 0,
-    public_gists: overrides.public_gists ?? 0,
-    followers: overrides.followers ?? 0,
-    following: overrides.following ?? 0,
-    created_at: overrides.created_at ?? now,
-    updated_at: overrides.updated_at ?? now,
-    plan: overrides.plan,
-    private_gists: overrides.private_gists,
-    total_private_repos: overrides.total_private_repos,
-    owned_private_repos: overrides.owned_private_repos,
-    disk_usage: overrides.disk_usage,
-    collaborators: overrides.collaborators,
-  };
-};
-
-const makeOrganization = (
-  login: string,
-  id: number,
-  overrides: Partial<organization_full> = {},
-): organization_full => ({
-  login,
-  id,
-  node_id: overrides.node_id ?? `O_${id}`,
-  url: `${API_URL}/orgs/${login}`,
-  repos_url: `${API_URL}/orgs/${login}/repos`,
-  events_url: `${API_URL}/orgs/${login}/events`,
-  hooks_url: `${API_URL}/orgs/${login}/hooks`,
-  issues_url: `${API_URL}/orgs/${login}/issues`,
-  members_url: `${API_URL}/orgs/${login}/members{/member}`,
-  public_members_url: `${API_URL}/orgs/${login}/public_members{/member}`,
-  avatar_url: `${APP_URL}/${login}.png`,
-  description: overrides.description ?? `${login} organization`,
-  name: overrides.name ?? login,
-  company: overrides.company ?? login,
-  blog: overrides.blog ?? "",
-  location: overrides.location ?? "Internet",
-  email: overrides.email ?? `${login}@example.com`,
-  twitter_username: overrides.twitter_username,
-  is_verified: overrides.is_verified ?? true,
-  has_organization_projects: overrides.has_organization_projects ?? true,
-  has_repository_projects: overrides.has_repository_projects ?? true,
-  public_repos: overrides.public_repos ?? 0,
-  public_gists: overrides.public_gists ?? 0,
-  followers: overrides.followers ?? 0,
-  following: overrides.following ?? 0,
-  html_url: `${APP_URL}/orgs/${login}`,
-  type: "Organization",
-  total_private_repos: overrides.total_private_repos ?? 0,
-  owned_private_repos: overrides.owned_private_repos ?? 0,
-  private_gists: overrides.private_gists ?? 0,
-  disk_usage: overrides.disk_usage ?? 0,
-  collaborators: overrides.collaborators ?? 0,
-  billing_email: overrides.billing_email ?? `${login}@example.com`,
-  plan: overrides.plan,
-  default_repository_permission:
-    overrides.default_repository_permission ?? "write",
-  default_repository_branch: overrides.default_repository_branch ?? "main",
-  members_can_create_repositories:
-    overrides.members_can_create_repositories ?? true,
-  two_factor_requirement_enabled:
-    overrides.two_factor_requirement_enabled ?? false,
-  members_allowed_repository_creation_type:
-    overrides.members_allowed_repository_creation_type ?? "all",
-  members_can_create_public_repositories:
-    overrides.members_can_create_public_repositories ?? true,
-  members_can_create_private_repositories:
-    overrides.members_can_create_private_repositories ?? true,
-  members_can_create_internal_repositories:
-    overrides.members_can_create_internal_repositories ?? true,
-  members_can_create_pages: overrides.members_can_create_pages ?? true,
-  members_can_create_public_pages:
-    overrides.members_can_create_public_pages ?? true,
-  members_can_create_private_pages:
-    overrides.members_can_create_private_pages ?? true,
-  members_can_delete_repositories:
-    overrides.members_can_delete_repositories ?? true,
-  members_can_change_repo_visibility:
-    overrides.members_can_change_repo_visibility ?? true,
-  members_can_invite_outside_collaborators:
-    overrides.members_can_invite_outside_collaborators ?? true,
-  members_can_delete_issues: overrides.members_can_delete_issues ?? true,
-  display_commenter_full_name_setting_enabled:
-    overrides.display_commenter_full_name_setting_enabled ?? false,
-  readers_can_create_discussions:
-    overrides.readers_can_create_discussions ?? true,
-});
-
-const organizationToSimple = (
-  organization: organization_full,
-): organization_simple => ({
-  login: organization.login,
-  id: organization.id,
-  node_id: organization.node_id,
-  url: organization.url,
-  repos_url: organization.repos_url,
-  events_url: organization.events_url,
-  hooks_url: organization.hooks_url,
-  issues_url: organization.issues_url,
-  members_url: organization.members_url,
-  public_members_url: organization.public_members_url,
-  avatar_url: organization.avatar_url,
-  description: organization.description,
-});
-
-const toSimpleUser = (user: public_user): simple_user => ({
-  name: user.name,
-  email: user.email,
-  login: user.login,
-  id: user.id,
-  node_id: user.node_id,
-  avatar_url: user.avatar_url,
-  gravatar_id: user.gravatar_id,
-  url: user.url,
-  html_url: user.html_url,
-  followers_url: user.followers_url,
-  following_url: user.following_url,
-  gists_url: user.gists_url,
-  starred_url: user.starred_url,
-  subscriptions_url: user.subscriptions_url,
-  organizations_url: user.organizations_url,
-  repos_url: user.repos_url,
-  events_url: user.events_url,
-  received_events_url: user.received_events_url,
-  type: user.type,
-  site_admin: user.site_admin,
-  user_view_type: user.user_view_type,
 });
 
 const makeCommit = (
@@ -374,18 +225,8 @@ const makeReadme = (
 });
 
 export class Context {
-  private gistsById = new Map<string, gist_simple>();
-  private starredGistIds = new Set<string>();
-  private commentsByGistId = new Map<string, Map<number, gist_comment>>();
-
-  private usersByLogin = new Map<string, public_user>();
-  private orgsByLogin = new Map<string, organization_full>();
   private reposByKey = new Map<RepoKey, RepoState>();
 
-  private nextGistCounter = 1;
-  private nextCommentId = 1;
-  private nextUserId = 100;
-  private nextOrgId = 500;
   private nextRepoId = 1000;
   private nextIssueId = 2000;
   private nextIssueCommentId = 3000;
@@ -394,14 +235,126 @@ export class Context {
   private nextWorkflowId = 6000;
   private nextRunId = 7000;
   private nextJobId = 8000;
+  private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
-    void $;
+    this.loadContext = $.loadContext;
   }
 
-  private generateGistId(): string {
-    const counter = this.nextGistCounter++;
-    return String(counter).padStart(20, "0");
+  private gistsContext(): GistsContext {
+    return this.loadContext("/gists") as GistsContext;
+  }
+
+  private usersContext(): UsersContext {
+    return this.loadContext("/users") as UsersContext;
+  }
+
+  saveGist(
+    gist: Partial<gist_simple> & { files: NonNullable<gist_simple["files"]> },
+  ): gist_simple {
+    return this.gistsContext().saveGist(gist);
+  }
+
+  getGist(id: string): gist_simple | undefined {
+    return this.gistsContext().getGist(id);
+  }
+
+  hasGist(id: string): boolean {
+    return this.gistsContext().hasGist(id);
+  }
+
+  deleteGist(id: string): boolean {
+    return this.gistsContext().deleteGist(id);
+  }
+
+  listGists(): gist_simple[] {
+    return this.gistsContext().listGists();
+  }
+
+  listPublicGists(): gist_simple[] {
+    return this.gistsContext().listPublicGists();
+  }
+
+  starGist(id: string): void {
+    this.gistsContext().starGist(id);
+  }
+
+  unstarGist(id: string): void {
+    this.gistsContext().unstarGist(id);
+  }
+
+  isGistStarred(id: string): boolean {
+    return this.gistsContext().isGistStarred(id);
+  }
+
+  listStarredGists(): gist_simple[] {
+    return this.gistsContext().listStarredGists();
+  }
+
+  saveComment(
+    gistId: string,
+    comment: Partial<gist_comment> & { body: string },
+  ): gist_comment {
+    return this.gistsContext().saveComment(gistId, comment);
+  }
+
+  getComment(gistId: string, commentId: number): gist_comment | undefined {
+    return this.gistsContext().getComment(gistId, commentId);
+  }
+
+  hasComment(gistId: string, commentId: number): boolean {
+    return this.gistsContext().hasComment(gistId, commentId);
+  }
+
+  deleteComment(gistId: string, commentId: number): boolean {
+    return this.gistsContext().deleteComment(gistId, commentId);
+  }
+
+  listComments(gistId: string): gist_comment[] {
+    return this.gistsContext().listComments(gistId);
+  }
+
+  saveUser(user: Partial<public_user> & { login: string }): public_user {
+    return this.usersContext().saveUser(user);
+  }
+
+  getUser(login: string): public_user | undefined {
+    return this.usersContext().getUser(login);
+  }
+
+  listUsers(query?: {
+    since?: unknown;
+    per_page?: unknown;
+  }): Array<public_user> {
+    return this.usersContext().listUsers(query);
+  }
+
+  listSimpleUsers(query?: {
+    since?: unknown;
+    per_page?: unknown;
+  }): Array<simple_user> {
+    return this.usersContext().listSimpleUsers(query);
+  }
+
+  saveOrganization(
+    organization: Partial<organization_full> & { login: string },
+  ): organization_full {
+    return this.usersContext().saveOrganization(organization);
+  }
+
+  getOrganization(login: string): organization_full | undefined {
+    return this.usersContext().getOrganization(login);
+  }
+
+  listOrganizations(query?: { since?: unknown; per_page?: unknown }) {
+    return this.usersContext().listOrganizations(query);
+  }
+
+  listSimpleOrganizations(query?: {
+    since?: unknown;
+    per_page?: unknown;
+  }): Array<organization_simple> {
+    return this.usersContext().listSimpleOrganizations(query);
   }
 
   private ensureDefaultUser() {
@@ -418,7 +371,27 @@ export class Context {
   private resolveOwner(login: string): simple_user {
     const org = this.getOrganization(login);
     if (org) {
-      return makeSimpleUser(org.login, org.id, "Organization", org.name);
+      return {
+        login: org.login,
+        id: org.id,
+        node_id: org.node_id,
+        avatar_url: org.avatar_url,
+        gravatar_id: "",
+        url: org.url,
+        html_url: org.html_url,
+        followers_url: `${API_URL}/users/${org.login}/followers`,
+        following_url: `${API_URL}/users/${org.login}/following{/other_user}`,
+        gists_url: `${API_URL}/users/${org.login}/gists{/gist_id}`,
+        starred_url: `${API_URL}/users/${org.login}/starred{/owner}{/repo}`,
+        subscriptions_url: `${API_URL}/users/${org.login}/subscriptions`,
+        organizations_url: `${API_URL}/users/${org.login}/orgs`,
+        repos_url: `${API_URL}/users/${org.login}/repos`,
+        events_url: `${API_URL}/users/${org.login}/events{/privacy}`,
+        received_events_url: `${API_URL}/users/${org.login}/received_events`,
+        type: "Organization",
+        site_admin: false,
+        name: org.name,
+      };
     }
     return toSimpleUser(this.ensureUser(login));
   }
@@ -439,261 +412,6 @@ export class Context {
     ).length;
     state.repository.open_issues_count = openIssues;
     state.repository.open_issues = openIssues;
-  }
-
-  saveGist(
-    gist: Partial<gist_simple> & { files: NonNullable<gist_simple["files"]> },
-  ): gist_simple {
-    const now = isoNow();
-    const id = gist.id ?? this.generateGistId();
-    const existing = this.gistsById.get(id);
-    const fullGist: gist_simple = {
-      ...existing,
-      ...gist,
-      id,
-      node_id: gist.node_id ?? existing?.node_id ?? `G_${id}`,
-      url: gist.url ?? existing?.url ?? `${API_URL}/gists/${id}`,
-      forks_url:
-        gist.forks_url ?? existing?.forks_url ?? `${API_URL}/gists/${id}/forks`,
-      commits_url:
-        gist.commits_url ??
-        existing?.commits_url ??
-        `${API_URL}/gists/${id}/commits`,
-      git_pull_url:
-        gist.git_pull_url ?? existing?.git_pull_url ?? `${GIST_URL}/${id}.git`,
-      git_push_url:
-        gist.git_push_url ?? existing?.git_push_url ?? `${GIST_URL}/${id}.git`,
-      html_url: gist.html_url ?? existing?.html_url ?? `${GIST_URL}/${id}`,
-      files: gist.files,
-      public: gist.public ?? existing?.public ?? true,
-      created_at: existing?.created_at ?? gist.created_at ?? now,
-      updated_at: now,
-      description: gist.description ?? existing?.description ?? "",
-      comments: this.commentsByGistId.get(id)?.size ?? existing?.comments ?? 0,
-      user: gist.user ?? existing?.user,
-      comments_url:
-        gist.comments_url ??
-        existing?.comments_url ??
-        `${API_URL}/gists/${id}/comments`,
-      owner: gist.owner ?? existing?.owner,
-      truncated: gist.truncated ?? existing?.truncated ?? false,
-    };
-    this.gistsById.set(id, fullGist);
-    if (gist.id == null) {
-      this.nextGistCounter = Math.max(
-        this.nextGistCounter,
-        Number(id) + 1 || this.nextGistCounter,
-      );
-    }
-    return fullGist;
-  }
-
-  getGist(id: string): gist_simple | undefined {
-    return this.gistsById.get(id);
-  }
-
-  hasGist(id: string): boolean {
-    return this.gistsById.has(id);
-  }
-
-  deleteGist(id: string): boolean {
-    return this.gistsById.delete(id);
-  }
-
-  listGists(): gist_simple[] {
-    return [...this.gistsById.values()];
-  }
-
-  listPublicGists(): gist_simple[] {
-    return [...this.gistsById.values()].filter((gist) => gist.public);
-  }
-
-  starGist(id: string): void {
-    this.starredGistIds.add(id);
-  }
-
-  unstarGist(id: string): void {
-    this.starredGistIds.delete(id);
-  }
-
-  isGistStarred(id: string): boolean {
-    return this.starredGistIds.has(id);
-  }
-
-  listStarredGists(): gist_simple[] {
-    return [...this.gistsById.values()].filter((gist) =>
-      this.starredGistIds.has(gist.id ?? ""),
-    );
-  }
-
-  saveComment(
-    gistId: string,
-    comment: Partial<gist_comment> & { body: string },
-  ): gist_comment {
-    const now = isoNow();
-    const existing = comment.id
-      ? this.commentsByGistId.get(gistId)?.get(comment.id)
-      : undefined;
-    const id = comment.id ?? this.nextCommentId++;
-    const fullComment: gist_comment = {
-      id,
-      node_id: comment.node_id ?? existing?.node_id ?? `GC_${id}`,
-      url:
-        comment.url ??
-        existing?.url ??
-        `${API_URL}/gists/${gistId}/comments/${id}`,
-      body: comment.body,
-      user: comment.user ?? existing?.user ?? null,
-      created_at: existing?.created_at ?? comment.created_at ?? now,
-      updated_at: now,
-      author_association:
-        comment.author_association ?? existing?.author_association ?? "NONE",
-    };
-    if (!this.commentsByGistId.has(gistId)) {
-      this.commentsByGistId.set(gistId, new Map());
-    }
-    this.commentsByGistId.get(gistId)!.set(id, fullComment);
-    if (comment.id == null) {
-      this.nextCommentId = Math.max(this.nextCommentId, id + 1);
-    }
-
-    const gist = this.gistsById.get(gistId);
-    if (gist) {
-      gist.comments = this.commentsByGistId.get(gistId)!.size;
-    }
-
-    return fullComment;
-  }
-
-  getComment(gistId: string, commentId: number): gist_comment | undefined {
-    return this.commentsByGistId.get(gistId)?.get(commentId);
-  }
-
-  hasComment(gistId: string, commentId: number): boolean {
-    return this.commentsByGistId.get(gistId)?.has(commentId) ?? false;
-  }
-
-  deleteComment(gistId: string, commentId: number): boolean {
-    const deleted =
-      this.commentsByGistId.get(gistId)?.delete(commentId) ?? false;
-    if (deleted) {
-      const gist = this.gistsById.get(gistId);
-      if (gist) {
-        gist.comments = this.commentsByGistId.get(gistId)?.size ?? 0;
-      }
-    }
-    return deleted;
-  }
-
-  listComments(gistId: string): gist_comment[] {
-    return [...(this.commentsByGistId.get(gistId)?.values() ?? [])];
-  }
-
-  saveUser(user: Partial<public_user> & { login: string }): public_user {
-    const existing = this.usersByLogin.get(user.login);
-    const id = user.id ?? existing?.id ?? this.nextUserId++;
-    const fullUser = makePublicUser(user.login, id, { ...existing, ...user });
-    this.usersByLogin.set(fullUser.login, fullUser);
-    this.nextUserId = Math.max(this.nextUserId, id + 1);
-    return this.getUser(fullUser.login)!;
-  }
-
-  getUser(login: string): public_user | undefined {
-    const user = this.usersByLogin.get(login);
-    if (!user) return undefined;
-
-    const repositories = this.listRepositories().filter(
-      (repository) => repository.owner.login === login,
-    );
-
-    return {
-      ...user,
-      public_repos: repositories.filter((repository) => !repository.private)
-        .length,
-      total_private_repos: repositories.filter(
-        (repository) => repository.private,
-      ).length,
-      owned_private_repos: repositories.filter(
-        (repository) => repository.private,
-      ).length,
-      updated_at: isoNow(),
-    };
-  }
-
-  listUsers(query?: {
-    since?: unknown;
-    per_page?: unknown;
-  }): Array<public_user> {
-    const users = [...this.usersByLogin.keys()]
-      .map((login) => this.getUser(login)!)
-      .sort((left, right) => left.id - right.id);
-    const filtered =
-      query?.since == null
-        ? users
-        : users.filter((user) => user.id > Number(query.since));
-    return paginate(filtered, query);
-  }
-
-  listSimpleUsers(query?: {
-    since?: unknown;
-    per_page?: unknown;
-  }): Array<simple_user> {
-    return this.listUsers(query).map((user) => toSimpleUser(user));
-  }
-
-  saveOrganization(
-    organization: Partial<organization_full> & { login: string },
-  ): organization_full {
-    const existing = this.orgsByLogin.get(organization.login);
-    const id = organization.id ?? existing?.id ?? this.nextOrgId++;
-    const fullOrganization = makeOrganization(organization.login, id, {
-      ...existing,
-      ...organization,
-    });
-    this.orgsByLogin.set(fullOrganization.login, fullOrganization);
-    this.nextOrgId = Math.max(this.nextOrgId, id + 1);
-    return this.getOrganization(fullOrganization.login)!;
-  }
-
-  getOrganization(login: string): organization_full | undefined {
-    const organization = this.orgsByLogin.get(login);
-    if (!organization) return undefined;
-
-    const repositories = this.listRepositories().filter(
-      (repository) => repository.owner.login === login,
-    );
-
-    return {
-      ...organization,
-      public_repos: repositories.filter((repository) => !repository.private)
-        .length,
-      total_private_repos: repositories.filter(
-        (repository) => repository.private,
-      ).length,
-      owned_private_repos: repositories.filter(
-        (repository) => repository.private,
-      ).length,
-      updated_at: isoNow(),
-    } as organization_full & { updated_at: string };
-  }
-
-  listOrganizations(query?: { since?: unknown; per_page?: unknown }) {
-    const organizations = [...this.orgsByLogin.keys()]
-      .map((login) => this.getOrganization(login)!)
-      .sort((left, right) => left.id - right.id);
-    const filtered =
-      query?.since == null
-        ? organizations
-        : organizations.filter(
-            (organization) => organization.id > Number(query.since),
-          );
-    return paginate(filtered, query);
-  }
-
-  listSimpleOrganizations(query?: { since?: unknown; per_page?: unknown }) {
-    return this.listOrganizations(query).map((organization) =>
-      organizationToSimple(organization),
-    );
   }
 
   saveRepository(
