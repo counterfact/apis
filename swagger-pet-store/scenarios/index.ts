@@ -1,3 +1,5 @@
+import type { Scenario$ } from "../types/_.context";
+
 /**
  * Scenario scripts are plain TypeScript functions that receive the live REPL
  * environment and can read or mutate server state. Run them from the REPL with:
@@ -26,7 +28,7 @@
  *
  * If you don't need a startup scenario, delete this function or leave it empty.
  */
-const pets = ($) => {
+const pets = ($: Scenario$) => {
   $.context.savePet({
     id: 1,
     category: { id: 1, name: "dogs" },
@@ -53,7 +55,7 @@ const pets = ($) => {
   });
 };
 
-const users = ($) => {
+const users = ($: Scenario$) => {
   $.context.saveUser({
     id: 1,
     username: "jane.doe",
@@ -76,7 +78,7 @@ const users = ($) => {
   });
 };
 
-const orders = ($) => {
+const orders = ($: Scenario$) => {
   $.context.saveOrder({
     id: 1,
     petId: 1,
@@ -95,13 +97,13 @@ const orders = ($) => {
   });
 };
 
-const petStore = ($) => {
+const petStore = ($: Scenario$) => {
   pets($);
   users($);
   orders($);
 };
 
-const startup = ($) => {
+const startup = ($: Scenario$) => {
   petStore($);
 };
 
