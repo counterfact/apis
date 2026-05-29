@@ -1315,9 +1315,9 @@ export class Context {
   savePullRequest(
     owner: string,
     repo: string,
-    pullInput: Partial<pull_request> & {
-      head: string;
-      base: string;
+    pullInput: Omit<Partial<pull_request>, "head" | "base"> & {
+      head: string | Partial<pull_request["head"]>;
+      base: string | Partial<pull_request["base"]>;
       title?: string;
       body?: string;
       number?: number;
@@ -1336,18 +1336,57 @@ export class Context {
       pullInput.user ??
       existing?.user ??
       toSimpleUser(this.ensureDefaultUser());
-    const headRef =
-      pullInput.head.ref ??
-      (typeof pullInput.head === "string" ? pullInput.head : "feature-branch");
-    const baseRef =
-      pullInput.base.ref ??
-      (typeof pullInput.base === "string"
-        ? pullInput.base
-        : state.repository.default_branch);
-    const headRepo = pullInput.head.repo ?? state.repository;
-    const baseRepo = pullInput.base.repo ?? state.repository;
-    const headUser = pullInput.head.user ?? author;
-    const baseUser = pullInput.base.user ?? state.repository.owner;
+
+    // Parse head: can be "branch" or "owner:branch" or an object
+    let headRef: string;
+    let headOwnerLogin: string | undefined;
+    if (typeof pullInput.head === "string") {
+      const colonIndex = pullInput.head.indexOf(":");
+      if (colonIndex > 0) {
+        headOwnerLogin = pullInput.head.substring(0, colonIndex);
+        headRef = pullInput.head.substring(colonIndex + 1);
+      } else {
+        headRef = pullInput.head;
+      }
+    } else {
+      headRef = pullInput.head.ref ?? "feature-branch";
+    }
+
+    // Parse base: can be "branch" or "owner:branch" or an object
+    let baseRef: string;
+    let baseOwnerLogin: string | undefined;
+    if (typeof pullInput.base === "string") {
+      const colonIndex = pullInput.base.indexOf(":");
+      if (colonIndex > 0) {
+        baseOwnerLogin = pullInput.base.substring(0, colonIndex);
+        baseRef = pullInput.base.substring(colonIndex + 1);
+      } else {
+        baseRef = pullInput.base;
+      }
+    } else {
+      baseRef = pullInput.base.ref ?? state.repository.default_branch;
+    }
+
+    const headRepo =
+      typeof pullInput.head === "object" && pullInput.head.repo
+        ? pullInput.head.repo
+        : state.repository;
+    const baseRepo =
+      typeof pullInput.base === "object" && pullInput.base.repo
+        ? pullInput.base.repo
+        : state.repository;
+    const headUser =
+      typeof pullInput.head === "object" && pullInput.head.user
+        ? pullInput.head.user
+        : headOwnerLogin
+          ? this.ensureUser(headOwnerLogin)
+          : author;
+    const baseUser =
+      typeof pullInput.base === "object" && pullInput.base.user
+        ? pullInput.base.user
+        : baseOwnerLogin
+          ? this.ensureUser(baseOwnerLogin)
+          : state.repository.owner;
     const reviewCount =
       state.reviews.get(number)?.size ?? existing?.review_comments ?? 0;
     const sha = hashFor(owner, repo, "pull", number, headRef);
@@ -1396,23 +1435,34 @@ export class Context {
         pullInput.requested_teams ?? existing?.requested_teams ?? [],
       head: {
         label:
-          pullInput.head.label ??
+          (typeof pullInput.head === "object"
+            ? pullInput.head.label
+            : undefined) ??
           existing?.head.label ??
           `${headUser.login}:${headRef}`,
         ref: headRef,
         repo: headRepo,
-        sha: pullInput.head.sha ?? existing?.head.sha ?? sha,
+        sha:
+          (typeof pullInput.head === "object"
+            ? pullInput.head.sha
+            : undefined) ??
+          existing?.head.sha ??
+          sha,
         user: headUser,
       },
       base: {
         label:
-          pullInput.base.label ??
+          (typeof pullInput.base === "object"
+            ? pullInput.base.label
+            : undefined) ??
           existing?.base.label ??
           `${baseRepo.full_name}:${baseRef}`,
         ref: baseRef,
         repo: baseRepo,
         sha:
-          pullInput.base.sha ??
+          (typeof pullInput.base === "object"
+            ? pullInput.base.sha
+            : undefined) ??
           existing?.base.sha ??
           hashFor(owner, repo, baseRef),
         user: baseUser,
@@ -1437,8 +1487,7 @@ export class Context {
       },
       author_association:
         pullInput.author_association ?? existing?.author_association ?? "OWNER",
-      auto_merge:
-        pullInput.auto_merge ?? existing?.auto_merge ?? (null as never),
+      auto_merge: pullInput.auto_merge ?? existing?.auto_merge ?? (null as any),
       draft: pullInput.draft ?? existing?.draft ?? false,
       merged: pullInput.merged ?? existing?.merged ?? false,
       mergeable: pullInput.mergeable ?? existing?.mergeable ?? true,

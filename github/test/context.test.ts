@@ -327,3 +327,54 @@ test("Context stores repositories, issues, pull requests, and workflows with sta
     1,
   );
 });
+
+test("Context.savePullRequest correctly parses owner:branch format for head and base", () => {
+  const context = new Context({} as never);
+
+  // Setup users and repository
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveUser({ id: 2, login: "mona", name: "Mona" });
+  context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+  });
+  context.saveRepository({
+    id: 101,
+    owner: "counterfact",
+    name: "platform-api",
+    default_branch: "main",
+  });
+
+  // Create a pull request with "owner:branch" format for head
+  const pr = context.savePullRequest("counterfact", "platform-api", {
+    number: 1,
+    title: "Test PR",
+    head: "mona:feature-routing",
+    base: "main",
+  });
+
+  // Verify head is parsed correctly
+  assert.equal(
+    pr.head.ref,
+    "feature-routing",
+    "head.ref should be just the branch name",
+  );
+  assert.equal(
+    pr.head.label,
+    "mona:feature-routing",
+    "head.label should be owner:branch",
+  );
+  assert.equal(
+    pr.head.user.login,
+    "mona",
+    "head.user should be parsed from owner:branch",
+  );
+
+  // Verify base is set correctly
+  assert.equal(pr.base.ref, "main", "base.ref should be the branch name");
+  assert.ok(
+    pr.base.label.includes("main"),
+    "base.label should include the branch name",
+  );
+});
