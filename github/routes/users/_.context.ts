@@ -219,7 +219,7 @@ export class Context {
   constructor(private readonly $: Context$) {}
 
   private rootContext(): RootContext {
-    return this.$.loadContext("/") as RootContext;
+    return this.$.loadContext("/");
   }
 
   saveUser(user: Partial<public_user> & { login: string }): public_user {
