@@ -1,0 +1,36 @@
+import type { alert_number } from "./alert-number.js";
+import type { alert_created_at } from "./alert-created-at.js";
+import type { alert_updated_at } from "./alert-updated-at.js";
+import type { alert_url } from "./alert-url.js";
+import type { alert_html_url } from "./alert-html-url.js";
+import type { alert_instances_url } from "./alert-instances-url.js";
+import type { code_scanning_alert_state } from "./code-scanning-alert-state.js";
+import type { alert_fixed_at } from "./alert-fixed-at.js";
+import type { nullable_simple_user } from "./nullable-simple-user.js";
+import type { alert_dismissed_at } from "./alert-dismissed-at.js";
+import type { code_scanning_alert_dismissed_reason } from "./code-scanning-alert-dismissed-reason.js";
+import type { code_scanning_alert_dismissed_comment } from "./code-scanning-alert-dismissed-comment.js";
+import type { code_scanning_alert_rule_summary } from "./code-scanning-alert-rule-summary.js";
+import type { code_scanning_analysis_tool } from "./code-scanning-analysis-tool.js";
+import type { code_scanning_alert_instance } from "./code-scanning-alert-instance.js";
+import type { simple_user } from "./simple-user.js";
+
+export type code_scanning_alert_items = {
+  number: alert_number;
+  created_at: alert_created_at;
+  updated_at?: alert_updated_at;
+  url: alert_url;
+  html_url: alert_html_url;
+  instances_url: alert_instances_url;
+  state: code_scanning_alert_state;
+  fixed_at?: alert_fixed_at;
+  dismissed_by: nullable_simple_user;
+  dismissed_at: alert_dismissed_at;
+  dismissed_reason: code_scanning_alert_dismissed_reason;
+  dismissed_comment?: code_scanning_alert_dismissed_comment;
+  rule: code_scanning_alert_rule_summary;
+  tool: code_scanning_analysis_tool;
+  most_recent_instance: code_scanning_alert_instance;
+  dismissal_approved_by?: nullable_simple_user;
+  assignees?: Array<simple_user>;
+};
