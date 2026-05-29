@@ -2,9 +2,18 @@ import type { gistsListComments } from "../../../types/paths/gists/{gist_id}/com
 import type { gistsCreateComment } from "../../../types/paths/gists/{gist_id}/comments.types.js";
 
 export const GET: gistsListComments = async ($) => {
-  return $.response[200].random();
+  if (!$.context.hasGist($.path.gist_id)) {
+    return $.response[404].empty();
+  }
+  return $.response[200].json($.context.listComments($.path.gist_id));
 };
 
 export const POST: gistsCreateComment = async ($) => {
-  return $.response[201].random();
+  if (!$.context.hasGist($.path.gist_id)) {
+    return $.response[404].empty();
+  }
+  const comment = $.context.saveComment($.path.gist_id, {
+    body: $.body.body,
+  });
+  return $.response[201].json(comment);
 };
