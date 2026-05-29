@@ -5,10 +5,13 @@ import { Context as UsersContext } from "../routes/users/_.context.ts";
 
 export const createContextHarness = () => {
   const contexts = new Map<string, unknown>();
-  let rootContext!: Context;
+  let rootContext: Context | undefined;
 
   const loadContext: Context$["loadContext"] = ((path: string) => {
     if (path === "/") {
+      if (!rootContext) {
+        throw new Error("Root context has not been initialized");
+      }
       return rootContext;
     }
 

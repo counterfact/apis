@@ -17,8 +17,10 @@ import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { workflow } from "../types/components/schemas/workflow.js";
 import type { workflow_run } from "../types/components/schemas/workflow-run.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
-import { toSimpleUser } from "./users/_.context.js";
-import type { Context as UsersContext } from "./users/_.context.js";
+import {
+  toSimpleUser,
+  type Context as UsersContext,
+} from "./users/_.context.js";
 
 type RepoKey = `${string}/${string}`;
 
