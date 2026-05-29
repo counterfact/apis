@@ -4,7 +4,11 @@ import type {
 } from "../../../../../types/paths/repos/{owner}/{repo}/issues/{issue_number}.types.js";
 
 export const GET: issuesGet = async ($) => {
-  const issue = $.context.getIssue($.path.owner, $.path.repo, $.path.issue_number);
+  const issue = $.context.getIssue(
+    $.path.owner,
+    $.path.repo,
+    $.path.issue_number,
+  );
   if (!issue) {
     return $.response[404].empty();
   }
@@ -12,7 +16,11 @@ export const GET: issuesGet = async ($) => {
 };
 
 export const PATCH: issuesUpdate = async ($) => {
-  const existing = $.context.getIssue($.path.owner, $.path.repo, $.path.issue_number);
+  const existing = $.context.getIssue(
+    $.path.owner,
+    $.path.repo,
+    $.path.issue_number,
+  );
   if (!existing) {
     return $.response[404].empty();
   }

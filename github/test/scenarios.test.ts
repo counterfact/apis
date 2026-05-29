@@ -77,9 +77,15 @@ test("identity and repository scenarios seed users, orgs, and repos", () => {
   repositories($);
 
   assert.equal($.context.getUser("octocat")?.name, "The Octocat");
-  assert.equal($.context.getOrganization("counterfact")?.description, "API simulator fixtures for local integration testing");
+  assert.equal(
+    $.context.getOrganization("counterfact")?.description,
+    "API simulator fixtures for local integration testing",
+  );
   assert.equal($.context.listRepositories().length, 3);
-  assert.equal($.context.getRepository("counterfact", "platform-api")?.default_branch, "main");
+  assert.equal(
+    $.context.getRepository("counterfact", "platform-api")?.default_branch,
+    "main",
+  );
 });
 
 test("issues, pull requests, and actions scenarios seed related data", () => {
@@ -91,13 +97,35 @@ test("issues, pull requests, and actions scenarios seed related data", () => {
   pullRequests($);
   actions($);
 
-  assert.equal($.context.listIssues("counterfact", "platform-api", { state: "all" }).length, 2);
-  assert.equal($.context.listIssueComments("counterfact", "platform-api", 1).length, 1);
-  assert.equal($.context.listPullRequests("counterfact", "platform-api").length, 1);
-  assert.equal($.context.listPullRequestReviews("counterfact", "platform-api", 1).length, 1);
-  assert.equal($.context.listWorkflows("counterfact", "actions-demo").length, 2);
-  assert.equal($.context.listWorkflowRuns("counterfact", "actions-demo").length, 2);
-  assert.equal($.context.listWorkflowJobs("counterfact", "actions-demo", 401).length, 2);
+  assert.equal(
+    $.context.listIssues("counterfact", "platform-api", { state: "all" })
+      .length,
+    2,
+  );
+  assert.equal(
+    $.context.listIssueComments("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(
+    $.context.listPullRequests("counterfact", "platform-api").length,
+    1,
+  );
+  assert.equal(
+    $.context.listPullRequestReviews("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(
+    $.context.listWorkflows("counterfact", "actions-demo").length,
+    2,
+  );
+  assert.equal(
+    $.context.listWorkflowRuns("counterfact", "actions-demo").length,
+    2,
+  );
+  assert.equal(
+    $.context.listWorkflowJobs("counterfact", "actions-demo", 401).length,
+    2,
+  );
 });
 
 test("seedGitHub seeds all new GitHub domains together", () => {
@@ -107,9 +135,19 @@ test("seedGitHub seeds all new GitHub domains together", () => {
 
   assert.equal($.context.listGists().length, 3);
   assert.equal($.context.listRepositories().length, 3);
-  assert.equal($.context.listIssues("counterfact", "platform-api", { state: "all" }).length, 2);
-  assert.equal($.context.listPullRequests("counterfact", "platform-api").length, 1);
-  assert.equal($.context.listWorkflows("counterfact", "actions-demo").length, 2);
+  assert.equal(
+    $.context.listIssues("counterfact", "platform-api", { state: "all" })
+      .length,
+    2,
+  );
+  assert.equal(
+    $.context.listPullRequests("counterfact", "platform-api").length,
+    1,
+  );
+  assert.equal(
+    $.context.listWorkflows("counterfact", "actions-demo").length,
+    2,
+  );
   assert.equal($.context.getUser("mona")?.login, "mona");
   assert.equal($.context.getOrganization("counterfact")?.login, "counterfact");
   assert.equal($.context.listComments("aa5a315d61ae9438b18d").length, 1);

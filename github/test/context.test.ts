@@ -224,7 +224,11 @@ test("Context stores repositories, issues, pull requests, and workflows with sta
   const context = new Context({} as never);
 
   context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
-  context.saveOrganization({ id: 10, login: "counterfact", name: "Counterfact" });
+  context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+  });
   context.saveRepository({
     id: 101,
     owner: "counterfact",
@@ -276,16 +280,38 @@ test("Context stores repositories, issues, pull requests, and workflows with sta
 
   assert.equal(context.getOrganization("counterfact")?.login, "counterfact");
   assert.equal(context.getRepository("counterfact", "platform-api")?.id, 101);
-  assert.equal(context.getRepositoryReadme("counterfact", "platform-api")?.name, "README.md");
   assert.equal(
-    context.getRepositoryBranch("counterfact", "platform-api", "feature-routing")?.name,
+    context.getRepositoryReadme("counterfact", "platform-api")?.name,
+    "README.md",
+  );
+  assert.equal(
+    context.getRepositoryBranch(
+      "counterfact",
+      "platform-api",
+      "feature-routing",
+    )?.name,
     "feature-routing",
   );
   assert.equal(context.getIssue("counterfact", "platform-api", 1)?.comments, 1);
-  assert.equal(context.listIssueComments("counterfact", "platform-api", 1).length, 1);
-  assert.equal(context.getPullRequest("counterfact", "platform-api", 1)?.title, "Add stateful routes");
-  assert.equal(context.listPullRequestReviews("counterfact", "platform-api", 1).length, 1);
+  assert.equal(
+    context.listIssueComments("counterfact", "platform-api", 1).length,
+    1,
+  );
+  assert.equal(
+    context.getPullRequest("counterfact", "platform-api", 1)?.title,
+    "Add stateful routes",
+  );
+  assert.equal(
+    context.listPullRequestReviews("counterfact", "platform-api", 1).length,
+    1,
+  );
   assert.equal(context.listWorkflows("counterfact", "platform-api").length, 1);
-  assert.equal(context.listWorkflowRuns("counterfact", "platform-api").length, 1);
-  assert.equal(context.listWorkflowJobs("counterfact", "platform-api", 401).length, 1);
+  assert.equal(
+    context.listWorkflowRuns("counterfact", "platform-api").length,
+    1,
+  );
+  assert.equal(
+    context.listWorkflowJobs("counterfact", "platform-api", 401).length,
+    1,
+  );
 });

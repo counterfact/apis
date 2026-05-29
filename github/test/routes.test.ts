@@ -5,19 +5,46 @@ import { GET as getWorkflowJobs } from "../routes/repos/{owner}/{repo}/actions/r
 import { GET as getWorkflowRuns } from "../routes/repos/{owner}/{repo}/actions/runs.ts";
 import { GET as getWorkflows } from "../routes/repos/{owner}/{repo}/actions/workflows.ts";
 import { GET as getBranch } from "../routes/repos/{owner}/{repo}/branches/{branch}.ts";
-import { GET as getIssueComments, POST as postIssueComment } from "../routes/repos/{owner}/{repo}/issues/{issue_number}/comments.ts";
-import { GET as getIssue, PATCH as patchIssue } from "../routes/repos/{owner}/{repo}/issues/{issue_number}.ts";
-import { GET as getIssues, POST as postIssue } from "../routes/repos/{owner}/{repo}/issues.ts";
-import { GET as getPullReviews, POST as postPullReview } from "../routes/repos/{owner}/{repo}/pulls/{pull_number}/reviews.ts";
-import { GET as getPull, PATCH as patchPull } from "../routes/repos/{owner}/{repo}/pulls/{pull_number}.ts";
-import { GET as getPulls, POST as postPull } from "../routes/repos/{owner}/{repo}/pulls.ts";
+import {
+  GET as getIssueComments,
+  POST as postIssueComment,
+} from "../routes/repos/{owner}/{repo}/issues/{issue_number}/comments.ts";
+import {
+  GET as getIssue,
+  PATCH as patchIssue,
+} from "../routes/repos/{owner}/{repo}/issues/{issue_number}.ts";
+import {
+  GET as getIssues,
+  POST as postIssue,
+} from "../routes/repos/{owner}/{repo}/issues.ts";
+import {
+  GET as getPullReviews,
+  POST as postPullReview,
+} from "../routes/repos/{owner}/{repo}/pulls/{pull_number}/reviews.ts";
+import {
+  GET as getPull,
+  PATCH as patchPull,
+} from "../routes/repos/{owner}/{repo}/pulls/{pull_number}.ts";
+import {
+  GET as getPulls,
+  POST as postPull,
+} from "../routes/repos/{owner}/{repo}/pulls.ts";
 import { GET as getReadme } from "../routes/repos/{owner}/{repo}/readme.ts";
-import { GET as getRepo, PATCH as patchRepo } from "../routes/repos/{owner}/{repo}.ts";
+import {
+  GET as getRepo,
+  PATCH as patchRepo,
+} from "../routes/repos/{owner}/{repo}.ts";
 import { GET as getSearchIssues } from "../routes/search/issues.ts";
 import { GET as getSearchRepos } from "../routes/search/repositories.ts";
-import { GET as getOrgRepos, POST as postOrgRepo } from "../routes/orgs/{org}/repos.ts";
+import {
+  GET as getOrgRepos,
+  POST as postOrgRepo,
+} from "../routes/orgs/{org}/repos.ts";
 import { GET as getOrg } from "../routes/orgs/{org}.ts";
-import { GET as getUserRepos, POST as postUserRepo } from "../routes/user/repos.ts";
+import {
+  GET as getUserRepos,
+  POST as postUserRepo,
+} from "../routes/user/repos.ts";
 import { GET as getUser } from "../routes/users/{username}.ts";
 import { seedGitHub } from "../scenarios/index.ts";
 
@@ -77,11 +104,18 @@ test("repository routes list, create, fetch, update, branch, and readme data", a
   const created = (await postUserRepo(
     create$({
       context,
-      body: { name: "new-repo", description: "Created via route", auto_init: true },
+      body: {
+        name: "new-repo",
+        description: "Created via route",
+        auto_init: true,
+      },
     }) as never,
   )) as RouteResult;
   assert.equal(created.status, 201);
-  assert.equal((created.body as { full_name: string }).full_name, "octocat/new-repo");
+  assert.equal(
+    (created.body as { full_name: string }).full_name,
+    "octocat/new-repo",
+  );
 
   const orgCreated = (await postOrgRepo(
     create$({
@@ -93,10 +127,16 @@ test("repository routes list, create, fetch, update, branch, and readme data", a
   assert.equal(orgCreated.status, 201);
 
   const repo = (await getRepo(
-    create$({ context, path: { owner: "counterfact", repo: "platform-api" } }) as never,
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
   )) as RouteResult;
   assert.equal(repo.status, 200);
-  assert.equal((repo.body as { full_name: string }).full_name, "counterfact/platform-api");
+  assert.equal(
+    (repo.body as { full_name: string }).full_name,
+    "counterfact/platform-api",
+  );
 
   const patched = (await patchRepo(
     create$({
@@ -105,18 +145,28 @@ test("repository routes list, create, fetch, update, branch, and readme data", a
       body: { description: "Updated description" },
     }) as never,
   )) as RouteResult;
-  assert.equal((patched.body as { description: string }).description, "Updated description");
+  assert.equal(
+    (patched.body as { description: string }).description,
+    "Updated description",
+  );
 
   const branch = (await getBranch(
     create$({
       context,
-      path: { owner: "counterfact", repo: "platform-api", branch: "feature-routing" },
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        branch: "feature-routing",
+      },
     }) as never,
   )) as RouteResult;
   assert.equal((branch.body as { name: string }).name, "feature-routing");
 
   const readme = (await getReadme(
-    create$({ context, path: { owner: "counterfact", repo: "platform-api" } }) as never,
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
   )) as RouteResult;
   assert.equal((readme.body as { name: string }).name, "README.md");
 
@@ -154,7 +204,10 @@ test("issue routes manage issue lifecycle and comments", async () => {
       path: { owner: "counterfact", repo: "platform-api", issue_number: 1 },
     }) as never,
   )) as RouteResult;
-  assert.equal((issue.body as { title: string }).title, "Support stateful repository reads");
+  assert.equal(
+    (issue.body as { title: string }).title,
+    "Support stateful repository reads",
+  );
 
   const patched = (await patchIssue(
     create$({
@@ -187,7 +240,10 @@ test("pull request routes manage reviews and updates", async () => {
   const context = createSeededContext();
 
   const listed = (await getPulls(
-    create$({ context, path: { owner: "counterfact", repo: "platform-api" } }) as never,
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
   )) as RouteResult;
   assert.equal((listed.body as Array<unknown>).length, 1);
 
@@ -212,7 +268,10 @@ test("pull request routes manage reviews and updates", async () => {
       path: { owner: "counterfact", repo: "platform-api", pull_number: 1 },
     }) as never,
   )) as RouteResult;
-  assert.equal((pull.body as { title: string }).title, "Implement stateful repository fixtures");
+  assert.equal(
+    (pull.body as { title: string }).title,
+    "Implement stateful repository fixtures",
+  );
 
   const updated = (await patchPull(
     create$({
@@ -245,7 +304,10 @@ test("actions, identity, and search routes return seeded data", async () => {
   const context = createSeededContext();
 
   const workflows = (await getWorkflows(
-    create$({ context, path: { owner: "counterfact", repo: "actions-demo" } }) as never,
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo" },
+    }) as never,
   )) as RouteResult;
   assert.equal((workflows.body as { total_count: number }).total_count, 2);
 
@@ -277,12 +339,18 @@ test("actions, identity, and search routes return seeded data", async () => {
   assert.equal((org.body as { login: string }).login, "counterfact");
 
   const repoSearch = (await getSearchRepos(
-    create$({ context, query: { q: "platform repo:counterfact/platform-api" } }) as never,
+    create$({
+      context,
+      query: { q: "platform repo:counterfact/platform-api" },
+    }) as never,
   )) as RouteResult;
   assert.equal((repoSearch.body as { total_count: number }).total_count, 1);
 
   const issueSearch = (await getSearchIssues(
-    create$({ context, query: { q: "stateful repo:counterfact/platform-api is:issue" } }) as never,
+    create$({
+      context,
+      query: { q: "stateful repo:counterfact/platform-api is:issue" },
+    }) as never,
   )) as RouteResult;
   assert.equal((issueSearch.body as { total_count: number }).total_count, 1);
 });

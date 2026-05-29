@@ -53,7 +53,10 @@ const asNumber = (value: unknown, fallback: number) => {
   return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
 };
 
-const paginate = <T>(items: Array<T>, query?: { page?: unknown; per_page?: unknown }) => {
+const paginate = <T>(
+  items: Array<T>,
+  query?: { page?: unknown; per_page?: unknown },
+) => {
   const page = asNumber(query?.page, 1);
   const perPage = asNumber(query?.per_page, DEFAULT_PAGE_SIZE);
   const start = (page - 1) * perPage;
@@ -127,7 +130,12 @@ const makePublicUser = (
   id: number,
   overrides: Partial<public_user> = {},
 ): public_user => {
-  const simple = makeSimpleUser(login, id, overrides.type ?? "User", overrides.name);
+  const simple = makeSimpleUser(
+    login,
+    id,
+    overrides.type ?? "User",
+    overrides.name,
+  );
   const now = isoNow();
 
   return {
@@ -196,7 +204,8 @@ const makeOrganization = (
   collaborators: overrides.collaborators ?? 0,
   billing_email: overrides.billing_email ?? `${login}@example.com`,
   plan: overrides.plan,
-  default_repository_permission: overrides.default_repository_permission ?? "write",
+  default_repository_permission:
+    overrides.default_repository_permission ?? "write",
   default_repository_branch: overrides.default_repository_branch ?? "main",
   members_can_create_repositories:
     overrides.members_can_create_repositories ?? true,
@@ -228,7 +237,9 @@ const makeOrganization = (
     overrides.readers_can_create_discussions ?? true,
 });
 
-const organizationToSimple = (organization: organization_full): organization_simple => ({
+const organizationToSimple = (
+  organization: organization_full,
+): organization_simple => ({
   login: organization.login,
   id: organization.id,
   node_id: organization.node_id,
@@ -273,35 +284,36 @@ const makeCommit = (
   branch: string,
   actor: simple_user,
   sha: string = hashFor(owner, repo, branch),
-) => ({
-  url: `${API_URL}/repos/${owner}/${repo}/commits/${sha}`,
-  sha,
-  node_id: `C_${sha}`,
-  html_url: `${APP_URL}/${owner}/${repo}/commit/${sha}`,
-  comments_url: `${API_URL}/repos/${owner}/${repo}/commits/${sha}/comments`,
-  commit: {
+) =>
+  ({
     url: `${API_URL}/repos/${owner}/${repo}/commits/${sha}`,
-    author: {
-      name: actor.name ?? actor.login,
-      email: actor.email ?? `${actor.login}@example.com`,
-      date: isoNow(),
+    sha,
+    node_id: `C_${sha}`,
+    html_url: `${APP_URL}/${owner}/${repo}/commit/${sha}`,
+    comments_url: `${API_URL}/repos/${owner}/${repo}/commits/${sha}/comments`,
+    commit: {
+      url: `${API_URL}/repos/${owner}/${repo}/commits/${sha}`,
+      author: {
+        name: actor.name ?? actor.login,
+        email: actor.email ?? `${actor.login}@example.com`,
+        date: isoNow(),
+      },
+      committer: {
+        name: actor.name ?? actor.login,
+        email: actor.email ?? `${actor.login}@example.com`,
+        date: isoNow(),
+      },
+      message: `Latest commit on ${branch}`,
+      comment_count: 0,
+      tree: {
+        sha: hashFor(owner, repo, branch, "tree"),
+        url: `${API_URL}/repos/${owner}/${repo}/git/trees/${hashFor(owner, repo, branch, "tree")}`,
+      },
     },
-    committer: {
-      name: actor.name ?? actor.login,
-      email: actor.email ?? `${actor.login}@example.com`,
-      date: isoNow(),
-    },
-    message: `Latest commit on ${branch}`,
-    comment_count: 0,
-    tree: {
-      sha: hashFor(owner, repo, branch, "tree"),
-      url: `${API_URL}/repos/${owner}/${repo}/git/trees/${hashFor(owner, repo, branch, "tree")}`,
-    },
-  },
-  author: actor,
-  committer: actor,
-  parents: [],
-}) as const;
+    author: actor,
+    committer: actor,
+    parents: [],
+  }) as const;
 
 const makeBranch = (
   owner: string,
@@ -392,7 +404,10 @@ export class Context {
   }
 
   private ensureDefaultUser() {
-    return this.getUser(DEFAULT_USER_LOGIN) ?? this.saveUser({ login: DEFAULT_USER_LOGIN });
+    return (
+      this.getUser(DEFAULT_USER_LOGIN) ??
+      this.saveUser({ login: DEFAULT_USER_LOGIN })
+    );
   }
 
   private ensureUser(login: string): public_user {
@@ -440,7 +455,9 @@ export class Context {
       forks_url:
         gist.forks_url ?? existing?.forks_url ?? `${API_URL}/gists/${id}/forks`,
       commits_url:
-        gist.commits_url ?? existing?.commits_url ?? `${API_URL}/gists/${id}/commits`,
+        gist.commits_url ??
+        existing?.commits_url ??
+        `${API_URL}/gists/${id}/commits`,
       git_pull_url:
         gist.git_pull_url ?? existing?.git_pull_url ?? `${APP_URL}/${id}.git`,
       git_push_url:
@@ -521,7 +538,9 @@ export class Context {
       id,
       node_id: comment.node_id ?? existing?.node_id ?? `GC_${id}`,
       url:
-        comment.url ?? existing?.url ?? `${API_URL}/gists/${gistId}/comments/${id}`,
+        comment.url ??
+        existing?.url ??
+        `${API_URL}/gists/${gistId}/comments/${id}`,
       body: comment.body,
       user: comment.user ?? existing?.user ?? null,
       created_at: existing?.created_at ?? comment.created_at ?? now,
@@ -588,14 +607,22 @@ export class Context {
 
     return {
       ...user,
-      public_repos: repositories.filter((repository) => !repository.private).length,
-      total_private_repos: repositories.filter((repository) => repository.private).length,
-      owned_private_repos: repositories.filter((repository) => repository.private).length,
+      public_repos: repositories.filter((repository) => !repository.private)
+        .length,
+      total_private_repos: repositories.filter(
+        (repository) => repository.private,
+      ).length,
+      owned_private_repos: repositories.filter(
+        (repository) => repository.private,
+      ).length,
       updated_at: isoNow(),
     };
   }
 
-  listUsers(query?: { since?: unknown; per_page?: unknown }): Array<public_user> {
+  listUsers(query?: {
+    since?: unknown;
+    per_page?: unknown;
+  }): Array<public_user> {
     const users = [...this.usersByLogin.keys()]
       .map((login) => this.getUser(login)!)
       .sort((left, right) => left.id - right.id);
@@ -606,7 +633,10 @@ export class Context {
     return paginate(filtered, query);
   }
 
-  listSimpleUsers(query?: { since?: unknown; per_page?: unknown }): Array<simple_user> {
+  listSimpleUsers(query?: {
+    since?: unknown;
+    per_page?: unknown;
+  }): Array<simple_user> {
     return this.listUsers(query).map((user) => toSimpleUser(user));
   }
 
@@ -634,9 +664,14 @@ export class Context {
 
     return {
       ...organization,
-      public_repos: repositories.filter((repository) => !repository.private).length,
-      total_private_repos: repositories.filter((repository) => repository.private).length,
-      owned_private_repos: repositories.filter((repository) => repository.private).length,
+      public_repos: repositories.filter((repository) => !repository.private)
+        .length,
+      total_private_repos: repositories.filter(
+        (repository) => repository.private,
+      ).length,
+      owned_private_repos: repositories.filter(
+        (repository) => repository.private,
+      ).length,
       updated_at: isoNow(),
     } as organization_full & { updated_at: string };
   }
@@ -648,7 +683,9 @@ export class Context {
     const filtered =
       query?.since == null
         ? organizations
-        : organizations.filter((organization) => organization.id > Number(query.since));
+        : organizations.filter(
+            (organization) => organization.id > Number(query.since),
+          );
     return paginate(filtered, query);
   }
 
@@ -676,7 +713,9 @@ export class Context {
     const now = isoNow();
     const id = repository.id ?? existing?.repository.id ?? this.nextRepoId++;
     const defaultBranch =
-      repository.default_branch ?? existing?.repository.default_branch ?? "main";
+      repository.default_branch ??
+      existing?.repository.default_branch ??
+      "main";
     const fullName = `${owner.login}/${repository.name}`;
     const repoUrl = `${API_URL}/repos/${fullName}`;
 
@@ -691,7 +730,9 @@ export class Context {
       private: repository.private ?? existing?.repository.private ?? false,
       html_url: `${APP_URL}/${fullName}`,
       description:
-        repository.description ?? existing?.repository.description ?? `${repository.name} repository`,
+        repository.description ??
+        existing?.repository.description ??
+        `${repository.name} repository`,
       fork: repository.fork ?? existing?.repository.fork ?? false,
       url: repoUrl,
       archive_url: `${repoUrl}/{archive_format}{/ref}`,
@@ -736,27 +777,39 @@ export class Context {
       hooks_url: `${repoUrl}/hooks`,
       svn_url: `${APP_URL}/${fullName}`,
       homepage: repository.homepage ?? existing?.repository.homepage ?? "",
-      language: repository.language ?? existing?.repository.language ?? "TypeScript",
-      forks_count: repository.forks_count ?? existing?.repository.forks_count ?? 0,
+      language:
+        repository.language ?? existing?.repository.language ?? "TypeScript",
+      forks_count:
+        repository.forks_count ?? existing?.repository.forks_count ?? 0,
       stargazers_count:
-        repository.stargazers_count ?? existing?.repository.stargazers_count ?? 0,
+        repository.stargazers_count ??
+        existing?.repository.stargazers_count ??
+        0,
       watchers_count:
         repository.watchers_count ?? existing?.repository.watchers_count ?? 0,
       size: repository.size ?? existing?.repository.size ?? 1,
       default_branch: defaultBranch,
       open_issues_count:
-        repository.open_issues_count ?? existing?.repository.open_issues_count ?? 0,
-      has_issues: repository.has_issues ?? existing?.repository.has_issues ?? true,
+        repository.open_issues_count ??
+        existing?.repository.open_issues_count ??
+        0,
+      has_issues:
+        repository.has_issues ?? existing?.repository.has_issues ?? true,
       has_projects:
         repository.has_projects ?? existing?.repository.has_projects ?? true,
       has_wiki: repository.has_wiki ?? existing?.repository.has_wiki ?? true,
-      has_pages: repository.has_pages ?? existing?.repository.has_pages ?? false,
+      has_pages:
+        repository.has_pages ?? existing?.repository.has_pages ?? false,
       has_downloads:
         repository.has_downloads ?? existing?.repository.has_downloads ?? true,
       has_discussions:
-        repository.has_discussions ?? existing?.repository.has_discussions ?? true,
+        repository.has_discussions ??
+        existing?.repository.has_discussions ??
+        true,
       has_pull_requests:
-        repository.has_pull_requests ?? existing?.repository.has_pull_requests ?? true,
+        repository.has_pull_requests ??
+        existing?.repository.has_pull_requests ??
+        true,
       pull_request_creation_policy:
         repository.pull_request_creation_policy ??
         existing?.repository.pull_request_creation_policy ??
@@ -768,10 +821,10 @@ export class Context {
         existing?.repository.visibility ??
         (repository.private ? "private" : "public"),
       pushed_at: repository.pushed_at ?? existing?.repository.pushed_at ?? now,
-      created_at: existing?.repository.created_at ?? repository.created_at ?? now,
+      created_at:
+        existing?.repository.created_at ?? repository.created_at ?? now,
       updated_at: now,
-      permissions:
-        repository.permissions ??
+      permissions: repository.permissions ??
         existing?.repository.permissions ?? {
           admin: true,
           push: true,
@@ -779,19 +832,29 @@ export class Context {
           maintain: true,
         },
       allow_rebase_merge:
-        repository.allow_rebase_merge ?? existing?.repository.allow_rebase_merge ?? true,
+        repository.allow_rebase_merge ??
+        existing?.repository.allow_rebase_merge ??
+        true,
       allow_squash_merge:
-        repository.allow_squash_merge ?? existing?.repository.allow_squash_merge ?? true,
+        repository.allow_squash_merge ??
+        existing?.repository.allow_squash_merge ??
+        true,
       allow_auto_merge:
-        repository.allow_auto_merge ?? existing?.repository.allow_auto_merge ?? false,
+        repository.allow_auto_merge ??
+        existing?.repository.allow_auto_merge ??
+        false,
       delete_branch_on_merge:
         repository.delete_branch_on_merge ??
         existing?.repository.delete_branch_on_merge ??
         false,
       allow_merge_commit:
-        repository.allow_merge_commit ?? existing?.repository.allow_merge_commit ?? true,
+        repository.allow_merge_commit ??
+        existing?.repository.allow_merge_commit ??
+        true,
       allow_update_branch:
-        repository.allow_update_branch ?? existing?.repository.allow_update_branch ?? true,
+        repository.allow_update_branch ??
+        existing?.repository.allow_update_branch ??
+        true,
       use_squash_pr_title_as_default:
         repository.use_squash_pr_title_as_default ??
         existing?.repository.use_squash_pr_title_as_default ??
@@ -819,18 +882,28 @@ export class Context {
         existing?.repository.web_commit_signoff_required ??
         false,
       subscribers_count:
-        repository.subscribers_count ?? existing?.repository.subscribers_count ?? 0,
+        repository.subscribers_count ??
+        existing?.repository.subscribers_count ??
+        0,
       network_count:
         repository.network_count ?? existing?.repository.network_count ?? 0,
       license: repository.license ?? existing?.repository.license ?? null,
       organization:
         this.getOrganization(owner.login) != null
-          ? (makeSimpleUser(owner.login, owner.id, "Organization", owner.name) as never)
+          ? (makeSimpleUser(
+              owner.login,
+              owner.id,
+              "Organization",
+              owner.name,
+            ) as never)
           : existing?.repository.organization,
       forks: repository.forks ?? existing?.repository.forks ?? 0,
       master_branch:
-        repository.master_branch ?? existing?.repository.master_branch ?? defaultBranch,
-      open_issues: repository.open_issues ?? existing?.repository.open_issues ?? 0,
+        repository.master_branch ??
+        existing?.repository.master_branch ??
+        defaultBranch,
+      open_issues:
+        repository.open_issues ?? existing?.repository.open_issues ?? 0,
       watchers: repository.watchers ?? existing?.repository.watchers ?? 0,
       anonymous_access_enabled:
         repository.anonymous_access_enabled ??
@@ -856,11 +929,18 @@ export class Context {
 
     const branches = repository.branches ?? [defaultBranch];
     for (const branch of new Set([defaultBranch, ...branches])) {
-      state.branches.set(branch, makeBranch(owner.login, repository.name, branch, owner));
+      state.branches.set(
+        branch,
+        makeBranch(owner.login, repository.name, branch, owner),
+      );
     }
 
     if (repository.readme != null) {
-      state.readme = makeReadme(owner.login, repository.name, repository.readme);
+      state.readme = makeReadme(
+        owner.login,
+        repository.name,
+        repository.readme,
+      );
     }
 
     this.upsertRepoState(owner.login, repository.name, state);
@@ -925,7 +1005,9 @@ export class Context {
       repositories = repositories.filter((repository) => repository.private);
     }
     if (query?.type === "owner") {
-      repositories = repositories.filter((repository) => repository.owner.type === "User");
+      repositories = repositories.filter(
+        (repository) => repository.owner.type === "User",
+      );
     }
 
     const sortField = query?.sort ?? "updated";
@@ -936,12 +1018,14 @@ export class Context {
       }
       if (sortField === "created") {
         return (
-          (new Date(left.created_at).getTime() - new Date(right.created_at).getTime()) *
+          (new Date(left.created_at).getTime() -
+            new Date(right.created_at).getTime()) *
           direction
         );
       }
       return (
-        (new Date(left.updated_at).getTime() - new Date(right.updated_at).getTime()) *
+        (new Date(left.updated_at).getTime() -
+          new Date(right.updated_at).getTime()) *
         direction
       );
     });
@@ -951,7 +1035,13 @@ export class Context {
 
   listRepositoriesForOwner(
     owner: string,
-    query?: { type?: string; sort?: string; direction?: string; page?: unknown; per_page?: unknown },
+    query?: {
+      type?: string;
+      sort?: string;
+      direction?: string;
+      page?: unknown;
+      per_page?: unknown;
+    },
   ) {
     let repositories = this.listRepositories().filter(
       (repository) => repository.owner.login === owner,
@@ -968,7 +1058,8 @@ export class Context {
     repositories.sort((left, right) => {
       if (query?.sort === "created") {
         return (
-          (new Date(left.created_at).getTime() - new Date(right.created_at).getTime()) *
+          (new Date(left.created_at).getTime() -
+            new Date(right.created_at).getTime()) *
           direction
         );
       }
@@ -1010,9 +1101,13 @@ export class Context {
     const number = issueInput.number ?? state.nextIssueNumber++;
     const existing = state.issues.get(number);
     const id = issueInput.id ?? existing?.id ?? this.nextIssueId++;
-    const author = issueInput.user ?? existing?.user ?? toSimpleUser(this.ensureDefaultUser());
+    const author =
+      issueInput.user ??
+      existing?.user ??
+      toSimpleUser(this.ensureDefaultUser());
     const repoUrl = `${API_URL}/repos/${owner}/${repo}`;
-    const comments = state.issueComments.get(number)?.size ?? existing?.comments ?? 0;
+    const comments =
+      state.issueComments.get(number)?.size ?? existing?.comments ?? 0;
     const nextIssue: issue = {
       ...(existing ?? {}),
       ...issueInput,
@@ -1040,8 +1135,8 @@ export class Context {
       comments,
       closed_at:
         issueInput.state === "closed"
-          ? issueInput.closed_at ?? existing?.closed_at ?? now
-          : issueInput.closed_at ?? existing?.closed_at ?? "",
+          ? (issueInput.closed_at ?? existing?.closed_at ?? now)
+          : (issueInput.closed_at ?? existing?.closed_at ?? ""),
       created_at: existing?.created_at ?? issueInput.created_at ?? now,
       updated_at: now,
       draft: issueInput.draft ?? existing?.draft ?? false,
@@ -1049,13 +1144,19 @@ export class Context {
       body_html: issueInput.body_html ?? existing?.body_html,
       body_text: issueInput.body_text ?? existing?.body_text ?? issueInput.body,
       timeline_url:
-        issueInput.timeline_url ?? existing?.timeline_url ?? `${repoUrl}/issues/${number}/timeline`,
+        issueInput.timeline_url ??
+        existing?.timeline_url ??
+        `${repoUrl}/issues/${number}/timeline`,
       type: issueInput.type ?? existing?.type,
-      repository: issueInput.repository ?? existing?.repository ?? state.repository,
+      repository:
+        issueInput.repository ?? existing?.repository ?? state.repository,
       performed_via_github_app:
-        issueInput.performed_via_github_app ?? existing?.performed_via_github_app,
+        issueInput.performed_via_github_app ??
+        existing?.performed_via_github_app,
       author_association:
-        issueInput.author_association ?? existing?.author_association ?? "OWNER",
+        issueInput.author_association ??
+        existing?.author_association ??
+        "OWNER",
       reactions: issueInput.reactions ?? existing?.reactions,
       sub_issues_summary:
         issueInput.sub_issues_summary ?? existing?.sub_issues_summary,
@@ -1063,18 +1164,24 @@ export class Context {
         issueInput.parent_issue_url ?? existing?.parent_issue_url,
       pinned_comment: issueInput.pinned_comment ?? existing?.pinned_comment,
       issue_dependencies_summary:
-        issueInput.issue_dependencies_summary ?? existing?.issue_dependencies_summary,
+        issueInput.issue_dependencies_summary ??
+        existing?.issue_dependencies_summary,
       issue_field_values:
         issueInput.issue_field_values ?? existing?.issue_field_values,
     };
 
     state.issues.set(number, nextIssue);
+    state.nextIssueNumber = Math.max(state.nextIssueNumber, number + 1);
     this.nextIssueId = Math.max(this.nextIssueId, id + 1);
     this.syncRepoCounts(owner, repo);
     return nextIssue;
   }
 
-  getIssue(owner: string, repo: string, issueNumber: number): issue | undefined {
+  getIssue(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+  ): issue | undefined {
     return this.getRepoState(owner, repo)?.issues.get(issueNumber);
   }
 
@@ -1095,17 +1202,23 @@ export class Context {
     let filtered = issues;
 
     if (query?.state && query.state !== "all") {
-      filtered = filtered.filter((issueItem) => issueItem.state === query.state);
+      filtered = filtered.filter(
+        (issueItem) => issueItem.state === query.state,
+      );
     }
     if (query?.creator) {
-      filtered = filtered.filter((issueItem) => issueItem.user?.login === query.creator);
+      filtered = filtered.filter(
+        (issueItem) => issueItem.user?.login === query.creator,
+      );
     }
     if (query?.labels) {
-      const labels = query.labels.split(",").map((label) => label.trim().toLowerCase());
+      const labels = query.labels
+        .split(",")
+        .map((label) => label.trim().toLowerCase());
       filtered = filtered.filter((issueItem) =>
         labels.every((label) =>
           issueItem.labels.some((item) =>
-            String(typeof item === "string" ? item : item.name ?? "")
+            String(typeof item === "string" ? item : (item.name ?? ""))
               .toLowerCase()
               .includes(label),
           ),
@@ -1120,12 +1233,14 @@ export class Context {
       }
       if (query?.sort === "created") {
         return (
-          (new Date(left.created_at).getTime() - new Date(right.created_at).getTime()) *
+          (new Date(left.created_at).getTime() -
+            new Date(right.created_at).getTime()) *
           direction
         );
       }
       return (
-        (new Date(left.updated_at).getTime() - new Date(right.updated_at).getTime()) *
+        (new Date(left.updated_at).getTime() -
+          new Date(right.updated_at).getTime()) *
         direction
       );
     });
@@ -1146,7 +1261,8 @@ export class Context {
     }
 
     const now = isoNow();
-    const comments = state.issueComments.get(issueNumber) ?? new Map<number, issue_comment>();
+    const comments =
+      state.issueComments.get(issueNumber) ?? new Map<number, issue_comment>();
     const id = comment.id ?? this.nextIssueCommentId++;
     const existing = comments.get(id);
     const issueUrl = `${API_URL}/repos/${owner}/${repo}/issues/${issueNumber}`;
@@ -1159,7 +1275,10 @@ export class Context {
       body: comment.body,
       body_text: comment.body,
       html_url: `${APP_URL}/${owner}/${repo}/issues/${issueNumber}#issuecomment-${id}`,
-      user: comment.user ?? existing?.user ?? toSimpleUser(this.ensureDefaultUser()),
+      user:
+        comment.user ??
+        existing?.user ??
+        toSimpleUser(this.ensureDefaultUser()),
       created_at: existing?.created_at ?? comment.created_at ?? now,
       updated_at: now,
       issue_url: issueUrl,
@@ -1185,7 +1304,9 @@ export class Context {
     query?: { page?: unknown; per_page?: unknown },
   ) {
     const comments = [
-      ...(this.getRepoState(owner, repo)?.issueComments.get(issueNumber)?.values() ?? []),
+      ...(this.getRepoState(owner, repo)
+        ?.issueComments.get(issueNumber)
+        ?.values() ?? []),
     ].sort((left, right) => left.id - right.id);
     return paginate(comments, query);
   }
@@ -1210,14 +1331,24 @@ export class Context {
     const number = pullInput.number ?? state.nextPullNumber++;
     const existing = state.pulls.get(number);
     const id = pullInput.id ?? existing?.id ?? this.nextPullId++;
-    const author = pullInput.user ?? existing?.user ?? toSimpleUser(this.ensureDefaultUser());
-    const headRef = pullInput.head.ref ?? (typeof pullInput.head === "string" ? pullInput.head : "feature-branch");
-    const baseRef = pullInput.base.ref ?? (typeof pullInput.base === "string" ? pullInput.base : state.repository.default_branch);
+    const author =
+      pullInput.user ??
+      existing?.user ??
+      toSimpleUser(this.ensureDefaultUser());
+    const headRef =
+      pullInput.head.ref ??
+      (typeof pullInput.head === "string" ? pullInput.head : "feature-branch");
+    const baseRef =
+      pullInput.base.ref ??
+      (typeof pullInput.base === "string"
+        ? pullInput.base
+        : state.repository.default_branch);
     const headRepo = pullInput.head.repo ?? state.repository;
     const baseRepo = pullInput.base.repo ?? state.repository;
     const headUser = pullInput.head.user ?? author;
     const baseUser = pullInput.base.user ?? state.repository.owner;
-    const reviewCount = state.reviews.get(number)?.size ?? existing?.review_comments ?? 0;
+    const reviewCount =
+      state.reviews.get(number)?.size ?? existing?.review_comments ?? 0;
     const sha = hashFor(owner, repo, "pull", number, headRef);
 
     const pullRequest: pull_request = {
@@ -1249,33 +1380,49 @@ export class Context {
       updated_at: now,
       closed_at:
         pullInput.state === "closed"
-          ? pullInput.closed_at ?? existing?.closed_at ?? now
-          : pullInput.closed_at ?? existing?.closed_at ?? "",
+          ? (pullInput.closed_at ?? existing?.closed_at ?? now)
+          : (pullInput.closed_at ?? existing?.closed_at ?? ""),
       merged_at: pullInput.merged_at ?? existing?.merged_at ?? "",
       merge_commit_sha:
-        pullInput.merge_commit_sha ?? existing?.merge_commit_sha ?? hashFor(owner, repo, number, "merge"),
+        pullInput.merge_commit_sha ??
+        existing?.merge_commit_sha ??
+        hashFor(owner, repo, number, "merge"),
       assignee: pullInput.assignee ?? existing?.assignee ?? null,
       assignees: pullInput.assignees ?? existing?.assignees ?? [],
       requested_reviewers:
         pullInput.requested_reviewers ?? existing?.requested_reviewers ?? [],
-      requested_teams: pullInput.requested_teams ?? existing?.requested_teams ?? [],
+      requested_teams:
+        pullInput.requested_teams ?? existing?.requested_teams ?? [],
       head: {
-        label: pullInput.head.label ?? existing?.head.label ?? `${headUser.login}:${headRef}`,
+        label:
+          pullInput.head.label ??
+          existing?.head.label ??
+          `${headUser.login}:${headRef}`,
         ref: headRef,
         repo: headRepo,
         sha: pullInput.head.sha ?? existing?.head.sha ?? sha,
         user: headUser,
       },
       base: {
-        label: pullInput.base.label ?? existing?.base.label ?? `${baseRepo.full_name}:${baseRef}`,
+        label:
+          pullInput.base.label ??
+          existing?.base.label ??
+          `${baseRepo.full_name}:${baseRef}`,
         ref: baseRef,
         repo: baseRepo,
-        sha: pullInput.base.sha ?? existing?.base.sha ?? hashFor(owner, repo, baseRef),
+        sha:
+          pullInput.base.sha ??
+          existing?.base.sha ??
+          hashFor(owner, repo, baseRef),
         user: baseUser,
       },
       _links: {
-        comments: { href: `${API_URL}/repos/${owner}/${repo}/issues/${number}/comments` },
-        commits: { href: `${API_URL}/repos/${owner}/${repo}/pulls/${number}/commits` },
+        comments: {
+          href: `${API_URL}/repos/${owner}/${repo}/issues/${number}/comments`,
+        },
+        commits: {
+          href: `${API_URL}/repos/${owner}/${repo}/pulls/${number}/commits`,
+        },
         statuses: { href: `${API_URL}/repos/${owner}/${repo}/statuses/${sha}` },
         html: { href: `${APP_URL}/${owner}/${repo}/pull/${number}` },
         issue: { href: `${API_URL}/repos/${owner}/${repo}/issues/${number}` },
@@ -1289,7 +1436,8 @@ export class Context {
       },
       author_association:
         pullInput.author_association ?? existing?.author_association ?? "OWNER",
-      auto_merge: pullInput.auto_merge ?? existing?.auto_merge ?? (null as never),
+      auto_merge:
+        pullInput.auto_merge ?? existing?.auto_merge ?? (null as never),
       draft: pullInput.draft ?? existing?.draft ?? false,
       merged: pullInput.merged ?? existing?.merged ?? false,
       mergeable: pullInput.mergeable ?? existing?.mergeable ?? true,
@@ -1310,6 +1458,7 @@ export class Context {
     };
 
     state.pulls.set(number, pullRequest);
+    state.nextPullNumber = Math.max(state.nextPullNumber, number + 1);
     this.nextPullId = Math.max(this.nextPullId, id + 1);
     return pullRequest;
   }
@@ -1347,12 +1496,14 @@ export class Context {
     pulls.sort((left, right) => {
       if (query?.sort === "updated") {
         return (
-          (new Date(left.updated_at).getTime() - new Date(right.updated_at).getTime()) *
+          (new Date(left.updated_at).getTime() -
+            new Date(right.updated_at).getTime()) *
           direction
         );
       }
       return (
-        (new Date(left.created_at).getTime() - new Date(right.created_at).getTime()) *
+        (new Date(left.created_at).getTime() -
+          new Date(right.created_at).getTime()) *
         direction
       );
     });
@@ -1369,11 +1520,14 @@ export class Context {
     const state = this.getRepoState(owner, repo);
     const pullRequest = state?.pulls.get(pullNumber);
     if (!state || !pullRequest) {
-      throw new Error(`Pull request ${owner}/${repo}#${pullNumber} does not exist`);
+      throw new Error(
+        `Pull request ${owner}/${repo}#${pullNumber} does not exist`,
+      );
     }
 
     const now = isoNow();
-    const reviews = state.reviews.get(pullNumber) ?? new Map<number, pull_request_review>();
+    const reviews =
+      state.reviews.get(pullNumber) ?? new Map<number, pull_request_review>();
     const id = review.id ?? this.nextReviewId++;
     const existing = reviews.get(id);
     const fullReview: pull_request_review = {
@@ -1381,17 +1535,23 @@ export class Context {
       ...review,
       id,
       node_id: review.node_id ?? existing?.node_id ?? `RV_${id}`,
-      user: review.user ?? existing?.user ?? toSimpleUser(this.ensureDefaultUser()),
+      user:
+        review.user ?? existing?.user ?? toSimpleUser(this.ensureDefaultUser()),
       body: review.body ?? existing?.body ?? "",
       state: review.state ?? existing?.state ?? "COMMENTED",
       html_url: `${APP_URL}/${owner}/${repo}/pull/${pullNumber}#pullrequestreview-${id}`,
       pull_request_url: `${API_URL}/repos/${owner}/${repo}/pulls/${pullNumber}`,
       _links: {
-        html: { href: `${APP_URL}/${owner}/${repo}/pull/${pullNumber}#pullrequestreview-${id}` },
-        pull_request: { href: `${API_URL}/repos/${owner}/${repo}/pulls/${pullNumber}` },
+        html: {
+          href: `${APP_URL}/${owner}/${repo}/pull/${pullNumber}#pullrequestreview-${id}`,
+        },
+        pull_request: {
+          href: `${API_URL}/repos/${owner}/${repo}/pulls/${pullNumber}`,
+        },
       },
       submitted_at: review.submitted_at ?? existing?.submitted_at ?? now,
-      commit_id: review.commit_id ?? existing?.commit_id ?? pullRequest.head.sha,
+      commit_id:
+        review.commit_id ?? existing?.commit_id ?? pullRequest.head.sha,
       body_html: review.body_html ?? existing?.body_html,
       body_text: review.body_text ?? existing?.body_text ?? review.body,
       author_association:
@@ -1412,7 +1572,8 @@ export class Context {
     query?: { page?: unknown; per_page?: unknown },
   ) {
     const reviews = [
-      ...(this.getRepoState(owner, repo)?.reviews.get(pullNumber)?.values() ?? []),
+      ...(this.getRepoState(owner, repo)?.reviews.get(pullNumber)?.values() ??
+        []),
     ].sort((left, right) => left.id - right.id);
     return paginate(reviews, query);
   }
@@ -1453,9 +1614,9 @@ export class Context {
     repo: string,
     query?: { page?: unknown; per_page?: unknown },
   ) {
-    const workflows = [...(this.getRepoState(owner, repo)?.workflows.values() ?? [])].sort(
-      (left, right) => left.id - right.id,
-    );
+    const workflows = [
+      ...(this.getRepoState(owner, repo)?.workflows.values() ?? []),
+    ].sort((left, right) => left.id - right.id);
     return paginate(workflows, query);
   }
 
@@ -1474,7 +1635,9 @@ export class Context {
     const state = this.getRepoState(owner, repo);
     const workflowItem = state?.workflows.get(runInput.workflow_id);
     if (!state || !workflowItem) {
-      throw new Error(`Workflow ${runInput.workflow_id} for ${owner}/${repo} does not exist`);
+      throw new Error(
+        `Workflow ${runInput.workflow_id} for ${owner}/${repo} does not exist`,
+      );
     }
 
     const now = isoNow();
@@ -1488,8 +1651,11 @@ export class Context {
       check_suite_id: runInput.check_suite_id ?? id + 100,
       check_suite_node_id: runInput.check_suite_node_id ?? `CS_${id}`,
       head_branch: runInput.head_branch,
-      head_sha: runInput.head_sha ?? hashFor(owner, repo, runInput.head_branch, id),
-      path: runInput.path ?? `${owner}/${repo}/${workflowItem.path}@${runInput.head_branch}`,
+      head_sha:
+        runInput.head_sha ?? hashFor(owner, repo, runInput.head_branch, id),
+      path:
+        runInput.path ??
+        `${owner}/${repo}/${workflowItem.path}@${runInput.head_branch}`,
       run_number: runInput.run_number ?? id - 6999,
       run_attempt: runInput.run_attempt ?? 1,
       event: runInput.event,
@@ -1610,11 +1776,13 @@ export class Context {
         use_squash_pr_title_as_default:
           state.repository.use_squash_pr_title_as_default,
         squash_merge_commit_title: state.repository.squash_merge_commit_title,
-        squash_merge_commit_message: state.repository.squash_merge_commit_message,
+        squash_merge_commit_message:
+          state.repository.squash_merge_commit_message,
         merge_commit_title: state.repository.merge_commit_title,
         merge_commit_message: state.repository.merge_commit_message,
         allow_forking: state.repository.allow_forking,
-        web_commit_signoff_required: state.repository.web_commit_signoff_required,
+        web_commit_signoff_required:
+          state.repository.web_commit_signoff_required,
         subscribers_count: state.repository.subscribers_count,
         network_count: state.repository.network_count,
         license: state.repository.license,
@@ -1746,12 +1914,18 @@ export class Context {
     owner: string,
     repo: string,
     runId: number,
-    jobInput: Partial<job> & { name: string; status: job["status"]; conclusion: job["conclusion"] },
+    jobInput: Partial<job> & {
+      name: string;
+      status: job["status"];
+      conclusion: job["conclusion"];
+    },
   ) {
     const state = this.getRepoState(owner, repo);
     const run = state?.runs.get(runId);
     if (!state || !run) {
-      throw new Error(`Workflow run ${runId} for ${owner}/${repo} does not exist`);
+      throw new Error(
+        `Workflow run ${runId} for ${owner}/${repo} does not exist`,
+      );
     }
 
     const now = isoNow();
@@ -1805,9 +1979,9 @@ export class Context {
     runId: number,
     query?: { filter?: string; page?: unknown; per_page?: unknown },
   ) {
-    const jobs = [...(this.getRepoState(owner, repo)?.jobs.get(runId) ?? [])].sort(
-      (left, right) => left.id - right.id,
-    );
+    const jobs = [
+      ...(this.getRepoState(owner, repo)?.jobs.get(runId) ?? []),
+    ].sort((left, right) => left.id - right.id);
     return paginate(jobs, query);
   }
 
@@ -1820,15 +1994,35 @@ export class Context {
   }) {
     const parsed = parseSearchQuery(query.q);
     let repositories = this.listRepositories().filter((repository) => {
-      const haystack = [repository.name, repository.full_name, repository.description]
+      const haystack = [
+        repository.name,
+        repository.full_name,
+        repository.description,
+      ]
         .join(" ")
         .toLowerCase();
       return (
         matchTerms(haystack, parsed.terms) &&
-        hasQualifier(parsed.qualifiers, "repo", (value) => repository.full_name.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "org", (value) => repository.owner.login.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "user", (value) => repository.owner.login.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "language", (value) => repository.language.toLowerCase() === value)
+        hasQualifier(
+          parsed.qualifiers,
+          "repo",
+          (value) => repository.full_name.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "org",
+          (value) => repository.owner.login.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "user",
+          (value) => repository.owner.login.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "language",
+          (value) => repository.language.toLowerCase() === value,
+        )
       );
     });
 
@@ -1839,7 +2033,8 @@ export class Context {
       }
       if (query.sort === "updated") {
         return (
-          (new Date(left.updated_at).getTime() - new Date(right.updated_at).getTime()) *
+          (new Date(left.updated_at).getTime() -
+            new Date(right.updated_at).getTime()) *
           direction
         );
       }
@@ -1866,75 +2061,101 @@ export class Context {
     per_page?: unknown;
   }) {
     const parsed = parseSearchQuery(query.q);
-    const wantPrs = parsed.qualifiers.get("is")?.some((value) =>
-      ["pr", "pull", "pull-request"].includes(value),
-    );
-    const wantIssues = parsed.qualifiers.get("is")?.some((value) => value === "issue");
+    const wantPrs = parsed.qualifiers
+      .get("is")
+      ?.some((value) => ["pr", "pull", "pull-request"].includes(value));
+    const wantIssues = parsed.qualifiers
+      .get("is")
+      ?.some((value) => value === "issue");
     const includeIssues = wantIssues || !wantPrs;
     const includePulls = wantPrs || !wantIssues;
 
     const issueItems = includeIssues
       ? this.listRepositories().flatMap((repository) =>
-          this.listIssues(repository.owner.login, repository.name, { state: "all" }).map(
-            (issueItem) => ({ ...issueItem, score: 1 }),
-          ),
+          this.listIssues(repository.owner.login, repository.name, {
+            state: "all",
+          }).map((issueItem) => ({ ...issueItem, score: 1 })),
         )
       : [];
 
     const pullItems = includePulls
       ? this.listRepositories().flatMap((repository) =>
-          this.listPullRequests(repository.owner.login, repository.name, { state: "all" }).map(
-            (pull) => ({
-              url: pull.issue_url,
-              repository_url: pull.base.repo.url,
-              labels_url: `${pull.issue_url}/labels{/name}`,
-              comments_url: pull.comments_url,
-              events_url: `${pull.issue_url}/events`,
+          this.listPullRequests(repository.owner.login, repository.name, {
+            state: "all",
+          }).map((pull) => ({
+            url: pull.issue_url,
+            repository_url: pull.base.repo.url,
+            labels_url: `${pull.issue_url}/labels{/name}`,
+            comments_url: pull.comments_url,
+            events_url: `${pull.issue_url}/events`,
+            html_url: pull.html_url,
+            id: pull.id,
+            node_id: pull.node_id,
+            number: pull.number,
+            title: pull.title,
+            locked: pull.locked,
+            active_lock_reason: pull.active_lock_reason,
+            assignees: pull.assignees,
+            user: pull.user,
+            labels: pull.labels,
+            state: pull.state,
+            assignee: pull.assignee,
+            milestone: pull.milestone,
+            comments: pull.comments,
+            created_at: pull.created_at,
+            updated_at: pull.updated_at,
+            closed_at: pull.closed_at,
+            pull_request: {
+              diff_url: pull.diff_url,
               html_url: pull.html_url,
-              id: pull.id,
-              node_id: pull.node_id,
-              number: pull.number,
-              title: pull.title,
-              locked: pull.locked,
-              active_lock_reason: pull.active_lock_reason,
-              assignees: pull.assignees,
-              user: pull.user,
-              labels: pull.labels,
-              state: pull.state,
-              assignee: pull.assignee,
-              milestone: pull.milestone,
-              comments: pull.comments,
-              created_at: pull.created_at,
-              updated_at: pull.updated_at,
-              closed_at: pull.closed_at,
-              pull_request: {
-                diff_url: pull.diff_url,
-                html_url: pull.html_url,
-                patch_url: pull.patch_url,
-                url: pull.url,
-                merged_at: pull.merged_at || undefined,
-              },
-              body: pull.body,
-              score: 1,
-              author_association: pull.author_association,
-              draft: pull.draft,
-              repository: pull.base.repo,
-            }),
-          ),
+              patch_url: pull.patch_url,
+              url: pull.url,
+              merged_at: pull.merged_at || undefined,
+            },
+            body: pull.body,
+            score: 1,
+            author_association: pull.author_association,
+            draft: pull.draft,
+            repository: pull.base.repo,
+          })),
         )
       : [];
 
     let items = [...issueItems, ...pullItems].filter((item) => {
-      const haystack = [item.title, item.body ?? "", item.repository?.full_name ?? ""]
+      const haystack = [
+        item.title,
+        item.body ?? "",
+        item.repository?.full_name ?? "",
+      ]
         .join(" ")
         .toLowerCase();
       return (
         matchTerms(haystack, parsed.terms) &&
-        hasQualifier(parsed.qualifiers, "repo", (value) => item.repository?.full_name.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "org", (value) => item.repository?.owner.login.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "user", (value) => item.repository?.owner.login.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "state", (value) => item.state.toLowerCase() === value) &&
-        hasQualifier(parsed.qualifiers, "author", (value) => item.user?.login?.toLowerCase() === value)
+        hasQualifier(
+          parsed.qualifiers,
+          "repo",
+          (value) => item.repository?.full_name.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "org",
+          (value) => item.repository?.owner.login.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "user",
+          (value) => item.repository?.owner.login.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "state",
+          (value) => item.state.toLowerCase() === value,
+        ) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "author",
+          (value) => item.user?.login?.toLowerCase() === value,
+        )
       );
     });
 
@@ -1942,7 +2163,8 @@ export class Context {
     items.sort((left, right) => {
       if (query.sort === "created") {
         return (
-          (new Date(left.created_at).getTime() - new Date(right.created_at).getTime()) *
+          (new Date(left.created_at).getTime() -
+            new Date(right.created_at).getTime()) *
           direction
         );
       }
@@ -1950,7 +2172,8 @@ export class Context {
         return (left.comments - right.comments) * direction;
       }
       return (
-        (new Date(left.updated_at).getTime() - new Date(right.updated_at).getTime()) *
+        (new Date(left.updated_at).getTime() -
+          new Date(right.updated_at).getTime()) *
         direction
       );
     });
