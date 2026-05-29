@@ -238,12 +238,48 @@ export const actions: Scenario = ($) => {
   });
 };
 
+export const releases: Scenario = ($) => {
+  $.context.saveRelease("counterfact", "platform-api", {
+    id: 601,
+    tag_name: "v1.0.0",
+    name: "v1.0.0",
+    body: "First stable release of the platform API.",
+    draft: false,
+    prerelease: false,
+    created_at: "2024-01-15T10:00:00Z",
+    published_at: "2024-01-15T10:00:00Z",
+  });
+
+  $.context.saveRelease("counterfact", "platform-api", {
+    id: 602,
+    tag_name: "v2.0.0-beta.1",
+    name: "v2.0.0-beta.1",
+    body: "Beta release with new stateful context features.",
+    draft: false,
+    prerelease: true,
+    created_at: "2024-03-01T12:00:00Z",
+    published_at: "2024-03-01T12:00:00Z",
+  });
+
+  $.context.saveRelease("counterfact", "platform-api", {
+    id: 603,
+    tag_name: "v2.0.0",
+    name: "v2.0.0",
+    body: "Draft of the next major release.",
+    draft: true,
+    prerelease: false,
+    created_at: "2024-04-01T08:00:00Z",
+    published_at: "",
+  });
+};
+
 export const seedGitHub: Scenario = ($) => {
   identities($);
   repositories($);
   issues($);
   pullRequests($);
   actions($);
+  releases($);
   gists($);
   gistComments($);
 };

@@ -13,6 +13,7 @@ import type { organization_simple } from "../types/components/schemas/organizati
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { pull_request } from "../types/components/schemas/pull-request.js";
 import type { pull_request_review } from "../types/components/schemas/pull-request-review.js";
+import type { release } from "../types/components/schemas/release.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { workflow } from "../types/components/schemas/workflow.js";
 import type { workflow_run } from "../types/components/schemas/workflow-run.js";
@@ -35,8 +36,10 @@ type RepoState = {
   workflows: Map<number, workflow>;
   runs: Map<number, workflow_run>;
   jobs: Map<number, Array<job>>;
+  releases: Map<number, release>;
   nextIssueNumber: number;
   nextPullNumber: number;
+  nextReleaseId: number;
 };
 
 const API_URL = "https://api.github.com";
@@ -235,6 +238,7 @@ export class Context {
   private nextWorkflowId = 6000;
   private nextRunId = 7000;
   private nextJobId = 8000;
+  private nextReleaseId = 9000;
   private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
@@ -640,8 +644,10 @@ export class Context {
       workflows: new Map(),
       runs: new Map(),
       jobs: new Map(),
+      releases: new Map(),
       nextIssueNumber: 1,
       nextPullNumber: 1,
+      nextReleaseId: 1,
     };
 
     state.repository = fullRepository;
@@ -1777,5 +1783,122 @@ export class Context {
       items: pagedItems,
       search_type: "lexical" as const,
     };
+  }
+
+  saveRelease(
+    owner: string,
+    repo: string,
+    releaseInput: Partial<release> & { tag_name: string },
+  ): release {
+    const state = this.getRepoState(owner, repo);
+    if (!state) {
+      throw new Error(`Repository ${owner}/${repo} does not exist`);
+    }
+
+    const now = isoNow();
+    const id = releaseInput.id ?? state.nextReleaseId++;
+    const existing = state.releases.get(id);
+    const author =
+      releaseInput.author ??
+      existing?.author ??
+      toSimpleUser(this.ensureDefaultUser());
+    const repoUrl = `${API_URL}/repos/${owner}/${repo}`;
+    const releaseUrl = `${repoUrl}/releases/${id}`;
+
+    const fullRelease: release = {
+      ...(existing ?? {}),
+      ...releaseInput,
+      id,
+      node_id: releaseInput.node_id ?? existing?.node_id ?? `RE_${id}`,
+      url: releaseUrl,
+      html_url: `${APP_URL}/${owner}/${repo}/releases/tag/${releaseInput.tag_name}`,
+      assets_url: `${releaseUrl}/assets`,
+      upload_url: `https://uploads.github.com/repos/${owner}/${repo}/releases/${id}/assets{?name,label}`,
+      tarball_url: `${APP_URL}/${owner}/${repo}/archive/${releaseInput.tag_name}.tar.gz`,
+      zipball_url: `${APP_URL}/${owner}/${repo}/archive/${releaseInput.tag_name}.zip`,
+      tag_name: releaseInput.tag_name,
+      target_commitish:
+        releaseInput.target_commitish ??
+        existing?.target_commitish ??
+        state.repository.default_branch,
+      name: releaseInput.name ?? existing?.name ?? releaseInput.tag_name,
+      body: releaseInput.body ?? existing?.body ?? "",
+      draft: releaseInput.draft ?? existing?.draft ?? false,
+      prerelease: releaseInput.prerelease ?? existing?.prerelease ?? false,
+      created_at: existing?.created_at ?? releaseInput.created_at ?? now,
+      published_at:
+        (releaseInput.draft ?? existing?.draft ?? false)
+          ? (releaseInput.published_at ?? existing?.published_at ?? "")
+          : (releaseInput.published_at ?? existing?.published_at ?? now),
+      author,
+      assets: releaseInput.assets ?? existing?.assets ?? [],
+    };
+
+    state.releases.set(id, fullRelease);
+    state.nextReleaseId = Math.max(state.nextReleaseId, id + 1);
+    this.nextReleaseId = Math.max(this.nextReleaseId, id + 1);
+    return fullRelease;
+  }
+
+  getRelease(owner: string, repo: string, id: number): release | undefined {
+    return this.getRepoState(owner, repo)?.releases.get(id);
+  }
+
+  getReleaseByTag(
+    owner: string,
+    repo: string,
+    tag: string,
+  ): release | undefined {
+    return [...(this.getRepoState(owner, repo)?.releases.values() ?? [])].find(
+      (r) => r.tag_name === tag,
+    );
+  }
+
+  getLatestRelease(owner: string, repo: string): release | undefined {
+    const candidates = [
+      ...(this.getRepoState(owner, repo)?.releases.values() ?? []),
+    ].filter((r) => !r.draft && !r.prerelease && r.published_at);
+    if (candidates.length === 0) return undefined;
+    return candidates.reduce((latest, current) =>
+      new Date(current.published_at).getTime() >
+      new Date(latest.published_at).getTime()
+        ? current
+        : latest,
+    );
+  }
+
+  updateRelease(
+    owner: string,
+    repo: string,
+    id: number,
+    patch: Partial<release>,
+  ): release | undefined {
+    const existing = this.getRelease(owner, repo, id);
+    if (!existing) return undefined;
+    return this.saveRelease(owner, repo, {
+      ...existing,
+      ...patch,
+      id,
+      tag_name: patch.tag_name ?? existing.tag_name,
+    });
+  }
+
+  deleteRelease(owner: string, repo: string, id: number): boolean {
+    return this.getRepoState(owner, repo)?.releases.delete(id) ?? false;
+  }
+
+  listReleases(
+    owner: string,
+    repo: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): release[] {
+    const releases = [
+      ...(this.getRepoState(owner, repo)?.releases.values() ?? []),
+    ].sort(
+      (left, right) =>
+        new Date(right.created_at).getTime() -
+        new Date(left.created_at).getTime(),
+    );
+    return paginate(releases, query);
   }
 }

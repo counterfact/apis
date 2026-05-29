@@ -34,6 +34,17 @@ import {
   GET as getRepo,
   PATCH as patchRepo,
 } from "../routes/repos/{owner}/{repo}.ts";
+import {
+  GET as getReleases,
+  POST as postRelease,
+} from "../routes/repos/{owner}/{repo}/releases.ts";
+import {
+  GET as getRelease,
+  PATCH as patchRelease,
+  DELETE as deleteRelease,
+} from "../routes/repos/{owner}/{repo}/releases/{release_id}.ts";
+import { GET as getLatestRelease } from "../routes/repos/{owner}/{repo}/releases/latest.ts";
+import { GET as getReleaseByTag } from "../routes/repos/{owner}/{repo}/releases/tags/{tag}.ts";
 import { GET as getSearchIssues } from "../routes/search/issues.ts";
 import { GET as getSearchRepos } from "../routes/search/repositories.ts";
 import {
@@ -354,4 +365,144 @@ test("actions, identity, and search routes return seeded data", async () => {
     }) as never,
   )) as RouteResult;
   assert.equal((issueSearch.body as { total_count: number }).total_count, 1);
+});
+
+test("release routes manage the full release lifecycle", async () => {
+  const context = createSeededContext();
+
+  // GET /repos/:owner/:repo/releases returns the seeded list
+  const listed = (await getReleases(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(listed.status, 200);
+  assert.equal((listed.body as Array<unknown>).length, 3);
+
+  // POST /repos/:owner/:repo/releases creates and returns 201
+  const created = (await postRelease(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+      body: { tag_name: "v3.0.0", name: "Version 3.0.0", body: "New release" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(created.status, 201);
+  assert.equal((created.body as { tag_name: string }).tag_name, "v3.0.0");
+  const newId = (created.body as { id: number }).id;
+
+  // GET /repos/:owner/:repo/releases/:id returns the release
+  const fetched = (await getRelease(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", release_id: newId },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(fetched.status, 200);
+  assert.equal((fetched.body as { tag_name: string }).tag_name, "v3.0.0");
+
+  // PATCH /repos/:owner/:repo/releases/:id updates and returns 200
+  const patched = (await patchRelease(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", release_id: newId },
+      body: { name: "Version 3.0.0 (updated)" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(patched.status, 200);
+  assert.equal(
+    (patched.body as { name: string }).name,
+    "Version 3.0.0 (updated)",
+  );
+
+  // DELETE /repos/:owner/:repo/releases/:id returns 204
+  const deleted = (await deleteRelease(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", release_id: newId },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(deleted.status, 204);
+
+  // GET /repos/:owner/:repo/releases/latest returns the latest stable release
+  const latest = (await getLatestRelease(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(latest.status, 200);
+  assert.equal((latest.body as { tag_name: string }).tag_name, "v1.0.0");
+
+  // GET /repos/:owner/:repo/releases/tags/:tag returns the matching release
+  const byTag = (await getReleaseByTag(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        tag: "v2.0.0-beta.1",
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(byTag.status, 200);
+  assert.equal((byTag.body as { tag_name: string }).tag_name, "v2.0.0-beta.1");
+});
+
+test("release routes return 404 when repository does not exist", async () => {
+  const context = createSeededContext();
+  const missingPath = { owner: "nobody", repo: "missing" };
+
+  const listed = (await getReleases(
+    create$({ context, path: missingPath }) as never,
+  )) as RouteResult;
+  assert.equal(listed.status, 404);
+
+  const created = (await postRelease(
+    create$({
+      context,
+      path: missingPath,
+      body: { tag_name: "v1.0.0" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(created.status, 404);
+
+  const fetched = (await getRelease(
+    create$({
+      context,
+      path: { ...missingPath, release_id: 1 },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(fetched.status, 404);
+
+  const patched = (await patchRelease(
+    create$({
+      context,
+      path: { ...missingPath, release_id: 1 },
+      body: { name: "x" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(patched.status, 404);
+
+  const deleted = (await deleteRelease(
+    create$({
+      context,
+      path: { ...missingPath, release_id: 1 },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(deleted.status, 404);
+
+  const latest = (await getLatestRelease(
+    create$({ context, path: missingPath }) as never,
+  )) as RouteResult;
+  assert.equal(latest.status, 404);
+
+  const byTag = (await getReleaseByTag(
+    create$({
+      context,
+      path: { ...missingPath, tag: "v1.0.0" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(byTag.status, 404);
 });
