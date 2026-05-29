@@ -16,8 +16,9 @@ import type { pull_request_review } from "../types/components/schemas/pull-reque
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { workflow } from "../types/components/schemas/workflow.js";
 import type { workflow_run } from "../types/components/schemas/workflow-run.js";
-import { Context as GistsContext } from "./gists/_.context.js";
-import { Context as UsersContext, toSimpleUser } from "./users/_.context.js";
+import type { Context as GistsContext } from "./gists/_.context.js";
+import { toSimpleUser } from "./users/_.context.js";
+import type { Context as UsersContext } from "./users/_.context.js";
 
 type RepoKey = `${string}/${string}`;
 
@@ -235,39 +236,7 @@ export class Context {
   private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
-    if (typeof $.loadContext === "function") {
-      this.loadContext = $.loadContext;
-      return;
-    }
-
-    const contexts = new Map<string, unknown>();
-    const localContext$ = {
-      ...$,
-      loadContext: ((path: string) => {
-        if (path === "/") {
-          return this;
-        }
-        const existing = contexts.get(path);
-        if (existing) {
-          return existing;
-        }
-
-        let created: unknown;
-        switch (path) {
-          case "/gists":
-            created = new GistsContext(localContext$ as Context$);
-            break;
-          case "/users":
-            created = new UsersContext(localContext$ as Context$);
-            break;
-          default:
-            throw new Error(`Unknown context path: ${path}`);
-        }
-        contexts.set(path, created);
-        return created;
-      }) as Context$["loadContext"],
-    } as Context$;
-    this.loadContext = localContext$.loadContext;
+    this.loadContext = $.loadContext;
   }
 
   private gistsContext(): GistsContext {
