@@ -219,3 +219,73 @@ test("Context.listComments returns empty array for unknown gist", () => {
   const context = new Context({} as never);
   assert.deepEqual(context.listComments("nonexistent"), []);
 });
+
+test("Context stores repositories, issues, pull requests, and workflows with stable lookup", () => {
+  const context = new Context({} as never);
+
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveOrganization({ id: 10, login: "counterfact", name: "Counterfact" });
+  context.saveRepository({
+    id: 101,
+    owner: "counterfact",
+    name: "platform-api",
+    readme: "# Platform API\n",
+    branches: ["main", "feature-routing"],
+  });
+  context.saveIssue("counterfact", "platform-api", {
+    number: 1,
+    title: "Support repository fixtures",
+    user: context.getUser("octocat"),
+  });
+  context.saveIssueComment("counterfact", "platform-api", 1, {
+    body: "Need one more assertion.",
+    user: context.getUser("octocat"),
+  });
+  context.savePullRequest("counterfact", "platform-api", {
+    number: 1,
+    title: "Add stateful routes",
+    head: "octocat:feature-routing",
+    base: "main",
+    user: context.getUser("octocat"),
+  });
+  context.savePullRequestReview("counterfact", "platform-api", 1, {
+    body: "Looks good.",
+    user: context.getUser("octocat"),
+  });
+  context.saveWorkflow("counterfact", "platform-api", {
+    id: 301,
+    name: "CI",
+    path: ".github/workflows/ci.yml",
+  });
+  context.saveWorkflowRun("counterfact", "platform-api", {
+    id: 401,
+    workflow_id: 301,
+    head_branch: "main",
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+    display_title: "CI on main",
+    actor: context.getUser("octocat"),
+  });
+  context.saveWorkflowJob("counterfact", "platform-api", 401, {
+    id: 501,
+    name: "test",
+    status: "completed",
+    conclusion: "success",
+  });
+
+  assert.equal(context.getOrganization("counterfact")?.login, "counterfact");
+  assert.equal(context.getRepository("counterfact", "platform-api")?.id, 101);
+  assert.equal(context.getRepositoryReadme("counterfact", "platform-api")?.name, "README.md");
+  assert.equal(
+    context.getRepositoryBranch("counterfact", "platform-api", "feature-routing")?.name,
+    "feature-routing",
+  );
+  assert.equal(context.getIssue("counterfact", "platform-api", 1)?.comments, 1);
+  assert.equal(context.listIssueComments("counterfact", "platform-api", 1).length, 1);
+  assert.equal(context.getPullRequest("counterfact", "platform-api", 1)?.title, "Add stateful routes");
+  assert.equal(context.listPullRequestReviews("counterfact", "platform-api", 1).length, 1);
+  assert.equal(context.listWorkflows("counterfact", "platform-api").length, 1);
+  assert.equal(context.listWorkflowRuns("counterfact", "platform-api").length, 1);
+  assert.equal(context.listWorkflowJobs("counterfact", "platform-api", 401).length, 1);
+});
