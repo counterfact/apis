@@ -36,6 +36,7 @@ type RepoState = {
 
 const API_URL = "https://api.github.com";
 const APP_URL = "https://github.com";
+const GIST_URL = "https://gist.github.com";
 const DEFAULT_USER_LOGIN = "octocat";
 const DEFAULT_PAGE_SIZE = 30;
 
@@ -459,10 +460,10 @@ export class Context {
         existing?.commits_url ??
         `${API_URL}/gists/${id}/commits`,
       git_pull_url:
-        gist.git_pull_url ?? existing?.git_pull_url ?? `${APP_URL}/${id}.git`,
+        gist.git_pull_url ?? existing?.git_pull_url ?? `${GIST_URL}/${id}.git`,
       git_push_url:
-        gist.git_push_url ?? existing?.git_push_url ?? `${APP_URL}/${id}.git`,
-      html_url: gist.html_url ?? existing?.html_url ?? `${APP_URL}/${id}`,
+        gist.git_push_url ?? existing?.git_push_url ?? `${GIST_URL}/${id}.git`,
+      html_url: gist.html_url ?? existing?.html_url ?? `${GIST_URL}/${id}`,
       files: gist.files,
       public: gist.public ?? existing?.public ?? true,
       created_at: existing?.created_at ?? gist.created_at ?? now,

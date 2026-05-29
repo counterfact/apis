@@ -17,7 +17,19 @@ test("Context.saveGist assigns an id and sets URL fields", () => {
   assert.equal(gist.description, "Hello World");
   assert.equal(gist.public, true);
   assert.ok(gist.url?.includes(gist.id!), "url should contain the gist id");
+  assert.ok(
+    gist.html_url?.startsWith("https://gist.github.com/"),
+    "html_url should point at gist.github.com",
+  );
   assert.ok(gist.html_url?.includes(gist.id!));
+  assert.ok(
+    gist.git_pull_url?.startsWith("https://gist.github.com/"),
+    "git_pull_url should point at gist.github.com",
+  );
+  assert.ok(
+    gist.git_push_url?.startsWith("https://gist.github.com/"),
+    "git_push_url should point at gist.github.com",
+  );
   assert.ok(gist.created_at);
   assert.ok(gist.updated_at);
 });
