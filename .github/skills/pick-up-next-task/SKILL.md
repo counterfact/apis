@@ -1,3 +1,8 @@
+---
+name: pick-up-next-task
+description: Picks and completes the next repository task from `.github/todo` when asked to "pick up the next task".
+---
+
 # Pick up the next task
 
 When the user says **"pick up the next task"**, follow this workflow:
