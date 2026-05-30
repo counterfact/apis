@@ -1,4 +1,4 @@
-import type { Scenario$ } from "../types/_.context";
+import type { Scenario$ } from "../types/_.context.ts";
 
 /**
  * Scenario scripts are plain TypeScript functions that receive the live REPL
@@ -129,11 +129,4 @@ const help = () => {
   );
 };
 
-module.exports = {
-  startup,
-  pets,
-  users,
-  orders,
-  petStore,
-  help,
-};
+export { startup, pets, users, orders, petStore, help };

@@ -1,4 +1,4 @@
-import type { Scenario } from "../types/_.context.js";
+import type { Scenario } from "../types/_.context.ts";
 
 export const gists: Scenario = ($) => {
   $.context.saveGist({
