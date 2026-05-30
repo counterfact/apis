@@ -19,6 +19,13 @@ import {
   POST as postIssueComment,
 } from "../routes/repos/{owner}/{repo}/issues/{issue_number}/comments.ts";
 import {
+  GET as getIssueLabels,
+  POST as postIssueLabels,
+  PUT as putIssueLabels,
+  DELETE as deleteIssueLabels,
+} from "../routes/repos/{owner}/{repo}/issues/{issue_number}/labels.ts";
+import { DELETE as deleteIssueLabel } from "../routes/repos/{owner}/{repo}/issues/{issue_number}/labels/{name}.ts";
+import {
   GET as getIssue,
   PATCH as patchIssue,
 } from "../routes/repos/{owner}/{repo}/issues/{issue_number}.ts";
@@ -26,6 +33,15 @@ import {
   GET as getIssues,
   POST as postIssue,
 } from "../routes/repos/{owner}/{repo}/issues.ts";
+import {
+  GET as getLabel,
+  PATCH as patchLabel,
+  DELETE as deleteLabel,
+} from "../routes/repos/{owner}/{repo}/labels/{name}.ts";
+import {
+  GET as getLabels,
+  POST as postLabel,
+} from "../routes/repos/{owner}/{repo}/labels.ts";
 import {
   GET as getPullReviews,
   POST as postPullReview,
@@ -375,6 +391,231 @@ test("issue routes manage issue lifecycle and comments", async () => {
     }) as never,
   )) as RouteResult;
   assert.equal((comments.body as Array<unknown>).length, 2);
+});
+
+test("label routes manage repository and issue labels", async () => {
+  const context = createSeededContext();
+
+  const listed = (await getLabels(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(listed.status, 200);
+  assert.deepEqual(
+    (listed.body as Array<{ name: string }>).map((item) => item.name),
+    ["bug", "enhancement", "documentation", "question"],
+  );
+
+  const created = (await postLabel(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+      body: {
+        name: "triage",
+        color: "fbca04",
+        description: "Needs triage",
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(created.status, 201);
+  assert.equal((created.body as { name: string }).name, "triage");
+
+  const fetched = (await getLabel(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", name: "triage" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(fetched.status, 200);
+
+  const patched = (await patchLabel(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", name: "triage" },
+      body: { new_name: "needs-triage", color: "c2e0c6" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((patched.body as { name: string }).name, "needs-triage");
+
+  const issueLabels = (await getIssueLabels(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", issue_number: 1 },
+    }) as never,
+  )) as RouteResult;
+  assert.deepEqual(
+    (issueLabels.body as Array<{ name: string }>).map((item) => item.name),
+    ["enhancement"],
+  );
+
+  const added = (await postIssueLabels(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", issue_number: 1 },
+      body: { labels: ["bug", "needs-triage"] },
+    }) as never,
+  )) as RouteResult;
+  assert.deepEqual(
+    (added.body as Array<{ name: string }>).map((item) => item.name),
+    ["enhancement", "bug", "needs-triage"],
+  );
+
+  const replaced = (await putIssueLabels(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", issue_number: 1 },
+      body: ["question"],
+    }) as never,
+  )) as RouteResult;
+  assert.deepEqual(
+    (replaced.body as Array<{ name: string }>).map((item) => item.name),
+    ["question"],
+  );
+
+  const removed = (await deleteIssueLabel(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        issue_number: 1,
+        name: "question",
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.deepEqual(removed.body, []);
+
+  const cleared = (await deleteIssueLabels(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", issue_number: 1 },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(cleared.status, 204);
+
+  const deleted = (await deleteLabel(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api", name: "needs-triage" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(deleted.status, 204);
+});
+
+test("label routes return 404 when the repository or issue does not exist", async () => {
+  const context = createSeededContext();
+  const missingRepo = { owner: "nobody", repo: "missing" };
+
+  assert.equal(
+    (
+      (await getLabels(create$({ context, path: missingRepo }) as never)) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await postLabel(
+        create$({
+          context,
+          path: missingRepo,
+          body: { name: "bug", color: "d73a4a" },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await getLabel(
+        create$({ context, path: { ...missingRepo, name: "bug" } }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await patchLabel(
+        create$({
+          context,
+          path: { ...missingRepo, name: "bug" },
+          body: { color: "000000" },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await deleteLabel(
+        create$({ context, path: { ...missingRepo, name: "bug" } }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await getIssueLabels(
+        create$({
+          context,
+          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await postIssueLabels(
+        create$({
+          context,
+          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+          body: { labels: ["bug"] },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await putIssueLabels(
+        create$({
+          context,
+          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+          body: [],
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await deleteIssueLabels(
+        create$({
+          context,
+          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await deleteIssueLabel(
+        create$({
+          context,
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            issue_number: 999,
+            name: "bug",
+          },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
 });
 
 test("pull request routes manage reviews and updates", async () => {

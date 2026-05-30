@@ -155,7 +155,6 @@ export const issues: Scenario = ($) => {
     body: "Add lightweight issue discovery for the seeded repository data.",
     state: "closed",
     state_reason: "completed",
-    labels: [{ name: "search", color: "0e8a16", default: false }],
     user: $.context.getUser("hubot"),
   });
 
@@ -163,6 +162,29 @@ export const issues: Scenario = ($) => {
     id: 11,
     body: "Repository routes are the best first slice.",
     user: $.context.getUser("octocat"),
+  });
+};
+
+export const labels: Scenario = ($) => {
+  $.context.saveLabel("counterfact", "platform-api", {
+    name: "bug",
+    color: "d73a4a",
+    description: "Something isn't working",
+  });
+  $.context.saveLabel("counterfact", "platform-api", {
+    name: "enhancement",
+    color: "84b6eb",
+    description: "New feature or request",
+  });
+  $.context.saveLabel("counterfact", "platform-api", {
+    name: "documentation",
+    color: "0075ca",
+    description: "Improvements or additions to documentation",
+  });
+  $.context.saveLabel("counterfact", "platform-api", {
+    name: "question",
+    color: "d876e3",
+    description: "Further information is requested",
   });
 };
 
@@ -300,6 +322,7 @@ export const releases: Scenario = ($) => {
 export const seedGitHub: Scenario = ($) => {
   void identities($);
   void repositories($);
+  void labels($);
   void issues($);
   void pullRequests($);
   void actions($);

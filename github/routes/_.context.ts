@@ -212,6 +212,26 @@ export class Context {
     return this.reposContext().listCommitComments(...args);
   }
 
+  saveLabel(...args: Parameters<ReposContext["saveLabel"]>) {
+    return this.reposContext().saveLabel(...args);
+  }
+
+  getLabel(...args: Parameters<ReposContext["getLabel"]>) {
+    return this.reposContext().getLabel(...args);
+  }
+
+  updateLabel(...args: Parameters<ReposContext["updateLabel"]>) {
+    return this.reposContext().updateLabel(...args);
+  }
+
+  deleteLabel(...args: Parameters<ReposContext["deleteLabel"]>) {
+    return this.reposContext().deleteLabel(...args);
+  }
+
+  listLabels(...args: Parameters<ReposContext["listLabels"]>) {
+    return this.reposContext().listLabels(...args);
+  }
+
   saveIssue(...args: Parameters<ReposContext["saveIssue"]>) {
     return this.reposContext().saveIssue(...args);
   }
@@ -230,6 +250,24 @@ export class Context {
 
   listIssueComments(...args: Parameters<ReposContext["listIssueComments"]>) {
     return this.reposContext().listIssueComments(...args);
+  }
+
+  addLabelToIssue(...args: Parameters<ReposContext["addLabelToIssue"]>) {
+    return this.reposContext().addLabelToIssue(...args);
+  }
+
+  removeLabelFromIssue(
+    ...args: Parameters<ReposContext["removeLabelFromIssue"]>
+  ) {
+    return this.reposContext().removeLabelFromIssue(...args);
+  }
+
+  replaceIssueLabels(...args: Parameters<ReposContext["replaceIssueLabels"]>) {
+    return this.reposContext().replaceIssueLabels(...args);
+  }
+
+  listIssueLabels(...args: Parameters<ReposContext["listIssueLabels"]>) {
+    return this.reposContext().listIssueLabels(...args);
   }
 
   savePullRequest(...args: Parameters<ReposContext["savePullRequest"]>) {

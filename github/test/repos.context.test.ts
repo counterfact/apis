@@ -191,6 +191,118 @@ test("Context.savePullRequest correctly parses owner:branch format for head and 
   );
 });
 
+test("Context label methods manage repository labels and issue associations", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+  });
+  context.saveRepository({
+    id: 101,
+    owner: "counterfact",
+    name: "platform-api",
+  });
+
+  const saved = context.saveLabel("counterfact", "platform-api", {
+    name: "bug",
+    color: "d73a4a",
+    description: "Something isn't working",
+  });
+  assert.equal(saved.name, "bug");
+  assert.match(saved.node_id, /^LA_/);
+  assert.equal(saved.default, false);
+  assert.match(saved.url, /\/repos\/counterfact\/platform-api\/labels\/bug$/);
+  assert.equal(context.listLabels("counterfact", "platform-api").length, 1);
+
+  context.saveIssue("counterfact", "platform-api", {
+    number: 1,
+    title: "Support labels",
+    labels: [{ name: "bug", color: "d73a4a" }],
+  });
+  assert.equal(
+    (context.getIssue("counterfact", "platform-api", 1)?.labels[0] as { id: number })
+      .id,
+    saved.id,
+  );
+
+  const renamed = context.updateLabel("counterfact", "platform-api", "bug", {
+    name: "type: bug",
+  });
+  assert.equal(renamed?.name, "type: bug");
+  assert.equal(context.getLabel("counterfact", "platform-api", "bug"), undefined);
+  assert.equal(
+    (context.getIssue("counterfact", "platform-api", 1)?.labels[0] as { name: string })
+      .name,
+    "type: bug",
+  );
+
+  assert.equal(
+    context.deleteLabel("counterfact", "platform-api", "missing"),
+    false,
+  );
+});
+
+test("Context label methods add, remove, and replace issue labels", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveOrganization({
+    id: 10,
+    login: "counterfact",
+    name: "Counterfact",
+  });
+  context.saveRepository({
+    id: 101,
+    owner: "counterfact",
+    name: "platform-api",
+  });
+  context.saveIssue("counterfact", "platform-api", {
+    number: 1,
+    title: "Support labels",
+  });
+  context.saveLabel("counterfact", "platform-api", {
+    name: "bug",
+    color: "d73a4a",
+  });
+  context.saveLabel("counterfact", "platform-api", {
+    name: "enhancement",
+    color: "84b6eb",
+  });
+  context.saveLabel("counterfact", "platform-api", {
+    name: "question",
+    color: "d876e3",
+  });
+
+  const added = context.addLabelToIssue("counterfact", "platform-api", 1, [
+    "bug",
+    "enhancement",
+  ]);
+  assert.deepEqual(
+    added.map((item) => item.name),
+    ["bug", "enhancement"],
+  );
+
+  assert.equal(
+    context.removeLabelFromIssue("counterfact", "platform-api", 1, "bug"),
+    true,
+  );
+  assert.deepEqual(
+    context.listIssueLabels("counterfact", "platform-api", 1).map((item) => item.name),
+    ["enhancement"],
+  );
+
+  const replaced = context.replaceIssueLabels("counterfact", "platform-api", 1, [
+    "question",
+  ]);
+  assert.deepEqual(
+    replaced.map((item) => item.name),
+    ["question"],
+  );
+});
+
 test("Context commit methods resolve refs, paginate, and manage statuses/comments", () => {
   const context = createContext();
 
