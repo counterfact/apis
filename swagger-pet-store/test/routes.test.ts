@@ -123,8 +123,8 @@ test("pet store API supports core CRUD flows", async () => {
   assert.equal(seededUser.username, "jane.doe");
 
   const seededLoginQuery = new URLSearchParams({
-    password: "pass123",
     username: "jane.doe",
+    password: "pass123",
   });
   const seededLoginResponse = await request(
     `/user/login?${seededLoginQuery.toString()}`,
@@ -137,14 +137,14 @@ test("pet store API supports core CRUD flows", async () => {
   assert.equal(seededOrder.petId, 1);
 
   const createPetResponse = await request("/pet", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
       name: "doggie",
       photoUrls: [],
       status: "available",
       tags: [{ id: 1, name: "tag-1" }],
     }),
-    headers: { "content-type": "application/json" },
-    method: "POST",
   });
   assert.equal(createPetResponse.status, 200);
   const createdPet = await createPetResponse.json();
@@ -173,34 +173,34 @@ test("pet store API supports core CRUD flows", async () => {
   assert.ok(inventory.available >= 1);
 
   const createUserResponse = await request("/user", {
-    body: JSON.stringify({
-      firstName: "Jane",
-      password: "pass123",
-      username: "user1",
-    }),
-    headers: { "content-type": "application/json" },
     method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      username: "user1",
+      password: "pass123",
+      firstName: "Jane",
+    }),
   });
   assert.equal(createUserResponse.status, 200);
   assert.equal(context.getUser("user1")?.firstName, "Jane");
 
   const loginQuery = new URLSearchParams({
-    password: "pass123",
     username: "user1",
+    password: "pass123",
   });
   const loginResponse = await request(`/user/login?${loginQuery.toString()}`);
   assert.equal(loginResponse.status, 200);
   assert.equal(loginResponse.headers.get("X-Rate-Limit"), "1000");
 
   const createOrderResponse = await request("/store/order", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      complete: false,
       petId: createdPet.id,
       quantity: 1,
       status: "placed",
+      complete: false,
     }),
-    headers: { "content-type": "application/json" },
-    method: "POST",
   });
   assert.equal(createOrderResponse.status, 200);
   const createdOrder = await createOrderResponse.json();
