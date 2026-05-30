@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 import test from "node:test";
 import { Context } from "../routes/_.context.ts";
 import { GET as getWorkflowJobs } from "../routes/repos/{owner}/{repo}/actions/runs/{run_id}/jobs.ts";
@@ -109,6 +110,126 @@ const createSeededContext = () => {
     route: () => ({}),
   });
   return context;
+};
+
+const startCommitRoutesHttpServer = async () => {
+  const context = createSeededContext();
+  const server = createServer(async (req, res) => {
+    const method = req.method ?? "GET";
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const query = Object.fromEntries(url.searchParams.entries());
+    const path = url.pathname;
+
+    let result: RouteResult | undefined;
+
+    const statusesMatch = path.match(
+      /^\/repos\/([^/]+)\/([^/]+)\/commits\/([^/]+)\/statuses$/,
+    );
+    if (method === "GET" && statusesMatch) {
+      const [, owner, repo, ref] = statusesMatch;
+      result = (await getCommitStatuses(
+        create$({ context, path: { owner, repo, ref }, query }) as never,
+      )) as RouteResult;
+    }
+
+    const statusMatch = path.match(
+      /^\/repos\/([^/]+)\/([^/]+)\/commits\/([^/]+)\/status$/,
+    );
+    if (!result && method === "GET" && statusMatch) {
+      const [, owner, repo, ref] = statusMatch;
+      result = (await getCombinedCommitStatus(
+        create$({ context, path: { owner, repo, ref } }) as never,
+      )) as RouteResult;
+    }
+
+    const commentsMatch = path.match(
+      /^\/repos\/([^/]+)\/([^/]+)\/commits\/([^/]+)\/comments$/,
+    );
+    if (!result && commentsMatch) {
+      const [, owner, repo, commit_sha] = commentsMatch;
+      if (method === "GET") {
+        result = (await getCommitComments(
+          create$({
+            context,
+            path: { owner, repo, commit_sha },
+            query,
+          }) as never,
+        )) as RouteResult;
+      }
+      if (method === "POST") {
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of req) {
+          chunks.push(chunk);
+        }
+        const bodyText = Buffer.concat(chunks).toString("utf8");
+        const body = bodyText
+          ? (JSON.parse(bodyText) as Record<string, unknown>)
+          : {};
+        result = (await postCommitComment(
+          create$({
+            context,
+            path: { owner, repo, commit_sha },
+            body,
+          }) as never,
+        )) as RouteResult;
+      }
+    }
+
+    const commitMatch = path.match(
+      /^\/repos\/([^/]+)\/([^/]+)\/commits\/([^/]+)$/,
+    );
+    if (!result && method === "GET" && commitMatch) {
+      const [, owner, repo, ref] = commitMatch;
+      result = (await getCommit(
+        create$({ context, path: { owner, repo, ref } }) as never,
+      )) as RouteResult;
+    }
+
+    const commitsMatch = path.match(/^\/repos\/([^/]+)\/([^/]+)\/commits$/);
+    if (!result && method === "GET" && commitsMatch) {
+      const [, owner, repo] = commitsMatch;
+      result = (await getCommits(
+        create$({ context, path: { owner, repo }, query }) as never,
+      )) as RouteResult;
+    }
+
+    if (!result) {
+      res.statusCode = 404;
+      res.end();
+      return;
+    }
+
+    res.statusCode = result.status;
+    if (result.body === undefined) {
+      res.end();
+      return;
+    }
+
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify(result.body));
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+    server.on("error", reject);
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("failed to determine HTTP test server address");
+  }
+
+  return {
+    request: (pathname: string, init?: RequestInit) =>
+      fetch(`http://127.0.0.1:${address.port}${pathname}`, init),
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      }),
+  };
 };
 
 test("repository routes list, create, fetch, update, branch, and readme data", async () => {
@@ -321,143 +442,94 @@ test("pull request routes manage reviews and updates", async () => {
 });
 
 test("commit routes list commits, fetch refs, comments, and statuses", async () => {
-  const context = createSeededContext();
+  const server = await startCommitRoutesHttpServer();
+  try {
+    const listed = await server.request(
+      "/repos/counterfact/actions-demo/commits",
+    );
+    assert.equal(listed.status, 200);
+    assert.ok(((await listed.json()) as Array<unknown>).length >= 1);
 
-  const listed = (await getCommits(
-    create$({
-      context,
-      path: { owner: "counterfact", repo: "actions-demo" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(listed.status, 200);
-  assert.ok((listed.body as Array<unknown>).length >= 1);
+    const byBranch = await server.request(
+      "/repos/counterfact/actions-demo/commits/main",
+    );
+    assert.equal(byBranch.status, 200);
+    const sha = ((await byBranch.json()) as { sha: string }).sha;
 
-  const byBranch = (await getCommit(
-    create$({
-      context,
-      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(byBranch.status, 200);
-  const sha = (byBranch.body as { sha: string }).sha;
+    const commentsBefore = await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments`,
+    );
+    assert.equal(((await commentsBefore.json()) as Array<unknown>).length, 0);
 
-  const commentsBefore = (await getCommitComments(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
+    const createdComment = await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          body: "Nice commit",
+          path: "README.md",
+          line: 1,
+        }),
       },
-    }) as never,
-  )) as RouteResult;
-  assert.equal((commentsBefore.body as Array<unknown>).length, 0);
+    );
+    assert.equal(createdComment.status, 201);
 
-  const createdComment = (await postCommitComment(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
+    await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ body: "Another comment" }),
       },
-      body: { body: "Nice commit", path: "README.md", line: 1 },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(createdComment.status, 201);
-
-  await postCommitComment(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
+    );
+    await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ body: "Third comment" }),
       },
-      body: { body: "Another comment" },
-    }) as never,
-  );
-  await postCommitComment(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
-      },
-      body: { body: "Third comment" },
-    }) as never,
-  );
+    );
 
-  const commentsAfter = (await getCommitComments(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
-      },
-    }) as never,
-  )) as RouteResult;
-  assert.equal((commentsAfter.body as Array<unknown>).length, 3);
+    const commentsAfter = await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments`,
+    );
+    assert.equal(((await commentsAfter.json()) as Array<unknown>).length, 3);
 
-  const pagedComments1 = (await getCommitComments(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
-      },
-      query: { per_page: 2, page: 1 },
-    }) as never,
-  )) as RouteResult;
-  const pagedComments2 = (await getCommitComments(
-    create$({
-      context,
-      path: {
-        owner: "counterfact",
-        repo: "actions-demo",
-        commit_sha: sha,
-      },
-      query: { per_page: 2, page: 2 },
-    }) as never,
-  )) as RouteResult;
-  assert.equal((pagedComments1.body as Array<unknown>).length, 2);
-  assert.equal((pagedComments2.body as Array<unknown>).length, 1);
+    const pagedComments1 = await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments?per_page=2&page=1`,
+    );
+    const pagedComments2 = await server.request(
+      `/repos/counterfact/actions-demo/commits/${sha}/comments?per_page=2&page=2`,
+    );
+    assert.equal(((await pagedComments1.json()) as Array<unknown>).length, 2);
+    assert.equal(((await pagedComments2.json()) as Array<unknown>).length, 1);
 
-  const combinedStatus = (await getCombinedCommitStatus(
-    create$({
-      context,
-      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal((combinedStatus.body as { state: string }).state, "success");
+    const combinedStatus = await server.request(
+      "/repos/counterfact/actions-demo/commits/main/status",
+    );
+    assert.equal(
+      ((await combinedStatus.json()) as { state: string }).state,
+      "success",
+    );
 
-  const statuses = (await getCommitStatuses(
-    create$({
-      context,
-      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal((statuses.body as Array<unknown>).length, 2);
+    const statuses = await server.request(
+      "/repos/counterfact/actions-demo/commits/main/statuses",
+    );
+    assert.equal(((await statuses.json()) as Array<unknown>).length, 2);
 
-  const pagedStatuses1 = (await getCommitStatuses(
-    create$({
-      context,
-      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
-      query: { per_page: 1, page: 1 },
-    }) as never,
-  )) as RouteResult;
-  const pagedStatuses2 = (await getCommitStatuses(
-    create$({
-      context,
-      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
-      query: { per_page: 1, page: 2 },
-    }) as never,
-  )) as RouteResult;
-  assert.equal((pagedStatuses1.body as Array<unknown>).length, 1);
-  assert.equal((pagedStatuses2.body as Array<unknown>).length, 1);
+    const pagedStatuses1 = await server.request(
+      "/repos/counterfact/actions-demo/commits/main/statuses?per_page=1&page=1",
+    );
+    const pagedStatuses2 = await server.request(
+      "/repos/counterfact/actions-demo/commits/main/statuses?per_page=1&page=2",
+    );
+    assert.equal(((await pagedStatuses1.json()) as Array<unknown>).length, 1);
+    assert.equal(((await pagedStatuses2.json()) as Array<unknown>).length, 1);
+  } finally {
+    await server.close();
+  }
 });
 
 test("actions, identity, and search routes return seeded data", async () => {
@@ -516,54 +588,41 @@ test("actions, identity, and search routes return seeded data", async () => {
 });
 
 test("commit routes return 404 when repository does not exist", async () => {
-  const context = createSeededContext();
-  const missing = { owner: "nobody", repo: "missing" };
+  const server = await startCommitRoutesHttpServer();
+  try {
+    const commits = await server.request("/repos/nobody/missing/commits");
+    assert.equal(commits.status, 404);
 
-  const commits = (await getCommits(
-    create$({ context, path: missing }) as never,
-  )) as RouteResult;
-  assert.equal(commits.status, 404);
+    const commit = await server.request("/repos/nobody/missing/commits/main");
+    assert.equal(commit.status, 404);
 
-  const commit = (await getCommit(
-    create$({
-      context,
-      path: { ...missing, ref: "main" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(commit.status, 404);
+    const comments = await server.request(
+      "/repos/nobody/missing/commits/abc123/comments",
+    );
+    assert.equal(comments.status, 404);
 
-  const comments = (await getCommitComments(
-    create$({
-      context,
-      path: { ...missing, commit_sha: "abc123" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(comments.status, 404);
+    const created = await server.request(
+      "/repos/nobody/missing/commits/abc123/comments",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ body: "x" }),
+      },
+    );
+    assert.equal(created.status, 404);
 
-  const created = (await postCommitComment(
-    create$({
-      context,
-      path: { ...missing, commit_sha: "abc123" },
-      body: { body: "x" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(created.status, 404);
+    const combined = await server.request(
+      "/repos/nobody/missing/commits/main/status",
+    );
+    assert.equal(combined.status, 404);
 
-  const combined = (await getCombinedCommitStatus(
-    create$({
-      context,
-      path: { ...missing, ref: "main" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(combined.status, 404);
-
-  const statuses = (await getCommitStatuses(
-    create$({
-      context,
-      path: { ...missing, ref: "main" },
-    }) as never,
-  )) as RouteResult;
-  assert.equal(statuses.status, 404);
+    const statuses = await server.request(
+      "/repos/nobody/missing/commits/main/statuses",
+    );
+    assert.equal(statuses.status, 404);
+  } finally {
+    await server.close();
+  }
 });
 
 test("release routes manage the full release lifecycle", async () => {
