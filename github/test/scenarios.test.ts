@@ -130,7 +130,9 @@ test("issues, pull requests, and actions scenarios seed related data", () => {
     2,
   );
   assert.deepEqual(
-    $.context.listLabels("counterfact", "platform-api").map((item) => item.name),
+    $.context
+      .listLabels("counterfact", "platform-api")
+      .map((item) => item.name),
     ["bug", "enhancement", "documentation", "question"],
   );
 });

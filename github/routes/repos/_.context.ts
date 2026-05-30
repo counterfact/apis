@@ -1197,7 +1197,10 @@ export class Context {
     repo: string,
     query?: { page?: unknown; per_page?: unknown },
   ): label[] {
-    return paginate([...(this.getRepoState(owner, repo)?.labels.values() ?? [])], query);
+    return paginate(
+      [...(this.getRepoState(owner, repo)?.labels.values() ?? [])],
+      query,
+    );
   }
 
   saveIssue(

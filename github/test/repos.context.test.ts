@@ -223,8 +223,11 @@ test("Context label methods manage repository labels and issue associations", ()
     labels: [{ name: "bug", color: "d73a4a" }],
   });
   assert.equal(
-    (context.getIssue("counterfact", "platform-api", 1)?.labels[0] as { id: number })
-      .id,
+    (
+      context.getIssue("counterfact", "platform-api", 1)?.labels[0] as {
+        id: number;
+      }
+    ).id,
     saved.id,
   );
 
@@ -232,10 +235,16 @@ test("Context label methods manage repository labels and issue associations", ()
     name: "type: bug",
   });
   assert.equal(renamed?.name, "type: bug");
-  assert.equal(context.getLabel("counterfact", "platform-api", "bug"), undefined);
   assert.equal(
-    (context.getIssue("counterfact", "platform-api", 1)?.labels[0] as { name: string })
-      .name,
+    context.getLabel("counterfact", "platform-api", "bug"),
+    undefined,
+  );
+  assert.equal(
+    (
+      context.getIssue("counterfact", "platform-api", 1)?.labels[0] as {
+        name: string;
+      }
+    ).name,
     "type: bug",
   );
 
@@ -290,13 +299,18 @@ test("Context label methods add, remove, and replace issue labels", () => {
     true,
   );
   assert.deepEqual(
-    context.listIssueLabels("counterfact", "platform-api", 1).map((item) => item.name),
+    context
+      .listIssueLabels("counterfact", "platform-api", 1)
+      .map((item) => item.name),
     ["enhancement"],
   );
 
-  const replaced = context.replaceIssueLabels("counterfact", "platform-api", 1, [
-    "question",
-  ]);
+  const replaced = context.replaceIssueLabels(
+    "counterfact",
+    "platform-api",
+    1,
+    ["question"],
+  );
   assert.deepEqual(
     replaced.map((item) => item.name),
     ["question"],

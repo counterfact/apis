@@ -498,7 +498,11 @@ test("label routes manage repository and issue labels", async () => {
   const deleted = (await deleteLabel(
     create$({
       context,
-      path: { owner: "counterfact", repo: "platform-api", name: "needs-triage" },
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        name: "needs-triage",
+      },
     }) as never,
   )) as RouteResult;
   assert.equal(deleted.status, 204);
@@ -510,7 +514,9 @@ test("label routes return 404 when the repository or issue does not exist", asyn
 
   assert.equal(
     (
-      (await getLabels(create$({ context, path: missingRepo }) as never)) as RouteResult
+      (await getLabels(
+        create$({ context, path: missingRepo }) as never,
+      )) as RouteResult
     ).status,
     404,
   );
@@ -559,7 +565,11 @@ test("label routes return 404 when the repository or issue does not exist", asyn
       (await getIssueLabels(
         create$({
           context,
-          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            issue_number: 999,
+          },
         }) as never,
       )) as RouteResult
     ).status,
@@ -570,7 +580,11 @@ test("label routes return 404 when the repository or issue does not exist", asyn
       (await postIssueLabels(
         create$({
           context,
-          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            issue_number: 999,
+          },
           body: { labels: ["bug"] },
         }) as never,
       )) as RouteResult
@@ -582,7 +596,11 @@ test("label routes return 404 when the repository or issue does not exist", asyn
       (await putIssueLabels(
         create$({
           context,
-          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            issue_number: 999,
+          },
           body: [],
         }) as never,
       )) as RouteResult
@@ -594,7 +612,11 @@ test("label routes return 404 when the repository or issue does not exist", asyn
       (await deleteIssueLabels(
         create$({
           context,
-          path: { owner: "counterfact", repo: "platform-api", issue_number: 999 },
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            issue_number: 999,
+          },
         }) as never,
       )) as RouteResult
     ).status,

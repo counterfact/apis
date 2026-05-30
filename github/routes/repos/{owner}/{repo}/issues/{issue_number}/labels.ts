@@ -53,7 +53,12 @@ export const GET: issuesListLabelsOnIssue = async ($) => {
   }
 
   return $.response[200].json(
-    $.context.listIssueLabels($.path.owner, $.path.repo, $.path.issue_number, $.query),
+    $.context.listIssueLabels(
+      $.path.owner,
+      $.path.repo,
+      $.path.issue_number,
+      $.query,
+    ),
   );
 };
 

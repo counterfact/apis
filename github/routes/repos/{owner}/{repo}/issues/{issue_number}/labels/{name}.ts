@@ -21,10 +21,6 @@ export const DELETE: issuesRemoveLabel = async ($) => {
   }
 
   return $.response[200].json(
-    $.context.listIssueLabels(
-      $.path.owner,
-      $.path.repo,
-      $.path.issue_number,
-    ),
+    $.context.listIssueLabels($.path.owner, $.path.repo, $.path.issue_number),
   );
 };
