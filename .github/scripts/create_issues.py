@@ -4,7 +4,8 @@
 Reads file paths from the PROPOSAL_FILES environment variable (newline-separated),
 parses the YAML front matter, validates required fields, creates a GitHub issue
 via the gh CLI, and optionally links it as a sub-issue when a parent can be
-resolved from front matter or the branch name.
+resolved from front matter or the branch name. The issue body includes a
+proposal marker so reruns can skip proposals that already created an issue.
 
 Exit codes:
   0 – all proposals processed successfully (or no proposals found)
@@ -17,6 +18,8 @@ import subprocess
 import sys
 
 import yaml
+
+PROPOSAL_MARKER_PREFIX = "cf-proposal-path:"
 
 
 def parse_proposal(filepath):
@@ -133,6 +136,35 @@ def create_github_issue(repo, title, body, labels, assignees, milestone):
     return issue_number, issue_id, issue_url
 
 
+def build_proposal_marker(proposal_path):
+    """Return the unique body marker for a proposal file path."""
+    return f"{PROPOSAL_MARKER_PREFIX}{proposal_path}"
+
+
+def issue_body_with_marker(body, proposal_path):
+    """Append proposal marker to an issue body for idempotency."""
+    marker = build_proposal_marker(proposal_path)
+    return f"{body.rstrip()}\n\n<!-- {marker} -->"
+
+
+def find_existing_issue_for_proposal(repo, proposal_path):
+    """Return existing issue number for proposal_path, or None."""
+    marker = build_proposal_marker(proposal_path)
+    query = f'repo:{repo} is:issue state:all in:body "{marker}"'
+    result = _gh(
+        "api",
+        "search/issues",
+        "-f",
+        f"q={query}",
+        "--jq",
+        ".items[0].number // empty",
+    )
+    value = result.stdout.strip()
+    if not value:
+        return None
+    return int(value)
+
+
 def add_sub_issue(repo, parent_number, child_issue_id):
     """Register the issue identified by child_issue_id as a sub-issue of parent_number."""
     result = _gh(
@@ -194,6 +226,11 @@ def main():
             failed = True
             continue
 
+        existing_issue = find_existing_issue_for_proposal(repo, filepath)
+        if existing_issue is not None:
+            print(f"  Skipping: issue already exists for {filepath} as #{existing_issue}")
+            continue
+
         parent_issue = resolve_parent_issue(metadata, ref)
 
         print(f"  Title:        {title}")
@@ -205,10 +242,11 @@ def main():
         labels = [str(lbl) for lbl in (metadata.get("labels") or [])]
         assignees = [str(a) for a in (metadata.get("assignees") or [])]
         milestone = metadata.get("milestone")
+        body_with_marker = issue_body_with_marker(body, filepath)
 
         try:
             issue_number, issue_id, issue_url = create_github_issue(
-                repo, title, body, labels, assignees, milestone
+                repo, title, body_with_marker, labels, assignees, milestone
             )
         except RuntimeError as exc:
             print(f"  Error creating issue: {exc}", file=sys.stderr)
