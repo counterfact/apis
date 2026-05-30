@@ -1,4 +1,6 @@
-# Implement Commits domain in the GitHub API simulator
+---
+title: Implement Commits domain in the GitHub API simulator
+---
 
 ## Summary
 

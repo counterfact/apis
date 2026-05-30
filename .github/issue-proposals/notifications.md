@@ -1,4 +1,6 @@
-# Implement Notifications domain in the GitHub API simulator
+---
+title: Implement Notifications domain in the GitHub API simulator
+---
 
 ## Summary
 
