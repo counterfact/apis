@@ -21,7 +21,6 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      - response status
      - response body/headers as applicable
      - resulting state changes
-   - Keep HTTP integration coverage in `test/routes.test.ts` rather than
      placeholder `dummy` test files.
 
 3. **Implement state and business logic in route context files**
