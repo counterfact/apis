@@ -330,7 +330,7 @@ test("commit routes list commits, fetch refs, comments, and statuses", async () 
     }) as never,
   )) as RouteResult;
   assert.equal(listed.status, 200);
-  assert.equal((listed.body as Array<unknown>).length >= 1, true);
+  assert.ok((listed.body as Array<unknown>).length >= 1);
 
   const byBranch = (await getCommit(
     create$({
