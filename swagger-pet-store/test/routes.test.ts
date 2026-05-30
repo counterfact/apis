@@ -1,17 +1,12 @@
 import assert from "node:assert/strict";
 import net from "node:net";
-import { createRequire } from "node:module";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { counterfact } from "counterfact";
 import { Context } from "../routes/_.context.ts";
+import { petStore } from "../scenarios/index.ts";
 
-const require = createRequire(import.meta.url);
-const { petStore } = require("../scenarios/index.ts");
 const basePath = fileURLToPath(new URL("../", import.meta.url));
-const counterfactModuleUrl = new URL(
-  "../node_modules/counterfact/dist/app.js",
-  import.meta.url,
-).href;
 const openApiPath = fileURLToPath(new URL("../openapi.yaml", import.meta.url));
 
 let port: number;
@@ -58,7 +53,6 @@ const getFreePort = async () =>
 
 test.before(async () => {
   port = await getFreePort();
-  const { counterfact } = await import(counterfactModuleUrl);
   const config = {
     adminApiToken: "",
     alwaysFakeOptionals: false,

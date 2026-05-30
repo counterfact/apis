@@ -129,7 +129,7 @@ const help = () => {
   );
 };
 
-module.exports = {
+export {
   startup,
   pets,
   users,
