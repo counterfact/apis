@@ -881,7 +881,14 @@ export class Context {
       );
     }
 
-    return paginate(commits, query);
+    const resolvedDefaultBranchCommit = this.resolveCommitRef(
+      state,
+      state.repository.default_branch,
+    );
+    return paginate(
+      resolvedDefaultBranchCommit ? [resolvedDefaultBranchCommit] : [],
+      query,
+    );
   }
 
   saveCommitStatus(
@@ -923,18 +930,27 @@ export class Context {
     return created;
   }
 
-  listCommitStatuses(owner: string, repo: string, sha: string): status[] {
+  listCommitStatuses(
+    owner: string,
+    repo: string,
+    sha: string,
+    query?: { per_page?: unknown; page?: unknown },
+  ): status[] {
     const state = this.getRepoState(owner, repo);
     const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
     if (!state || !commitItem) {
       return [];
     }
 
-    return [...(state.commitStatuses.get(commitItem.sha) ?? [])].sort(
-      (left, right) =>
-        new Date(right.created_at).getTime() -
-        new Date(left.created_at).getTime(),
+    const statuses = [...(state.commitStatuses.get(commitItem.sha) ?? [])].sort(
+      (left, right) => {
+        const byDate =
+          new Date(right.created_at).getTime() -
+          new Date(left.created_at).getTime();
+        return byDate !== 0 ? byDate : right.id - left.id;
+      },
     );
+    return paginate(statuses, query);
   }
 
   getCombinedStatus(
@@ -949,15 +965,22 @@ export class Context {
     }
 
     const statuses = this.listCommitStatuses(owner, repo, commitItem.sha);
+    const latestStatusesByContext = new Map<string, status>();
+    for (const item of statuses) {
+      if (!latestStatusesByContext.has(item.context)) {
+        latestStatusesByContext.set(item.context, item);
+      }
+    }
+    const latestStatuses = [...latestStatusesByContext.values()];
     let combinedState = "success";
 
-    if (statuses.some((item) => item.state === "failure")) {
+    if (latestStatuses.some((item) => item.state === "failure")) {
       combinedState = "failure";
-    } else if (statuses.some((item) => item.state === "error")) {
+    } else if (latestStatuses.some((item) => item.state === "error")) {
       combinedState = "error";
     } else if (
-      statuses.length === 0 ||
-      statuses.some((item) => item.state === "pending")
+      latestStatuses.length === 0 ||
+      latestStatuses.some((item) => item.state === "pending")
     ) {
       combinedState = "pending";
     }
@@ -1029,6 +1052,7 @@ export class Context {
     owner: string,
     repo: string,
     sha: string,
+    query?: { per_page?: unknown; page?: unknown },
   ): commit_comment[] {
     const state = this.getRepoState(owner, repo);
     const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
@@ -1036,9 +1060,10 @@ export class Context {
       return [];
     }
 
-    return [...(state.commitComments.get(commitItem.sha) ?? [])].sort(
+    const comments = [...(state.commitComments.get(commitItem.sha) ?? [])].sort(
       (left, right) => left.id - right.id,
     );
+    return paginate(comments, query);
   }
 
   saveIssue(

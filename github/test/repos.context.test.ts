@@ -219,58 +219,136 @@ test("Context commit methods resolve refs, paginate, and manage statuses/comment
   const bySha = context.getCommit("octocat", "hello-world", mainCommit!.sha);
   assert.equal(bySha?.sha, mainCommit!.sha);
 
+  const defaultBranchCommits = context.listCommits("octocat", "hello-world");
+  assert.equal(defaultBranchCommits.length, 1);
+  assert.equal(defaultBranchCommits[0].sha, mainCommit!.sha);
+
   const filtered = context.listCommits("octocat", "hello-world", {
     sha: "dev",
   });
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].sha, devCommit!.sha);
 
-  const page1 = context.listCommits("octocat", "hello-world", {
-    per_page: 2,
-    page: 1,
-  });
-  const page2 = context.listCommits("octocat", "hello-world", {
-    per_page: 2,
-    page: 2,
-  });
-  assert.equal(page1.length, 2);
-  assert.equal(page2.length, 1);
+  const lintStatus = context.saveCommitStatus(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      state: "success",
+      context: "ci/lint",
+    },
+  );
+  const testFailedStatus = context.saveCommitStatus(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      state: "failure",
+      context: "ci/test",
+    },
+  );
+  const testRecoveredStatus = context.saveCommitStatus(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      state: "success",
+      context: "ci/test",
+    },
+  );
+  const sameTimestamp = "2024-01-01T00:00:00.000Z";
+  lintStatus.created_at = sameTimestamp;
+  testFailedStatus.created_at = sameTimestamp;
+  testRecoveredStatus.created_at = sameTimestamp;
 
-  context.saveCommitStatus("octocat", "hello-world", mainCommit!.sha, {
-    state: "success",
-    context: "ci/lint",
-  });
-  context.saveCommitStatus("octocat", "hello-world", mainCommit!.sha, {
-    state: "success",
-    context: "ci/test",
-  });
+  const statuses = context.listCommitStatuses(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+  );
+  assert.equal(statuses.length, 3);
+  assert.equal(statuses[0].id, testRecoveredStatus.id);
+
+  const statusPage1 = context.listCommitStatuses(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      per_page: 2,
+      page: 1,
+    },
+  );
+  const statusPage2 = context.listCommitStatuses(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      per_page: 2,
+      page: 2,
+    },
+  );
+  assert.equal(statusPage1.length, 2);
+  assert.equal(statusPage2.length, 1);
+  assert.equal(statusPage1[0].id, testRecoveredStatus.id);
+
   assert.equal(
     context.getCombinedStatus("octocat", "hello-world", "main")?.state,
     "success",
   );
 
   context.saveCommitStatus("octocat", "hello-world", mainCommit!.sha, {
-    state: "failure",
-    context: "ci/test",
+    state: "success",
+    context: "deploy/prod",
   });
   assert.equal(
     context.getCombinedStatus("octocat", "hello-world", "main")?.state,
-    "failure",
+    "success",
   );
 
-  const comment = context.saveCommitComment("octocat", "hello-world", "main", {
+  const comment1 = context.saveCommitComment("octocat", "hello-world", "main", {
     body: "Looks good",
     path: "README.md",
     line: 1,
   });
-  assert.ok(comment.id > 0);
-  assert.ok(comment.created_at);
-  assert.ok(comment.updated_at);
+  const comment2 = context.saveCommitComment("octocat", "hello-world", "main", {
+    body: "Please add tests",
+  });
+  const comment3 = context.saveCommitComment("octocat", "hello-world", "main", {
+    body: "Merged",
+  });
+  assert.ok(comment1.id > 0);
+  assert.ok(comment1.created_at);
+  assert.ok(comment1.updated_at);
+  assert.ok(comment2.id > comment1.id);
+  assert.ok(comment3.id > comment2.id);
   assert.equal(
     context.listCommitComments("octocat", "hello-world", mainCommit!.sha)
       .length,
-    1,
+    3,
   );
+
+  const commentPage1 = context.listCommitComments(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      per_page: 2,
+      page: 1,
+    },
+  );
+  const commentPage2 = context.listCommitComments(
+    "octocat",
+    "hello-world",
+    mainCommit!.sha,
+    {
+      per_page: 2,
+      page: 2,
+    },
+  );
+  assert.equal(commentPage1.length, 2);
+  assert.equal(commentPage2.length, 1);
+  assert.equal(commentPage1[0].id, comment1.id);
+  assert.equal(commentPage2[0].id, comment3.id);
 });
 
 test("Context.saveRelease creates a release with auto-generated fields and correct author", () => {

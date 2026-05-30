@@ -13,7 +13,7 @@ export const GET: reposListCommentsForCommit = async ($) => {
   }
 
   return $.response[200].json(
-    $.context.listCommitComments(owner, repo, commit.sha),
+    $.context.listCommitComments(owner, repo, commit.sha, $.query),
   );
 };
 

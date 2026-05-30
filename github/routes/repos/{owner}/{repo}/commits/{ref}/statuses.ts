@@ -12,6 +12,6 @@ export const GET: reposListCommitStatusesForRef = async ($) => {
   }
 
   return $.response[200].json(
-    $.context.listCommitStatuses(owner, repo, commit.sha),
+    $.context.listCommitStatuses(owner, repo, commit.sha, $.query),
   );
 };

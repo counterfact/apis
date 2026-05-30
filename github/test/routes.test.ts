@@ -366,6 +366,29 @@ test("commit routes list commits, fetch refs, comments, and statuses", async () 
   )) as RouteResult;
   assert.equal(createdComment.status, 201);
 
+  await postCommitComment(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+      body: { body: "Another comment" },
+    }) as never,
+  );
+  await postCommitComment(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+      body: { body: "Third comment" },
+    }) as never,
+  );
+
   const commentsAfter = (await getCommitComments(
     create$({
       context,
@@ -376,7 +399,32 @@ test("commit routes list commits, fetch refs, comments, and statuses", async () 
       },
     }) as never,
   )) as RouteResult;
-  assert.equal((commentsAfter.body as Array<unknown>).length, 1);
+  assert.equal((commentsAfter.body as Array<unknown>).length, 3);
+
+  const pagedComments1 = (await getCommitComments(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+      query: { per_page: 2, page: 1 },
+    }) as never,
+  )) as RouteResult;
+  const pagedComments2 = (await getCommitComments(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+      query: { per_page: 2, page: 2 },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((pagedComments1.body as Array<unknown>).length, 2);
+  assert.equal((pagedComments2.body as Array<unknown>).length, 1);
 
   const combinedStatus = (await getCombinedCommitStatus(
     create$({
@@ -393,6 +441,23 @@ test("commit routes list commits, fetch refs, comments, and statuses", async () 
     }) as never,
   )) as RouteResult;
   assert.equal((statuses.body as Array<unknown>).length, 2);
+
+  const pagedStatuses1 = (await getCommitStatuses(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
+      query: { per_page: 1, page: 1 },
+    }) as never,
+  )) as RouteResult;
+  const pagedStatuses2 = (await getCommitStatuses(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
+      query: { per_page: 1, page: 2 },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((pagedStatuses1.body as Array<unknown>).length, 1);
+  assert.equal((pagedStatuses2.body as Array<unknown>).length, 1);
 });
 
 test("actions, identity, and search routes return seeded data", async () => {
