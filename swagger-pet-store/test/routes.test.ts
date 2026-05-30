@@ -42,18 +42,18 @@ const waitForServer = async () => {
 
 const getFreePort = async () =>
   new Promise<number>((resolve, reject) => {
-    const socket = net.createServer();
-    socket.listen(0, "127.0.0.1", () => {
-      const address = socket.address();
+    const tempServer = net.createServer();
+    tempServer.listen(0, "127.0.0.1", () => {
+      const address = tempServer.address();
       if (address && typeof address === "object") {
         resolve(address.port);
       } else {
         reject(new Error("failed to determine free port"));
       }
 
-      socket.close();
+      tempServer.close();
     });
-    socket.on("error", reject);
+    tempServer.on("error", reject);
   });
 
 test.before(async () => {
