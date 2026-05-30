@@ -30,7 +30,7 @@ const createContext = () => {
 test("Context.saveUser assigns an id and derives repository counts", () => {
   const { context, repositories } = createContext();
 
-  context.saveUser({ login: "octocat", name: "Octocat" });
+  const savedUser = context.saveUser({ login: "octocat", name: "Octocat" });
   repositories.push(
     { owner: { login: "octocat" }, private: false },
     { owner: { login: "octocat" }, private: true },
@@ -39,7 +39,8 @@ test("Context.saveUser assigns an id and derives repository counts", () => {
 
   const user = context.getUser("octocat");
   assert.ok(user, "saved user should be returned");
-  assert.equal(user?.id, 100);
+  assert.ok(savedUser.id > 0, "generated id should be positive");
+  assert.equal(user?.id, savedUser.id);
   assert.equal(user?.name, "Octocat");
   assert.equal(user?.public_repos, 1);
   assert.equal(user?.total_private_repos, 1);

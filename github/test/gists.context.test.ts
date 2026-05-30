@@ -196,6 +196,19 @@ test("Context.saveComment creates a comment and updates gist comment count", () 
   assert.equal(context.getGist(gist.id!)?.comments, 1);
 });
 
+test("Context.saveComment assigns unique increasing ids", () => {
+  const context = createContext();
+
+  const gist = context.saveGist({
+    files: { "x.txt": { filename: "x.txt", content: "x" } },
+  });
+
+  const first = context.saveComment(gist.id!, { body: "First" });
+  const second = context.saveComment(gist.id!, { body: "Second" });
+
+  assert.ok(second.id > first.id);
+});
+
 test("Context.saveComment preserves explicit comment id", () => {
   const context = createContext();
 

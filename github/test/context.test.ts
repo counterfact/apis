@@ -2,34 +2,46 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Context$ } from "../types/_.context.ts";
 import { Context } from "../routes/_.context.ts";
-import { Context as UsersContext } from "../routes/users/_.context.ts";
 
 const createContext = () => {
-  let context: Context | undefined;
-  let usersContext: UsersContext | undefined;
+  let nextUserId = 1;
+  let nextOrganizationId = 1;
+  const usersByLogin = new Map<string, { id: number; login: string }>();
+  const organizationsByLogin = new Map<string, { id: number; login: string }>();
+  const usersContext = {
+    saveUser(user: { id?: number; login: string }) {
+      const savedUser = {
+        id: user.id ?? nextUserId++,
+        login: user.login,
+      };
+      usersByLogin.set(savedUser.login, savedUser);
+      return savedUser;
+    },
+    getUser(login: string) {
+      return usersByLogin.get(login);
+    },
+    saveOrganization(organization: { id?: number; login: string }) {
+      const savedOrganization = {
+        id: organization.id ?? nextOrganizationId++,
+        login: organization.login,
+      };
+      organizationsByLogin.set(savedOrganization.login, savedOrganization);
+      return savedOrganization;
+    },
+    getOrganization(login: string) {
+      return organizationsByLogin.get(login);
+    },
+  };
 
   const loadContext: Context$["loadContext"] = ((path: string) => {
-    if (path === "/") {
-      if (!context) {
-        throw new Error("Root context has not been initialized");
-      }
-      return context;
-    }
-
     if (path === "/users") {
-      if (!usersContext) {
-        throw new Error("Users context has not been initialized");
-      }
       return usersContext;
     }
 
     throw new Error(`Unknown context path: ${path}`);
   }) as Context$["loadContext"];
 
-  usersContext = new UsersContext({ loadContext, readJson: async () => ({}) });
-  context = new Context({ loadContext, readJson: async () => ({}) });
-
-  return context;
+  return new Context({ loadContext, readJson: async () => ({}) });
 };
 
 test("Context stores repositories, issues, pull requests, and workflows with stable lookup", () => {
