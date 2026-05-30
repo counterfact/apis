@@ -378,3 +378,199 @@ test("Context.savePullRequest correctly parses owner:branch format for head and 
     "base.label should include the branch name",
   );
 });
+
+test("Context.saveRelease creates a release with auto-generated fields and correct author", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  const release = context.saveRelease("octocat", "hello-world", {
+    tag_name: "v1.0.0",
+    name: "Version 1.0.0",
+    body: "Initial release",
+  });
+
+  assert.ok(release.id > 0, "release should have a positive id");
+  assert.ok(release.node_id, "release should have a node_id");
+  assert.ok(release.url.includes(String(release.id)), "url should contain id");
+  assert.ok(
+    release.html_url.includes("v1.0.0"),
+    "html_url should contain tag name",
+  );
+  assert.ok(release.assets_url, "assets_url should be set");
+  assert.ok(release.upload_url, "upload_url should be set");
+  assert.ok(
+    release.tarball_url.includes("v1.0.0"),
+    "tarball_url should include tag",
+  );
+  assert.ok(
+    release.zipball_url.includes("v1.0.0"),
+    "zipball_url should include tag",
+  );
+  assert.equal(release.tag_name, "v1.0.0");
+  assert.equal(release.name, "Version 1.0.0");
+  assert.equal(release.body, "Initial release");
+  assert.equal(release.draft, false);
+  assert.equal(release.prerelease, false);
+  assert.ok(release.created_at);
+  assert.ok(release.published_at);
+  assert.equal(release.author.login, "octocat");
+  assert.deepEqual(release.assets, []);
+});
+
+test("Context.listReleases respects pagination", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  for (let index = 1; index <= 5; index++) {
+    context.saveRelease("octocat", "hello-world", {
+      tag_name: `v${index}.0.0`,
+    });
+  }
+
+  const page1 = context.listReleases("octocat", "hello-world", {
+    per_page: 2,
+    page: 1,
+  });
+  assert.equal(page1.length, 2);
+
+  const page2 = context.listReleases("octocat", "hello-world", {
+    per_page: 2,
+    page: 2,
+  });
+  assert.equal(page2.length, 2);
+
+  const page3 = context.listReleases("octocat", "hello-world", {
+    per_page: 2,
+    page: 3,
+  });
+  assert.equal(page3.length, 1);
+
+  const allTags = new Set(
+    [...page1, ...page2, ...page3].map((r) => r.tag_name),
+  );
+  assert.equal(allTags.size, 5, "all 5 releases should appear across pages");
+});
+
+test("Context.getLatestRelease skips draft and pre-release entries and uses created_at ordering", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  context.saveRelease("octocat", "hello-world", {
+    id: 1,
+    tag_name: "v1.0.0",
+    draft: false,
+    prerelease: false,
+    created_at: "2024-01-01T00:00:00Z",
+    published_at: "2024-04-01T00:00:00Z",
+  });
+  context.saveRelease("octocat", "hello-world", {
+    id: 2,
+    tag_name: "v1.1.0",
+    draft: false,
+    prerelease: false,
+    created_at: "2024-02-01T00:00:00Z",
+    published_at: "2024-03-01T00:00:00Z",
+  });
+  context.saveRelease("octocat", "hello-world", {
+    id: 3,
+    tag_name: "v2.0.0-beta",
+    draft: false,
+    prerelease: true,
+    created_at: "2024-03-01T00:00:00Z",
+    published_at: "2024-05-01T00:00:00Z",
+  });
+  context.saveRelease("octocat", "hello-world", {
+    id: 4,
+    tag_name: "v2.0.0-draft",
+    draft: true,
+    prerelease: false,
+    created_at: "2024-04-01T00:00:00Z",
+    published_at: "2024-06-01T00:00:00Z",
+  });
+
+  const latest = context.getLatestRelease("octocat", "hello-world");
+  assert.equal(
+    latest?.tag_name,
+    "v1.1.0",
+    "latest should be the newest stable release by created_at",
+  );
+});
+
+test("Context.getReleaseByTag returns the matching release or undefined", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  context.saveRelease("octocat", "hello-world", { tag_name: "v1.0.0" });
+
+  const found = context.getReleaseByTag("octocat", "hello-world", "v1.0.0");
+  assert.ok(found, "should find release by tag");
+  assert.equal(found?.tag_name, "v1.0.0");
+
+  const notFound = context.getReleaseByTag("octocat", "hello-world", "v99.0.0");
+  assert.equal(notFound, undefined);
+});
+
+test("Context.updateRelease merges patch fields and returns the updated release", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  const original = context.saveRelease("octocat", "hello-world", {
+    id: 10,
+    tag_name: "v1.0.0",
+    name: "Version 1.0.0",
+    body: "Initial body",
+    draft: true,
+  });
+
+  const updated = context.updateRelease("octocat", "hello-world", original.id, {
+    name: "Updated name",
+    body: "Updated body",
+    draft: false,
+  });
+
+  assert.ok(updated, "update should return the updated release");
+  assert.equal(updated?.id, original.id, "id should be preserved");
+  assert.equal(updated?.tag_name, "v1.0.0", "tag_name should be preserved");
+  assert.equal(updated?.name, "Updated name");
+  assert.equal(updated?.body, "Updated body");
+  assert.equal(updated?.draft, false);
+});
+
+test("Context.deleteRelease removes the release and returns false when not found", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  const release = context.saveRelease("octocat", "hello-world", {
+    id: 10,
+    tag_name: "v1.0.0",
+  });
+
+  assert.equal(
+    context.getRelease("octocat", "hello-world", release.id) !== undefined,
+    true,
+  );
+  assert.equal(
+    context.deleteRelease("octocat", "hello-world", release.id),
+    true,
+  );
+  assert.equal(
+    context.getRelease("octocat", "hello-world", release.id),
+    undefined,
+  );
+  assert.equal(
+    context.deleteRelease("octocat", "hello-world", release.id),
+    false,
+  );
+});

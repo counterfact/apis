@@ -7,6 +7,7 @@ import {
   identities,
   issues,
   pullRequests,
+  releases,
   repositories,
   seedGitHub,
 } from "../scenarios/index.ts";
@@ -151,4 +152,48 @@ test("seedGitHub seeds all new GitHub domains together", () => {
   assert.equal($.context.getUser("mona")?.login, "mona");
   assert.equal($.context.getOrganization("counterfact")?.login, "counterfact");
   assert.equal($.context.listComments("aa5a315d61ae9438b18d").length, 1);
+  assert.equal($.context.listReleases("counterfact", "platform-api").length, 3);
+});
+
+test("releases scenario seeds stable, pre-release, and draft releases", () => {
+  const $ = createScenario$();
+
+  identities($);
+  repositories($);
+  releases($);
+
+  const all = $.context.listReleases("counterfact", "platform-api");
+  assert.equal(all.length, 3, "should have 3 seeded releases");
+
+  const stable = $.context.getReleaseByTag(
+    "counterfact",
+    "platform-api",
+    "v1.0.0",
+  );
+  assert.ok(stable, "stable release should exist");
+  assert.equal(stable?.draft, false);
+  assert.equal(stable?.prerelease, false);
+
+  const beta = $.context.getReleaseByTag(
+    "counterfact",
+    "platform-api",
+    "v2.0.0-beta.1",
+  );
+  assert.ok(beta, "beta release should exist");
+  assert.equal(beta?.prerelease, true);
+
+  const draft = $.context.getReleaseByTag(
+    "counterfact",
+    "platform-api",
+    "v2.0.0",
+  );
+  assert.ok(draft, "draft release should exist");
+  assert.equal(draft?.draft, true);
+
+  const latest = $.context.getLatestRelease("counterfact", "platform-api");
+  assert.equal(
+    latest?.tag_name,
+    "v1.0.0",
+    "latest should be the stable release",
+  );
 });
