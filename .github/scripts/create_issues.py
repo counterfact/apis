@@ -153,6 +153,8 @@ def find_existing_issue_for_proposal(repo, proposal_path):
     query = f'repo:{repo} is:issue state:all in:body "{marker}"'
     result = _gh(
         "api",
+        "--method",
+        "GET",
         "search/issues",
         "-f",
         f"q={query}",
