@@ -39,6 +39,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REF: refs/heads/${{ github.event.pull_request.head.ref }}
           PROPOSAL_FILES: ${{ env.PROPOSAL_FILES }}
         run: python3 .github/scripts/create_issues.py

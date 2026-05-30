@@ -56,12 +56,17 @@ def _gh(*args, check=True):
         text=True,
     )
     if check and result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip())
+        message = result.stderr.strip() or result.stdout.strip()
+        raise RuntimeError(f"gh command failed: {message}")
     return result
 
 
 def get_parent_issue_from_context(ref):
-    """Try to derive a parent issue number from the current branch name."""
+    """Try to derive a parent issue number from the current branch name.
+
+    Supported examples include ``issue-1234``, ``fix/1234``,
+    ``1234-description``, and ``description-1234``.
+    """
     if not ref:
         return None
 
@@ -143,7 +148,8 @@ def add_sub_issue(repo, parent_number, child_issue_id):
     )
     if result.returncode != 0:
         print(
-            f"  Warning: could not create sub-issue relationship: {result.stderr.strip()}",
+            "  Warning: issue was created, but could not link it as a sub-issue: "
+            f"{result.stderr.strip()}",
             file=sys.stderr,
         )
         return False
@@ -157,10 +163,6 @@ def main():
 
     if not repo:
         print("Error: GITHUB_REPOSITORY environment variable is not set.", file=sys.stderr)
-        sys.exit(1)
-
-    if not ref:
-        print("Error: GITHUB_REF environment variable is not set.", file=sys.stderr)
         sys.exit(1)
 
     files = [f.strip() for f in proposal_files_env.splitlines() if f.strip()]
