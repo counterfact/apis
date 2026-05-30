@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Context$ } from "../types/_.context.ts";
-import { Context } from "../routes/_.context.ts";
 import { Context as ReposContext } from "../routes/repos/_.context.ts";
 
 const createContext = () => {
@@ -34,30 +33,15 @@ const createContext = () => {
     },
   };
 
-  const contexts = new Map<string, unknown>();
-
   const loadContext: Context$["loadContext"] = ((path: string) => {
     if (path === "/users") {
       return usersContext;
     }
 
-    if (path === "/repos") {
-      const existing = contexts.get(path);
-      if (existing) {
-        return existing;
-      }
-      const created = new ReposContext({
-        loadContext,
-        readJson: async () => ({}),
-      });
-      contexts.set(path, created);
-      return created;
-    }
-
     throw new Error(`Unknown context path: ${path}`);
   }) as Context$["loadContext"];
 
-  return new Context({ loadContext, readJson: async () => ({}) });
+  return new ReposContext({ loadContext, readJson: async () => ({}) });
 };
 
 test("Context stores repositories, issues, pull requests, and workflows with stable lookup", () => {
