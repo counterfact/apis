@@ -455,7 +455,7 @@ test("Context.listReleases respects pagination", () => {
   assert.equal(allTags.size, 5, "all 5 releases should appear across pages");
 });
 
-test("Context.getLatestRelease skips draft and pre-release entries", () => {
+test("Context.getLatestRelease skips draft and pre-release entries and uses created_at ordering", () => {
   const context = createContext();
 
   context.saveUser({ id: 1, login: "octocat" });
@@ -466,28 +466,39 @@ test("Context.getLatestRelease skips draft and pre-release entries", () => {
     tag_name: "v1.0.0",
     draft: false,
     prerelease: false,
-    published_at: "2024-01-01T00:00:00Z",
+    created_at: "2024-01-01T00:00:00Z",
+    published_at: "2024-04-01T00:00:00Z",
   });
   context.saveRelease("octocat", "hello-world", {
     id: 2,
-    tag_name: "v2.0.0-beta",
+    tag_name: "v1.1.0",
     draft: false,
-    prerelease: true,
-    published_at: "2024-02-01T00:00:00Z",
+    prerelease: false,
+    created_at: "2024-02-01T00:00:00Z",
+    published_at: "2024-03-01T00:00:00Z",
   });
   context.saveRelease("octocat", "hello-world", {
     id: 3,
+    tag_name: "v2.0.0-beta",
+    draft: false,
+    prerelease: true,
+    created_at: "2024-03-01T00:00:00Z",
+    published_at: "2024-05-01T00:00:00Z",
+  });
+  context.saveRelease("octocat", "hello-world", {
+    id: 4,
     tag_name: "v2.0.0-draft",
     draft: true,
     prerelease: false,
-    published_at: "2024-03-01T00:00:00Z",
+    created_at: "2024-04-01T00:00:00Z",
+    published_at: "2024-06-01T00:00:00Z",
   });
 
   const latest = context.getLatestRelease("octocat", "hello-world");
   assert.equal(
     latest?.tag_name,
-    "v1.0.0",
-    "latest should be the stable release",
+    "v1.1.0",
+    "latest should be the newest stable release by created_at",
   );
 });
 

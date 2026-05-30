@@ -238,7 +238,6 @@ export class Context {
   private nextWorkflowId = 6000;
   private nextRunId = 7000;
   private nextJobId = 8000;
-  private nextReleaseId = 9000;
   private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
@@ -1836,7 +1835,6 @@ export class Context {
 
     state.releases.set(id, fullRelease);
     state.nextReleaseId = Math.max(state.nextReleaseId, id + 1);
-    this.nextReleaseId = Math.max(this.nextReleaseId, id + 1);
     return fullRelease;
   }
 
@@ -1860,8 +1858,8 @@ export class Context {
     ].filter((r) => !r.draft && !r.prerelease && r.published_at);
     if (candidates.length === 0) return undefined;
     return candidates.reduce((latest, current) =>
-      new Date(current.published_at).getTime() >
-      new Date(latest.published_at).getTime()
+      new Date(current.created_at).getTime() >
+      new Date(latest.created_at).getTime()
         ? current
         : latest,
     );
