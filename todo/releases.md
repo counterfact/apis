@@ -43,8 +43,8 @@ listReleases(owner, repo, query?): release[]
 
 `saveRelease` auto-generates `id`, `node_id`, `url`, `html_url`, `assets_url`, `upload_url`,
 `tarball_url`, `zipball_url`, `created_at`, `published_at`, and sets `author` to the default
-user. `getLatestRelease` returns the most recent non-draft, non-prerelease release (latest
-`published_at`).
+user. `getLatestRelease` returns the most recent non-draft, non-prerelease release, sorted by
+latest `created_at` (matching GitHub's API contract for this endpoint).
 
 ### 3. Implement route handlers
 

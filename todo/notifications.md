@@ -48,22 +48,28 @@ listNotifications(query?: {
   repo?: string;
 }): thread[]
 getThreadSubscription(threadId: string): thread_subscription | undefined
-setThreadSubscription(threadId: string, input: { subscribed: boolean; ignored: boolean }): thread_subscription
+setThreadSubscription(threadId: string, input: { ignored?: boolean }): thread_subscription
 deleteThreadSubscription(threadId: string): boolean
 ```
 
 `saveNotification` auto-generates `id`, `url`, `subscription_url`, `updated_at`,
 `last_read_at`, and sets `unread: true`. `listNotifications` filters to unread-only by
 default (when `all` is falsy), and can filter by `owner`/`repo` for the per-repo endpoint.
+`setThreadSubscription` should derive `subscribed` internally from `ignored` (for example,
+`subscribed: !input.ignored` when creating the returned `thread_subscription`).
 
 ### 3. Implement route handlers
 
 - `GET /notifications` — call `listNotifications(query)`.
 - `PUT /notifications` — call `markAllNotificationsRead()`, return 202.
-- `GET /notifications/threads/{id}` — get or 404.
-- `PATCH /notifications/threads/{id}` — mark read, return 205.
-- `DELETE /notifications/threads/{id}` — mark done, return 204.
-- `GET/PUT/DELETE /notifications/threads/{id}/subscription` — delegate to subscription methods.
+- `GET /notifications/threads/{thread_id}` — convert `$.path.thread_id` to `String(...)` before
+  looking up the thread map; return the thread or 404.
+- `PATCH /notifications/threads/{thread_id}` — convert `$.path.thread_id` to `String(...)`, mark
+  read, return 205.
+- `DELETE /notifications/threads/{thread_id}` — convert `$.path.thread_id` to `String(...)`, mark
+  done, return 204.
+- `GET/PUT/DELETE /notifications/threads/{thread_id}/subscription` — convert
+  `$.path.thread_id` to `String(...)` before delegating to subscription methods.
 - `GET /repos/{owner}/{repo}/notifications` — call `listNotifications({ owner, repo, ...query })`.
 - `PUT /repos/{owner}/{repo}/notifications` — call `markAllNotificationsRead(owner, repo)`, return 202.
 
@@ -92,7 +98,7 @@ pull request review on `counterfact/platform-api`). Add `notifications($)` insid
 - `PATCH /notifications/threads/:id` returns 205.
 - `DELETE /notifications/threads/:id` returns 204.
 - `GET /notifications/threads/:id/subscription` returns the subscription.
-- `PUT /notifications/threads/:id/subscription` sets subscribed state and returns 200.
+- `PUT /notifications/threads/:id/subscription` sets `ignored`/derived `subscribed` state and returns 200.
 - `DELETE /notifications/threads/:id/subscription` removes the subscription and returns 204.
 - `GET /repos/:owner/:repo/notifications` returns only that repo's notifications.
 - `PUT /repos/:owner/:repo/notifications` marks only that repo's threads as read.

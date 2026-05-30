@@ -30,7 +30,7 @@ low-level object endpoints may remain as stubs for now.
 Add:
 
 - `commits: Map<string, commit>` (keyed by SHA)
-- `commitStatuses: Map<string, commit_status[]>` (keyed by SHA)
+- `commitStatuses: Map<string, status[]>` (keyed by SHA)
 - `commitComments: Map<string, commit_comment[]>` (keyed by SHA)
 - `nextCommitCommentId: number`
 
@@ -48,8 +48,8 @@ saveCommitStatus(owner, repo, sha: string, status: {
   context: string;
   description?: string;
   target_url?: string;
-}): commit_status
-listCommitStatuses(owner, repo, sha: string): commit_status[]
+}): status
+listCommitStatuses(owner, repo, sha: string): status[]
 getCombinedStatus(owner, repo, ref: string): combined_commit_status
 saveCommitComment(owner, repo, sha: string, input: {
   body: string;
@@ -61,7 +61,8 @@ listCommitComments(owner, repo, sha: string): commit_comment[]
 
 `listCommits` returns commits for the default branch (or the branch specified by `sha`),
 ordered newest-first, with pagination support. `getCombinedStatus` derives its `state`
-from the individual statuses for that ref (failure > error > pending > success > no status).
+from the individual statuses for that ref (failure > error > pending > success > no status),
+and populates `combined_commit_status.statuses` with `simple_commit_status` entries.
 
 ### 3. Implement route handlers
 
@@ -97,6 +98,8 @@ objects (`ci/lint` success, `ci/test` success) to the `main` branch HEAD commit 
 
 - `types/components/schemas/commit.ts` — `commit`
 - `types/components/schemas/combined-commit-status.ts` — `combined_commit_status`
+- `types/components/schemas/status.ts` — `status`
+- `types/components/schemas/simple-commit-status.ts` — `simple_commit_status`
 - `types/components/schemas/commit-comment.ts` — `commit_comment`
 - `types/paths/repos/{owner}/{repo}/commits.types.ts`
 - `types/paths/repos/{owner}/{repo}/commits/{ref}.types.ts`
