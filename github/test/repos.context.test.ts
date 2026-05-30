@@ -203,17 +203,25 @@ test("Context commit methods resolve refs, paginate, and manage statuses/comment
     branches: ["main", "dev", "feature"],
   });
 
-  const mainCommit = context.getRepositoryBranch("octocat", "hello-world", "main")
-    ?.commit;
-  const devCommit = context.getRepositoryBranch("octocat", "hello-world", "dev")
-    ?.commit;
+  const mainCommit = context.getRepositoryBranch(
+    "octocat",
+    "hello-world",
+    "main",
+  )?.commit;
+  const devCommit = context.getRepositoryBranch(
+    "octocat",
+    "hello-world",
+    "dev",
+  )?.commit;
   assert.ok(mainCommit);
   assert.ok(devCommit);
 
   const bySha = context.getCommit("octocat", "hello-world", mainCommit!.sha);
   assert.equal(bySha?.sha, mainCommit!.sha);
 
-  const filtered = context.listCommits("octocat", "hello-world", { sha: "dev" });
+  const filtered = context.listCommits("octocat", "hello-world", {
+    sha: "dev",
+  });
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].sha, devCommit!.sha);
 
@@ -259,7 +267,8 @@ test("Context commit methods resolve refs, paginate, and manage statuses/comment
   assert.ok(comment.created_at);
   assert.ok(comment.updated_at);
   assert.equal(
-    context.listCommitComments("octocat", "hello-world", mainCommit!.sha).length,
+    context.listCommitComments("octocat", "hello-world", mainCommit!.sha)
+      .length,
     1,
   );
 });

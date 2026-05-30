@@ -672,9 +672,17 @@ export class Context {
 
     const branches = repository.branches ?? [defaultBranch];
     for (const branch of new Set([defaultBranch, ...branches])) {
-      const branchDetails = makeBranch(owner.login, repository.name, branch, owner);
+      const branchDetails = makeBranch(
+        owner.login,
+        repository.name,
+        branch,
+        owner,
+      );
       state.branches.set(branch, branchDetails);
-      state.commits.set(branchDetails.commit.sha, branchDetails.commit as commit);
+      state.commits.set(
+        branchDetails.commit.sha,
+        branchDetails.commit as commit,
+      );
     }
 
     if (repository.readme != null) {
@@ -924,7 +932,8 @@ export class Context {
 
     return [...(state.commitStatuses.get(commitItem.sha) ?? [])].sort(
       (left, right) =>
-        new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+        new Date(right.created_at).getTime() -
+        new Date(left.created_at).getTime(),
     );
   }
 
@@ -953,18 +962,20 @@ export class Context {
       combinedState = "pending";
     }
 
-    const simpleStatuses: Array<simple_commit_status> = statuses.map((item) => ({
-      description: item.description,
-      id: item.id,
-      node_id: item.node_id,
-      state: item.state,
-      context: item.context,
-      target_url: item.target_url,
-      avatar_url: item.avatar_url,
-      url: item.url,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-    }));
+    const simpleStatuses: Array<simple_commit_status> = statuses.map(
+      (item) => ({
+        description: item.description,
+        id: item.id,
+        node_id: item.node_id,
+        state: item.state,
+        context: item.context,
+        target_url: item.target_url,
+        avatar_url: item.avatar_url,
+        url: item.url,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      }),
+    );
 
     return {
       state: combinedState,
@@ -1014,7 +1025,11 @@ export class Context {
     return comment;
   }
 
-  listCommitComments(owner: string, repo: string, sha: string): commit_comment[] {
+  listCommitComments(
+    owner: string,
+    repo: string,
+    sha: string,
+  ): commit_comment[] {
     const state = this.getRepoState(owner, repo);
     const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
     if (!state || !commitItem) {
