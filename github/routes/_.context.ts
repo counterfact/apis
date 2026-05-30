@@ -184,6 +184,34 @@ export class Context {
     return this.reposContext().getRepositoryBranch(...args);
   }
 
+  getCommit(...args: Parameters<ReposContext["getCommit"]>) {
+    return this.reposContext().getCommit(...args);
+  }
+
+  listCommits(...args: Parameters<ReposContext["listCommits"]>) {
+    return this.reposContext().listCommits(...args);
+  }
+
+  saveCommitStatus(...args: Parameters<ReposContext["saveCommitStatus"]>) {
+    return this.reposContext().saveCommitStatus(...args);
+  }
+
+  listCommitStatuses(...args: Parameters<ReposContext["listCommitStatuses"]>) {
+    return this.reposContext().listCommitStatuses(...args);
+  }
+
+  getCombinedStatus(...args: Parameters<ReposContext["getCombinedStatus"]>) {
+    return this.reposContext().getCombinedStatus(...args);
+  }
+
+  saveCommitComment(...args: Parameters<ReposContext["saveCommitComment"]>) {
+    return this.reposContext().saveCommitComment(...args);
+  }
+
+  listCommitComments(...args: Parameters<ReposContext["listCommitComments"]>) {
+    return this.reposContext().listCommitComments(...args);
+  }
+
   saveIssue(...args: Parameters<ReposContext["saveIssue"]>) {
     return this.reposContext().saveIssue(...args);
   }

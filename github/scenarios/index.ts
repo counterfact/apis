@@ -238,6 +238,30 @@ export const actions: Scenario = ($) => {
   });
 };
 
+export const commitStatuses: Scenario = ($) => {
+  const commitSha = $.context.getRepositoryBranch(
+    "counterfact",
+    "actions-demo",
+    "main",
+  )?.commit.sha;
+  if (!commitSha) {
+    return;
+  }
+
+  $.context.saveCommitStatus("counterfact", "actions-demo", commitSha, {
+    state: "success",
+    context: "ci/lint",
+    description: "Lint checks passed",
+    target_url: "https://github.com/counterfact/actions-demo/actions/runs/401",
+  });
+  $.context.saveCommitStatus("counterfact", "actions-demo", commitSha, {
+    state: "success",
+    context: "ci/test",
+    description: "Tests passed",
+    target_url: "https://github.com/counterfact/actions-demo/actions/runs/401",
+  });
+};
+
 export const releases: Scenario = ($) => {
   $.context.saveRelease("counterfact", "platform-api", {
     id: 601,
@@ -279,6 +303,7 @@ export const seedGitHub: Scenario = ($) => {
   void issues($);
   void pullRequests($);
   void actions($);
+  void commitStatuses($);
   void releases($);
   void gists($);
   void gistComments($);

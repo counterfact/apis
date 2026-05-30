@@ -191,6 +191,79 @@ test("Context.savePullRequest correctly parses owner:branch format for head and 
   );
 });
 
+test("Context commit methods resolve refs, paginate, and manage statuses/comments", () => {
+  const context = createContext();
+
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveRepository({
+    id: 101,
+    owner: "octocat",
+    name: "hello-world",
+    default_branch: "main",
+    branches: ["main", "dev", "feature"],
+  });
+
+  const mainCommit = context.getRepositoryBranch("octocat", "hello-world", "main")
+    ?.commit;
+  const devCommit = context.getRepositoryBranch("octocat", "hello-world", "dev")
+    ?.commit;
+  assert.ok(mainCommit);
+  assert.ok(devCommit);
+
+  const bySha = context.getCommit("octocat", "hello-world", mainCommit!.sha);
+  assert.equal(bySha?.sha, mainCommit!.sha);
+
+  const filtered = context.listCommits("octocat", "hello-world", { sha: "dev" });
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].sha, devCommit!.sha);
+
+  const page1 = context.listCommits("octocat", "hello-world", {
+    per_page: 2,
+    page: 1,
+  });
+  const page2 = context.listCommits("octocat", "hello-world", {
+    per_page: 2,
+    page: 2,
+  });
+  assert.equal(page1.length, 2);
+  assert.equal(page2.length, 1);
+
+  context.saveCommitStatus("octocat", "hello-world", mainCommit!.sha, {
+    state: "success",
+    context: "ci/lint",
+  });
+  context.saveCommitStatus("octocat", "hello-world", mainCommit!.sha, {
+    state: "success",
+    context: "ci/test",
+  });
+  assert.equal(
+    context.getCombinedStatus("octocat", "hello-world", "main")?.state,
+    "success",
+  );
+
+  context.saveCommitStatus("octocat", "hello-world", mainCommit!.sha, {
+    state: "failure",
+    context: "ci/test",
+  });
+  assert.equal(
+    context.getCombinedStatus("octocat", "hello-world", "main")?.state,
+    "failure",
+  );
+
+  const comment = context.saveCommitComment("octocat", "hello-world", "main", {
+    body: "Looks good",
+    path: "README.md",
+    line: 1,
+  });
+  assert.ok(comment.id > 0);
+  assert.ok(comment.created_at);
+  assert.ok(comment.updated_at);
+  assert.equal(
+    context.listCommitComments("octocat", "hello-world", mainCommit!.sha).length,
+    1,
+  );
+});
+
 test("Context.saveRelease creates a release with auto-generated fields and correct author", () => {
   const context = createContext();
 

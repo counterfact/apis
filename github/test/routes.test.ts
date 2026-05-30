@@ -5,6 +5,14 @@ import { GET as getWorkflowJobs } from "../routes/repos/{owner}/{repo}/actions/r
 import { GET as getWorkflowRuns } from "../routes/repos/{owner}/{repo}/actions/runs.ts";
 import { GET as getWorkflows } from "../routes/repos/{owner}/{repo}/actions/workflows.ts";
 import { GET as getBranch } from "../routes/repos/{owner}/{repo}/branches/{branch}.ts";
+import { GET as getCommit } from "../routes/repos/{owner}/{repo}/commits/{ref}.ts";
+import {
+  GET as getCommitComments,
+  POST as postCommitComment,
+} from "../routes/repos/{owner}/{repo}/commits/{commit_sha}/comments.ts";
+import { GET as getCombinedCommitStatus } from "../routes/repos/{owner}/{repo}/commits/{ref}/status.ts";
+import { GET as getCommitStatuses } from "../routes/repos/{owner}/{repo}/commits/{ref}/statuses.ts";
+import { GET as getCommits } from "../routes/repos/{owner}/{repo}/commits.ts";
 import {
   GET as getIssueComments,
   POST as postIssueComment,
@@ -312,6 +320,81 @@ test("pull request routes manage reviews and updates", async () => {
   assert.equal((reviews.body as Array<unknown>).length, 2);
 });
 
+test("commit routes list commits, fetch refs, comments, and statuses", async () => {
+  const context = createSeededContext();
+
+  const listed = (await getCommits(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(listed.status, 200);
+  assert.equal((listed.body as Array<unknown>).length >= 1, true);
+
+  const byBranch = (await getCommit(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(byBranch.status, 200);
+  const sha = (byBranch.body as { sha: string }).sha;
+
+  const commentsBefore = (await getCommitComments(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((commentsBefore.body as Array<unknown>).length, 0);
+
+  const createdComment = (await postCommitComment(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+      body: { body: "Nice commit", path: "README.md", line: 1 },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(createdComment.status, 201);
+
+  const commentsAfter = (await getCommitComments(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "actions-demo",
+        commit_sha: sha,
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((commentsAfter.body as Array<unknown>).length, 1);
+
+  const combinedStatus = (await getCombinedCommitStatus(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((combinedStatus.body as { state: string }).state, "success");
+
+  const statuses = (await getCommitStatuses(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "actions-demo", ref: "main" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((statuses.body as Array<unknown>).length, 2);
+});
+
 test("actions, identity, and search routes return seeded data", async () => {
   const context = createSeededContext();
 
@@ -365,6 +448,57 @@ test("actions, identity, and search routes return seeded data", async () => {
     }) as never,
   )) as RouteResult;
   assert.equal((issueSearch.body as { total_count: number }).total_count, 1);
+});
+
+test("commit routes return 404 when repository does not exist", async () => {
+  const context = createSeededContext();
+  const missing = { owner: "nobody", repo: "missing" };
+
+  const commits = (await getCommits(
+    create$({ context, path: missing }) as never,
+  )) as RouteResult;
+  assert.equal(commits.status, 404);
+
+  const commit = (await getCommit(
+    create$({
+      context,
+      path: { ...missing, ref: "main" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(commit.status, 404);
+
+  const comments = (await getCommitComments(
+    create$({
+      context,
+      path: { ...missing, commit_sha: "abc123" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(comments.status, 404);
+
+  const created = (await postCommitComment(
+    create$({
+      context,
+      path: { ...missing, commit_sha: "abc123" },
+      body: { body: "x" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(created.status, 404);
+
+  const combined = (await getCombinedCommitStatus(
+    create$({
+      context,
+      path: { ...missing, ref: "main" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(combined.status, 404);
+
+  const statuses = (await getCommitStatuses(
+    create$({
+      context,
+      path: { ...missing, ref: "main" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(statuses.status, 404);
 });
 
 test("release routes manage the full release lifecycle", async () => {
