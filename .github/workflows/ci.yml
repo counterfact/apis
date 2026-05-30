@@ -84,3 +84,23 @@ jobs:
       - name: Test
         working-directory: ${{ matrix.package }}
         run: npm test
+
+  test-status:
+    runs-on: ubuntu-latest
+    needs: [detect-packages, lint-and-test]
+    if: always()
+    steps:
+      - name: Report test status
+        run: |
+          if [[ "${{ needs.detect-packages.outputs.has_changes }}" == "false" ]]; then
+            echo "No package changes detected. Tests not required."
+            exit 0
+          fi
+          
+          if [[ "${{ needs.lint-and-test.result }}" == "success" ]]; then
+            echo "All tests passed."
+            exit 0
+          fi
+          
+          echo "Tests failed."
+          exit 1
