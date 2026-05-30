@@ -5,9 +5,13 @@ import type { content_file } from "../../types/components/schemas/content-file.j
 import type { full_repository } from "../../types/components/schemas/full-repository.js";
 import type { gist_comment } from "../../types/components/schemas/gist-comment.js";
 import type { gist_simple } from "../../types/components/schemas/gist-simple.js";
+import type { commit } from "../../types/components/schemas/commit.js";
+import type { combined_commit_status } from "../../types/components/schemas/combined-commit-status.js";
+import type { commit_comment } from "../../types/components/schemas/commit-comment.js";
 import type { issue } from "../../types/components/schemas/issue.js";
 import type { issue_comment } from "../../types/components/schemas/issue-comment.js";
 import type { job } from "../../types/components/schemas/job.js";
+import type { minimal_repository } from "../../types/components/schemas/minimal-repository.js";
 import type { organization_full } from "../../types/components/schemas/organization-full.js";
 import type { organization_simple } from "../../types/components/schemas/organization-simple.js";
 import type { public_user } from "../../types/components/schemas/public-user.js";
@@ -15,6 +19,8 @@ import type { pull_request } from "../../types/components/schemas/pull-request.j
 import type { pull_request_review } from "../../types/components/schemas/pull-request-review.js";
 import type { release } from "../../types/components/schemas/release.js";
 import type { simple_user } from "../../types/components/schemas/simple-user.js";
+import type { simple_commit_status } from "../../types/components/schemas/simple-commit-status.js";
+import type { status } from "../../types/components/schemas/status.js";
 import type { workflow } from "../../types/components/schemas/workflow.js";
 import type { workflow_run } from "../../types/components/schemas/workflow-run.js";
 import type { Context as GistsContext } from "../gists/_.context.js";
@@ -29,6 +35,9 @@ type RepoState = {
   repository: full_repository;
   readme?: content_file;
   branches: Map<string, branch_with_protection>;
+  commits: Map<string, commit>;
+  commitStatuses: Map<string, Array<status>>;
+  commitComments: Map<string, Array<commit_comment>>;
   issues: Map<number, issue>;
   issueComments: Map<number, Map<number, issue_comment>>;
   pulls: Map<number, pull_request>;
@@ -37,6 +46,7 @@ type RepoState = {
   runs: Map<number, workflow_run>;
   jobs: Map<number, Array<job>>;
   releases: Map<number, release>;
+  nextCommitCommentId: number;
   nextIssueNumber: number;
   nextPullNumber: number;
   nextReleaseId: number;
@@ -238,6 +248,7 @@ export class Context {
   private nextWorkflowId = 6000;
   private nextRunId = 7000;
   private nextJobId = 8000;
+  private nextStatusId = 9000;
   private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
@@ -636,6 +647,9 @@ export class Context {
     const state: RepoState = existing ?? {
       repository: fullRepository,
       branches: new Map(),
+      commits: new Map(),
+      commitStatuses: new Map(),
+      commitComments: new Map(),
       issues: new Map(),
       issueComments: new Map(),
       pulls: new Map(),
@@ -644,18 +658,30 @@ export class Context {
       runs: new Map(),
       jobs: new Map(),
       releases: new Map(),
+      nextCommitCommentId: 1,
       nextIssueNumber: 1,
       nextPullNumber: 1,
       nextReleaseId: 1,
     };
 
     state.repository = fullRepository;
+    state.commits ??= new Map();
+    state.commitStatuses ??= new Map();
+    state.commitComments ??= new Map();
+    state.nextCommitCommentId ??= 1;
 
     const branches = repository.branches ?? [defaultBranch];
     for (const branch of new Set([defaultBranch, ...branches])) {
-      state.branches.set(
+      const branchDetails = makeBranch(
+        owner.login,
+        repository.name,
         branch,
-        makeBranch(owner.login, repository.name, branch, owner),
+        owner,
+      );
+      state.branches.set(branch, branchDetails);
+      state.commits.set(
+        branchDetails.commit.sha,
+        branchDetails.commit as commit,
       );
     }
 
@@ -803,6 +829,241 @@ export class Context {
     branch: string,
   ): branch_with_protection | undefined {
     return this.getRepoState(owner, repo)?.branches.get(branch);
+  }
+
+  private resolveCommitRef(state: RepoState, ref: string): commit | undefined {
+    const branchCommit = state.branches.get(ref)?.commit as commit | undefined;
+    if (branchCommit) {
+      state.commits.set(branchCommit.sha, branchCommit);
+      return branchCommit;
+    }
+
+    const exact = state.commits.get(ref);
+    if (exact) {
+      return exact;
+    }
+
+    const prefixMatches = [...state.commits.values()].filter((item) =>
+      item.sha.startsWith(ref),
+    );
+    return prefixMatches.length === 1 ? prefixMatches[0] : undefined;
+  }
+
+  getCommit(owner: string, repo: string, ref: string): commit | undefined {
+    const state = this.getRepoState(owner, repo);
+    if (!state) {
+      return undefined;
+    }
+    return this.resolveCommitRef(state, ref);
+  }
+
+  listCommits(
+    owner: string,
+    repo: string,
+    query?: { sha?: string; per_page?: unknown; page?: unknown },
+  ): commit[] {
+    const state = this.getRepoState(owner, repo);
+    if (!state) {
+      return [];
+    }
+
+    const commits = [...state.commits.values()].sort(
+      (left, right) =>
+        new Date(right.commit.committer?.date ?? 0).getTime() -
+        new Date(left.commit.committer?.date ?? 0).getTime(),
+    );
+
+    if (query?.sha) {
+      const resolved = this.resolveCommitRef(state, query.sha);
+      return paginate(
+        resolved ? commits.filter((item) => item.sha === resolved.sha) : [],
+        query,
+      );
+    }
+
+    const resolvedDefaultBranchCommit = this.resolveCommitRef(
+      state,
+      state.repository.default_branch,
+    );
+    return paginate(
+      resolvedDefaultBranchCommit ? [resolvedDefaultBranchCommit] : [],
+      query,
+    );
+  }
+
+  saveCommitStatus(
+    owner: string,
+    repo: string,
+    sha: string,
+    statusInput: {
+      state: string;
+      context: string;
+      description?: string;
+      target_url?: string;
+    },
+  ): status {
+    const state = this.getRepoState(owner, repo);
+    const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
+    if (!state || !commitItem) {
+      throw new Error(`Commit ${owner}/${repo}@${sha} does not exist`);
+    }
+
+    const now = isoNow();
+    const id = this.nextStatusId++;
+    const created: status = {
+      id,
+      node_id: `STS_${id}`,
+      state: statusInput.state,
+      context: statusInput.context,
+      description: statusInput.description ?? "",
+      target_url: statusInput.target_url ?? "",
+      url: `${API_URL}/repos/${owner}/${repo}/statuses/${commitItem.sha}`,
+      avatar_url: `${APP_URL}/${DEFAULT_USER_LOGIN}.png`,
+      created_at: now,
+      updated_at: now,
+      creator: toSimpleUser(this.ensureDefaultUser()),
+    };
+
+    const statuses = state.commitStatuses.get(commitItem.sha) ?? [];
+    statuses.push(created);
+    state.commitStatuses.set(commitItem.sha, statuses);
+    return created;
+  }
+
+  listCommitStatuses(
+    owner: string,
+    repo: string,
+    sha: string,
+    query?: { per_page?: unknown; page?: unknown },
+  ): status[] {
+    const state = this.getRepoState(owner, repo);
+    const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
+    if (!state || !commitItem) {
+      return [];
+    }
+
+    const statuses = [...(state.commitStatuses.get(commitItem.sha) ?? [])].sort(
+      (left, right) => {
+        const byDate =
+          new Date(right.created_at).getTime() -
+          new Date(left.created_at).getTime();
+        return byDate !== 0 ? byDate : right.id - left.id;
+      },
+    );
+    return paginate(statuses, query);
+  }
+
+  getCombinedStatus(
+    owner: string,
+    repo: string,
+    ref: string,
+  ): combined_commit_status | undefined {
+    const state = this.getRepoState(owner, repo);
+    const commitItem = state ? this.resolveCommitRef(state, ref) : undefined;
+    if (!state || !commitItem) {
+      return undefined;
+    }
+
+    const statuses = this.listCommitStatuses(owner, repo, commitItem.sha);
+    const latestStatusesByContext = new Map<string, status>();
+    for (const item of statuses) {
+      if (!latestStatusesByContext.has(item.context)) {
+        latestStatusesByContext.set(item.context, item);
+      }
+    }
+    const latestStatuses = [...latestStatusesByContext.values()];
+    let combinedState = "success";
+
+    if (latestStatuses.some((item) => item.state === "failure")) {
+      combinedState = "failure";
+    } else if (latestStatuses.some((item) => item.state === "error")) {
+      combinedState = "error";
+    } else if (
+      latestStatuses.length === 0 ||
+      latestStatuses.some((item) => item.state === "pending")
+    ) {
+      combinedState = "pending";
+    }
+
+    const simpleStatuses: Array<simple_commit_status> = statuses.map(
+      (item) => ({
+        description: item.description,
+        id: item.id,
+        node_id: item.node_id,
+        state: item.state,
+        context: item.context,
+        target_url: item.target_url,
+        avatar_url: item.avatar_url,
+        url: item.url,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      }),
+    );
+
+    return {
+      state: combinedState,
+      statuses: simpleStatuses,
+      sha: commitItem.sha,
+      total_count: simpleStatuses.length,
+      repository: state.repository as minimal_repository,
+      commit_url: commitItem.url,
+      url: `${API_URL}/repos/${owner}/${repo}/commits/${commitItem.sha}/status`,
+    };
+  }
+
+  saveCommitComment(
+    owner: string,
+    repo: string,
+    sha: string,
+    input: { body: string; path?: string; line?: number },
+  ): commit_comment {
+    const state = this.getRepoState(owner, repo);
+    const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
+    if (!state || !commitItem) {
+      throw new Error(`Commit ${owner}/${repo}@${sha} does not exist`);
+    }
+
+    const id = state.nextCommitCommentId++;
+    const now = isoNow();
+    const comment: commit_comment = {
+      id,
+      node_id: `CC_${id}`,
+      body: input.body,
+      path: input.path ?? "",
+      position: input.line ?? 0,
+      line: input.line ?? 0,
+      commit_id: commitItem.sha,
+      user: toSimpleUser(this.ensureDefaultUser()),
+      created_at: now,
+      updated_at: now,
+      author_association: "OWNER",
+      html_url: `${APP_URL}/${owner}/${repo}/commit/${commitItem.sha}#commitcomment-${id}`,
+      url: `${API_URL}/repos/${owner}/${repo}/comments/${id}`,
+    };
+
+    const comments = state.commitComments.get(commitItem.sha) ?? [];
+    comments.push(comment);
+    state.commitComments.set(commitItem.sha, comments);
+    commitItem.commit.comment_count = comments.length;
+    return comment;
+  }
+
+  listCommitComments(
+    owner: string,
+    repo: string,
+    sha: string,
+    query?: { per_page?: unknown; page?: unknown },
+  ): commit_comment[] {
+    const state = this.getRepoState(owner, repo);
+    const commitItem = state ? this.resolveCommitRef(state, sha) : undefined;
+    if (!state || !commitItem) {
+      return [];
+    }
+
+    const comments = [...(state.commitComments.get(commitItem.sha) ?? [])].sort(
+      (left, right) => left.id - right.id,
+    );
+    return paginate(comments, query);
   }
 
   saveIssue(
