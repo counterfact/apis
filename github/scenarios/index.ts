@@ -274,18 +274,18 @@ export const releases: Scenario = ($) => {
 };
 
 export const seedGitHub: Scenario = ($) => {
-  identities($);
-  repositories($);
-  issues($);
-  pullRequests($);
-  actions($);
-  releases($);
-  gists($);
-  gistComments($);
+  void identities($);
+  void repositories($);
+  void issues($);
+  void pullRequests($);
+  void actions($);
+  void releases($);
+  void gists($);
+  void gistComments($);
 };
 
 export const startup: Scenario = ($) => {
-  seedGitHub($);
+  void seedGitHub($);
 };
 
 export const help: Scenario = ($) => {
