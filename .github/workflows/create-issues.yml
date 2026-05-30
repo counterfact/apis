@@ -1,0 +1,44 @@
+name: Create Issues from Proposals
+
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - '.github/issue-proposals/*.md'
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Get newly added proposal files
+        id: get-files
+        run: |
+          set -euo pipefail
+          ADDED=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '[.[] | select(.status == "added") | select(.filename | startswith(".github/issue-proposals/") and endswith(".md")) | .filename] | join("\n")')
+          echo "PROPOSAL_FILES<<EOF" >> "$GITHUB_ENV"
+          echo "$ADDED" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Process issue proposals
+        if: env.PROPOSAL_FILES != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: refs/heads/${{ github.event.pull_request.head.ref }}
+          PROPOSAL_FILES: ${{ env.PROPOSAL_FILES }}
+        run: python3 .github/scripts/create_issues.py

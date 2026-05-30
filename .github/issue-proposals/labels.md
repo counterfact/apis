@@ -1,4 +1,6 @@
-# Implement Labels domain in the GitHub API simulator
+---
+title: Implement Labels domain in the GitHub API simulator
+---
 
 ## Summary
 

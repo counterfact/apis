@@ -1,4 +1,6 @@
-# Implement Milestones domain in the GitHub API simulator
+---
+title: Implement Milestones domain in the GitHub API simulator
+---
 
 ## Summary
 

@@ -1,4 +1,6 @@
-# Implement Releases domain in the GitHub API simulator
+---
+title: Implement Releases domain in the GitHub API simulator
+---
 
 ## Summary
 
