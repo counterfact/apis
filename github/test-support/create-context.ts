@@ -1,6 +1,7 @@
 import type { Context$ } from "../types/_.context.ts";
 import { Context } from "../routes/_.context.ts";
 import { Context as GistsContext } from "../routes/gists/_.context.ts";
+import { Context as ReposContext } from "../routes/repos/_.context.ts";
 import { Context as UsersContext } from "../routes/users/_.context.ts";
 
 export const createContextHarness = () => {
@@ -27,6 +28,9 @@ export const createContextHarness = () => {
         break;
       case "/users":
         created = new UsersContext({ loadContext, readJson: async () => ({}) });
+        break;
+      case "/repos":
+        created = new ReposContext({ loadContext, readJson: async () => ({}) });
         break;
       default:
         throw new Error(`Unknown context path: ${path}`);
