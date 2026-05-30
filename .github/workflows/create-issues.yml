@@ -18,7 +18,7 @@ on:
 jobs:
   create-issues:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    if: github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     permissions:
       contents: read
       issues: write
@@ -47,21 +47,20 @@ jobs:
             after="${{ github.event.after }}"
 
             if [[ "$before" =~ ^0+$ ]]; then
-              if git rev-parse "${after}^" >/dev/null 2>&1; then
-                before="$(git rev-parse "${after}^")"
-              else
-                before="$(git hash-object -t tree /dev/null)"
-              fi
+              before="$(git hash-object -t tree /dev/null)"
             fi
 
             files="$(git diff --diff-filter=A --name-only "$before" "$after" -- '.github/issue-proposals/*.md')"
+          elif [[ -n "${INPUT_COMMIT_RANGE}" && -n "${INPUT_PULL_REQUEST_NUMBER}" ]]; then
+            echo "For workflow_dispatch, provide exactly one of: commit_range or pull_request_number." >&2
+            exit 1
           elif [[ -n "${INPUT_COMMIT_RANGE}" ]]; then
             files="$(git diff --diff-filter=A --name-only "${INPUT_COMMIT_RANGE}" -- '.github/issue-proposals/*.md')"
           elif [[ -n "${INPUT_PULL_REQUEST_NUMBER}" ]]; then
             files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${INPUT_PULL_REQUEST_NUMBER}/files" \
               --jq '[.[] | select(.status == "added") | select(.filename | startswith(".github/issue-proposals/") and endswith(".md")) | .filename] | join("\n")')"
           else
-            echo "For workflow_dispatch, provide either commit_range or pull_request_number." >&2
+            echo "For workflow_dispatch, provide exactly one of: commit_range or pull_request_number." >&2
             exit 1
           fi
 
