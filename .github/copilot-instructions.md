@@ -15,10 +15,14 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
 2. **Use TDD for simulator behavior**
    - Start by writing or updating tests that describe expected HTTP behavior.
    - Execute tests against a **running Counterfact instance**.
+   - In tests, start Counterfact via the **programmatic API** instead of shelling
+     out to the CLI.
    - Tests must exercise the simulator via real HTTP calls and assert:
      - response status
      - response body/headers as applicable
      - resulting state changes
+   - Keep HTTP integration coverage in `test/routes.test.ts` rather than
+     placeholder `dummy` test files.
 
 3. **Implement state and business logic in route context files**
    - Put simulator state and business rules in `routes/**/_.context.ts`.

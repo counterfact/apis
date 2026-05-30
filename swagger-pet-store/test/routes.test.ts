@@ -1,12 +1,24 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { spawn } = require("node:child_process");
-const net = require("node:net");
+import assert from "node:assert/strict";
+import net from "node:net";
+import { createRequire } from "node:module";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { Context } from "../routes/_.context.ts";
 
-let port;
-let server;
+const require = createRequire(import.meta.url);
+const { petStore } = require("../scenarios/index.ts");
+const basePath = fileURLToPath(new URL("../", import.meta.url));
+const counterfactModuleUrl = new URL(
+  "../node_modules/counterfact/dist/app.js",
+  import.meta.url,
+).href;
+const openApiPath = fileURLToPath(new URL("../openapi.yaml", import.meta.url));
 
-const request = async (pathname, init) => {
+let port: number;
+let server: { stop(): Promise<void> } | undefined;
+let context: Context;
+
+const request = async (pathname: string, init?: RequestInit) => {
   const response = await fetch(`http://127.0.0.1:${port}${pathname}`, init);
   return response;
 };
@@ -21,6 +33,7 @@ const waitForServer = async () => {
     } catch {
       // ignore while waiting for server startup
     }
+
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
@@ -28,44 +41,70 @@ const waitForServer = async () => {
 };
 
 const getFreePort = async () =>
-  new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
+  new Promise<number>((resolve, reject) => {
+    const socket = net.createServer();
+    socket.listen(0, "127.0.0.1", () => {
+      const address = socket.address();
       if (address && typeof address === "object") {
         resolve(address.port);
       } else {
         reject(new Error("failed to determine free port"));
       }
-      server.close();
+
+      socket.close();
     });
-    server.on("error", reject);
+    socket.on("error", reject);
   });
 
 test.before(async () => {
   port = await getFreePort();
-  server = spawn(
-    "npx",
-    ["counterfact", "openapi.yaml", ".", "--serve", "--port", String(port)],
-    {
-      cwd: process.cwd(),
-      stdio: "ignore",
+  const { counterfact } = await import(counterfactModuleUrl);
+  const config = {
+    adminApiToken: "",
+    alwaysFakeOptionals: false,
+    basePath,
+    buildCache: false,
+    generate: {
+      prune: false,
+      routes: false,
+      types: false,
     },
-  );
+    openApiPath,
+    port,
+    prefix: "",
+    proxyPaths: new Map([["", false]]),
+    proxyUrl: "",
+    startAdminApi: false,
+    startRepl: false,
+    startServer: true,
+    validateRequests: true,
+    validateResponses: true,
+    watch: {
+      routes: false,
+      types: false,
+    },
+  };
+
+  const app = await counterfact(config);
+  server = await app.start(config);
+  context = app.contextRegistry.find("/") as Context;
+  petStore({
+    context,
+    loadContext: (path: string) => app.contextRegistry.find(path),
+    route: () => ({}),
+    routes: {},
+  });
+
   try {
     await waitForServer();
   } catch (error) {
-    if (!server.killed) {
-      server.kill("SIGTERM");
-    }
+    await server.stop();
     throw error;
   }
 });
 
-test.after(() => {
-  if (server && !server.killed) {
-    server.kill("SIGTERM");
-  }
+test.after(async () => {
+  await server?.stop();
 });
 
 test("pet store API supports core CRUD flows", async () => {
@@ -84,8 +123,8 @@ test("pet store API supports core CRUD flows", async () => {
   assert.equal(seededUser.username, "jane.doe");
 
   const seededLoginQuery = new URLSearchParams({
-    username: "jane.doe",
     password: "pass123",
+    username: "jane.doe",
   });
   const seededLoginResponse = await request(
     `/user/login?${seededLoginQuery.toString()}`,
@@ -98,20 +137,21 @@ test("pet store API supports core CRUD flows", async () => {
   assert.equal(seededOrder.petId, 1);
 
   const createPetResponse = await request("/pet", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify({
       name: "doggie",
       photoUrls: [],
       status: "available",
       tags: [{ id: 1, name: "tag-1" }],
     }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
   });
   assert.equal(createPetResponse.status, 200);
   const createdPet = await createPetResponse.json();
   assert.equal(createdPet.name, "doggie");
   assert.equal(createdPet.status, "available");
   assert.equal(typeof createdPet.id, "number");
+  assert.equal(context.getPet(createdPet.id)?.name, "doggie");
 
   const getPetResponse = await request(`/pet/${createdPet.id}`);
   assert.equal(getPetResponse.status, 200);
@@ -123,7 +163,9 @@ test("pet store API supports core CRUD flows", async () => {
   );
   assert.equal(filterByStatusResponse.status, 200);
   const availablePets = await filterByStatusResponse.json();
-  assert.ok(availablePets.some((pet) => pet.id === createdPet.id));
+  assert.ok(
+    availablePets.some((pet: { id: number }) => pet.id === createdPet.id),
+  );
 
   const inventoryResponse = await request("/store/inventory");
   assert.equal(inventoryResponse.status, 200);
@@ -131,37 +173,39 @@ test("pet store API supports core CRUD flows", async () => {
   assert.ok(inventory.available >= 1);
 
   const createUserResponse = await request("/user", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      username: "user1",
-      password: "pass123",
       firstName: "Jane",
+      password: "pass123",
+      username: "user1",
     }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
   });
   assert.equal(createUserResponse.status, 200);
+  assert.equal(context.getUser("user1")?.firstName, "Jane");
 
   const loginQuery = new URLSearchParams({
-    username: "user1",
     password: "pass123",
+    username: "user1",
   });
   const loginResponse = await request(`/user/login?${loginQuery.toString()}`);
   assert.equal(loginResponse.status, 200);
   assert.equal(loginResponse.headers.get("X-Rate-Limit"), "1000");
 
   const createOrderResponse = await request("/store/order", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      complete: false,
       petId: createdPet.id,
       quantity: 1,
       status: "placed",
-      complete: false,
     }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
   });
   assert.equal(createOrderResponse.status, 200);
   const createdOrder = await createOrderResponse.json();
   assert.equal(typeof createdOrder.id, "number");
+  assert.equal(context.getOrder(createdOrder.id)?.petId, createdPet.id);
 
   const getOrderResponse = await request(`/store/order/${createdOrder.id}`);
   assert.equal(getOrderResponse.status, 200);
@@ -170,6 +214,7 @@ test("pet store API supports core CRUD flows", async () => {
     method: "DELETE",
   });
   assert.equal(deleteOrderResponse.status, 200);
+  assert.equal(context.getOrder(createdOrder.id), undefined);
 
   const missingOrderResponse = await request(`/store/order/${createdOrder.id}`);
   assert.equal(missingOrderResponse.status, 404);
