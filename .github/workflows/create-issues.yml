@@ -1,15 +1,24 @@
 name: Create Issues from Proposals
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     paths:
       - '.github/issue-proposals/*.md'
+  workflow_dispatch:
+    inputs:
+      commit_range:
+        description: "Commit range to scan (for example: <base>..<head>)"
+        required: false
+        type: string
+      pull_request_number:
+        description: "Pull request number to recover proposals from"
+        required: false
+        type: string
 
 jobs:
   create-issues:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     permissions:
       contents: read
       issues: write
@@ -18,26 +27,52 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Python dependencies
         run: pip install pyyaml
 
-      - name: Get newly added proposal files
+      - name: Select proposal files
         id: get-files
-        run: |
-          set -euo pipefail
-          ADDED=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '[.[] | select(.status == "added") | select(.filename | startswith(".github/issue-proposals/") and endswith(".md")) | .filename] | join("\n")')
-          echo "PROPOSAL_FILES<<EOF" >> "$GITHUB_ENV"
-          echo "$ADDED" >> "$GITHUB_ENV"
-          echo "EOF" >> "$GITHUB_ENV"
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_COMMIT_RANGE: ${{ inputs.commit_range }}
+          INPUT_PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            before="${{ github.event.before }}"
+            after="${{ github.event.after }}"
+
+            if [[ "$before" =~ ^0+$ ]]; then
+              if git rev-parse "${after}^" >/dev/null 2>&1; then
+                before="$(git rev-parse "${after}^")"
+              else
+                before="$(git hash-object -t tree /dev/null)"
+              fi
+            fi
+
+            files="$(git diff --diff-filter=A --name-only "$before" "$after" -- '.github/issue-proposals/*.md')"
+          elif [[ -n "${INPUT_COMMIT_RANGE}" ]]; then
+            files="$(git diff --diff-filter=A --name-only "${INPUT_COMMIT_RANGE}" -- '.github/issue-proposals/*.md')"
+          elif [[ -n "${INPUT_PULL_REQUEST_NUMBER}" ]]; then
+            files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${INPUT_PULL_REQUEST_NUMBER}/files" \
+              --jq '[.[] | select(.status == "added") | select(.filename | startswith(".github/issue-proposals/") and endswith(".md")) | .filename] | join("\n")')"
+          else
+            echo "For workflow_dispatch, provide either commit_range or pull_request_number." >&2
+            exit 1
+          fi
+
+          echo "proposal_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$files" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Process issue proposals
-        if: env.PROPOSAL_FILES != ''
+        if: steps.get-files.outputs.proposal_files != ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PROPOSAL_FILES: ${{ env.PROPOSAL_FILES }}
+          PROPOSAL_FILES: ${{ steps.get-files.outputs.proposal_files }}
         run: python3 .github/scripts/create_issues.py
