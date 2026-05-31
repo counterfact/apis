@@ -1168,6 +1168,7 @@ export class Context {
     const nextLabel: label = {
       ...existing,
       ...patch,
+      color: patch.color ?? existing.color,
       name: nextName,
       url: `${API_URL}/repos/${owner}/${repo}/labels/${encodeURIComponent(nextName)}`,
       description: patch.description ?? existing.description ?? "",

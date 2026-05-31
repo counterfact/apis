@@ -235,6 +235,7 @@ test("Context label methods manage repository labels and issue associations", ()
     name: "type: bug",
   });
   assert.equal(renamed?.name, "type: bug");
+  assert.equal(renamed?.color, "d73a4a");
   assert.equal(
     context.getLabel("counterfact", "platform-api", "bug"),
     undefined,
