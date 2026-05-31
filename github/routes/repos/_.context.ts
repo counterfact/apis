@@ -11,6 +11,7 @@ import type { commit_comment } from "../../types/components/schemas/commit-comme
 import type { issue } from "../../types/components/schemas/issue.js";
 import type { issue_comment } from "../../types/components/schemas/issue-comment.js";
 import type { job } from "../../types/components/schemas/job.js";
+import type { label } from "../../types/components/schemas/label.js";
 import type { minimal_repository } from "../../types/components/schemas/minimal-repository.js";
 import type { organization_full } from "../../types/components/schemas/organization-full.js";
 import type { organization_simple } from "../../types/components/schemas/organization-simple.js";
@@ -38,6 +39,7 @@ type RepoState = {
   commits: Map<string, commit>;
   commitStatuses: Map<string, Array<status>>;
   commitComments: Map<string, Array<commit_comment>>;
+  labels: Map<string, label>;
   issues: Map<number, issue>;
   issueComments: Map<number, Map<number, issue_comment>>;
   pulls: Map<number, pull_request>;
@@ -249,6 +251,7 @@ export class Context {
   private nextRunId = 7000;
   private nextJobId = 8000;
   private nextStatusId = 9000;
+  private nextLabelId = 10000;
   private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
@@ -426,6 +429,54 @@ export class Context {
     ).length;
     state.repository.open_issues_count = openIssues;
     state.repository.open_issues = openIssues;
+  }
+
+  private syncIssueLabels(
+    state: RepoState,
+    previousName: string,
+    nextLabel?: label,
+  ) {
+    for (const issueItem of state.issues.values()) {
+      issueItem.labels = issueItem.labels.flatMap((item) => {
+        const itemName = typeof item === "string" ? item : item.name;
+        if (itemName !== previousName) {
+          return [item];
+        }
+        return nextLabel ? [nextLabel] : [];
+      });
+    }
+  }
+
+  private resolveIssueLabels(
+    owner: string,
+    repo: string,
+    labels: issue["labels"],
+  ): Array<label> {
+    const resolved = new Map<string, label>();
+    for (const item of labels) {
+      const input =
+        typeof item === "string"
+          ? { name: item, color: "ededed", description: "" }
+          : {
+              name: item.name ?? "",
+              color: item.color ?? "ededed",
+              description: item.description ?? "",
+            };
+      const name = input.name.trim();
+      if (!name) {
+        continue;
+      }
+      resolved.set(
+        name,
+        this.getLabel(owner, repo, name) ??
+          this.saveLabel(owner, repo, {
+            name,
+            color: input.color,
+            description: input.description,
+          }),
+      );
+    }
+    return [...resolved.values()];
   }
 
   saveRepository(
@@ -650,6 +701,7 @@ export class Context {
       commits: new Map(),
       commitStatuses: new Map(),
       commitComments: new Map(),
+      labels: new Map(),
       issues: new Map(),
       issueComments: new Map(),
       pulls: new Map(),
@@ -668,6 +720,7 @@ export class Context {
     state.commits ??= new Map();
     state.commitStatuses ??= new Map();
     state.commitComments ??= new Map();
+    state.labels ??= new Map();
     state.nextCommitCommentId ??= 1;
 
     const branches = repository.branches ?? [defaultBranch];
@@ -1066,6 +1119,91 @@ export class Context {
     return paginate(comments, query);
   }
 
+  saveLabel(
+    owner: string,
+    repo: string,
+    input: { name: string; color: string; description?: string },
+  ): label {
+    const state = this.getRepoState(owner, repo);
+    if (!state) {
+      throw new Error(`Repository ${owner}/${repo} does not exist`);
+    }
+
+    const name = input.name.trim();
+    const existing = state.labels.get(name);
+    const id = existing?.id ?? this.nextLabelId++;
+    const nextLabel: label = {
+      id,
+      node_id: existing?.node_id ?? `LA_${id}`,
+      url: `${API_URL}/repos/${owner}/${repo}/labels/${encodeURIComponent(name)}`,
+      name,
+      color: input.color,
+      description: input.description ?? existing?.description ?? "",
+      default: false,
+    };
+
+    state.labels.set(name, nextLabel);
+    this.syncIssueLabels(state, name, nextLabel);
+    this.nextLabelId = Math.max(this.nextLabelId, id + 1);
+    return nextLabel;
+  }
+
+  getLabel(owner: string, repo: string, name: string): label | undefined {
+    return this.getRepoState(owner, repo)?.labels.get(name);
+  }
+
+  updateLabel(
+    owner: string,
+    repo: string,
+    name: string,
+    patch: Partial<label>,
+  ): label | undefined {
+    const state = this.getRepoState(owner, repo);
+    const existing = state?.labels.get(name);
+    if (!state || !existing) {
+      return undefined;
+    }
+
+    const nextName = patch.name?.trim() || existing.name;
+    const nextLabel: label = {
+      ...existing,
+      ...patch,
+      color: patch.color ?? existing.color,
+      name: nextName,
+      url: `${API_URL}/repos/${owner}/${repo}/labels/${encodeURIComponent(nextName)}`,
+      description: patch.description ?? existing.description ?? "",
+      default: existing.default,
+    };
+
+    if (nextName !== name) {
+      state.labels.delete(name);
+    }
+    state.labels.set(nextName, nextLabel);
+    this.syncIssueLabels(state, name, nextLabel);
+    return nextLabel;
+  }
+
+  deleteLabel(owner: string, repo: string, name: string): boolean {
+    const state = this.getRepoState(owner, repo);
+    if (!state || !state.labels.has(name)) {
+      return false;
+    }
+    state.labels.delete(name);
+    this.syncIssueLabels(state, name);
+    return true;
+  }
+
+  listLabels(
+    owner: string,
+    repo: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): label[] {
+    return paginate(
+      [...(this.getRepoState(owner, repo)?.labels.values() ?? [])],
+      query,
+    );
+  }
+
   saveIssue(
     owner: string,
     repo: string,
@@ -1110,7 +1248,10 @@ export class Context {
       title: String(issueInput.title),
       body: issueInput.body ?? existing?.body ?? "",
       user: author,
-      labels: issueInput.labels ?? existing?.labels ?? [],
+      labels:
+        issueInput.labels != null
+          ? this.resolveIssueLabels(owner, repo, issueInput.labels)
+          : (existing?.labels ?? []),
       assignee: issueInput.assignee ?? existing?.assignee ?? null,
       assignees: issueInput.assignees ?? existing?.assignees ?? [],
       milestone: issueInput.milestone ?? existing?.milestone ?? null,
@@ -1168,6 +1309,118 @@ export class Context {
     issueNumber: number,
   ): issue | undefined {
     return this.getRepoState(owner, repo)?.issues.get(issueNumber);
+  }
+
+  addLabelToIssue(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    names: string[],
+  ): label[] {
+    const existing = this.getIssue(owner, repo, issueNumber);
+    if (!existing) {
+      return [];
+    }
+
+    const labels = new Map<string, label>();
+    for (const item of this.listIssueLabels(owner, repo, issueNumber)) {
+      labels.set(item.name, item);
+    }
+    for (const name of names) {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        continue;
+      }
+      labels.set(
+        trimmed,
+        this.getLabel(owner, repo, trimmed) ??
+          this.saveLabel(owner, repo, {
+            name: trimmed,
+            color: "ededed",
+          }),
+      );
+    }
+
+    return this.saveIssue(owner, repo, {
+      ...existing,
+      number: issueNumber,
+      labels: [...labels.values()],
+    }).labels as label[];
+  }
+
+  removeLabelFromIssue(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    name: string,
+  ): boolean {
+    const existing = this.getIssue(owner, repo, issueNumber);
+    if (!existing) {
+      return false;
+    }
+
+    const labels = this.listIssueLabels(owner, repo, issueNumber);
+    if (!labels.some((item) => item.name === name)) {
+      return false;
+    }
+
+    this.saveIssue(owner, repo, {
+      ...existing,
+      number: issueNumber,
+      labels: labels.filter((item) => item.name !== name),
+    });
+    return true;
+  }
+
+  replaceIssueLabels(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    names: string[],
+  ): label[] {
+    const existing = this.getIssue(owner, repo, issueNumber);
+    if (!existing) {
+      return [];
+    }
+
+    const labels = new Map<string, label>();
+    for (const name of names) {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        continue;
+      }
+      labels.set(
+        trimmed,
+        this.getLabel(owner, repo, trimmed) ??
+          this.saveLabel(owner, repo, {
+            name: trimmed,
+            color: "ededed",
+          }),
+      );
+    }
+
+    return this.saveIssue(owner, repo, {
+      ...existing,
+      number: issueNumber,
+      labels: [...labels.values()],
+    }).labels as label[];
+  }
+
+  listIssueLabels(
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    query?: { page?: unknown; per_page?: unknown },
+  ): label[] {
+    const issueItem = this.getIssue(owner, repo, issueNumber);
+    if (!issueItem) {
+      return [];
+    }
+
+    return paginate(
+      this.resolveIssueLabels(owner, repo, issueItem.labels),
+      query,
+    );
   }
 
   listIssues(

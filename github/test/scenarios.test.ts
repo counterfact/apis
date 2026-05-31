@@ -6,6 +6,7 @@ import {
   gists,
   identities,
   issues,
+  labels,
   pullRequests,
   releases,
   repositories,
@@ -94,6 +95,7 @@ test("issues, pull requests, and actions scenarios seed related data", () => {
 
   identities($);
   repositories($);
+  labels($);
   issues($);
   pullRequests($);
   actions($);
@@ -127,6 +129,12 @@ test("issues, pull requests, and actions scenarios seed related data", () => {
     $.context.listWorkflowJobs("counterfact", "actions-demo", 401).length,
     2,
   );
+  assert.deepEqual(
+    $.context
+      .listLabels("counterfact", "platform-api")
+      .map((item) => item.name),
+    ["bug", "enhancement", "documentation", "question"],
+  );
 });
 
 test("seedGitHub seeds all new GitHub domains together", () => {
@@ -153,6 +161,7 @@ test("seedGitHub seeds all new GitHub domains together", () => {
   assert.equal($.context.getOrganization("counterfact")?.login, "counterfact");
   assert.equal($.context.listComments("aa5a315d61ae9438b18d").length, 1);
   assert.equal($.context.listReleases("counterfact", "platform-api").length, 3);
+  assert.equal($.context.listLabels("counterfact", "platform-api").length, 4);
 });
 
 test("releases scenario seeds stable, pre-release, and draft releases", () => {
