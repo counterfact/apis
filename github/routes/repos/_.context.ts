@@ -1267,6 +1267,10 @@ export class Context {
       input.creator ??
       existing?.creator ??
       toSimpleUser(this.ensureDefaultUser());
+    const closedAt =
+      input.state === "closed"
+        ? (input.closed_at ?? existing?.closed_at ?? now)
+        : (input.closed_at ?? existing?.closed_at ?? "");
     const milestoneItem: milestone = {
       ...(existing ?? {}),
       ...input,
@@ -1284,10 +1288,7 @@ export class Context {
       closed_issues: input.closed_issues ?? existing?.closed_issues ?? 0,
       created_at: existing?.created_at ?? input.created_at ?? now,
       updated_at: now,
-      closed_at:
-        input.state === "closed"
-          ? (input.closed_at ?? existing?.closed_at ?? now)
-          : (input.closed_at ?? existing?.closed_at ?? ""),
+      closed_at: closedAt,
       due_on: input.due_on ?? existing?.due_on ?? "",
     };
 
