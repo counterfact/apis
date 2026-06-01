@@ -34,6 +34,15 @@ import {
   POST as postIssue,
 } from "../routes/repos/{owner}/{repo}/issues.ts";
 import {
+  GET as getMilestone,
+  PATCH as patchMilestone,
+  DELETE as deleteMilestone,
+} from "../routes/repos/{owner}/{repo}/milestones/{milestone_number}.ts";
+import {
+  GET as getMilestones,
+  POST as postMilestone,
+} from "../routes/repos/{owner}/{repo}/milestones.ts";
+import {
   GET as getLabel,
   PATCH as patchLabel,
   DELETE as deleteLabel,
@@ -393,6 +402,76 @@ test("issue routes manage issue lifecycle and comments", async () => {
   assert.equal((comments.body as Array<unknown>).length, 2);
 });
 
+test("milestone routes manage milestone lifecycle", async () => {
+  const context = createSeededContext();
+
+  const listed = (await getMilestones(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+      query: { state: "all" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((listed.body as Array<unknown>).length, 2);
+
+  const openOnly = (await getMilestones(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+      query: { state: "open" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((openOnly.body as Array<unknown>).length, 1);
+
+  const created = (await postMilestone(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+      body: { title: "v1.1", description: "Next milestone" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(created.status, 201);
+  assert.equal((created.body as { number: number }).number, 3);
+
+  const fetched = (await getMilestone(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        milestone_number: 1,
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((fetched.body as { title: string }).title, "v1.0");
+
+  const patched = (await patchMilestone(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        milestone_number: 1,
+      },
+      body: { title: "v1.0.1", state: "closed" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((patched.body as { title: string }).title, "v1.0.1");
+  assert.equal((patched.body as { state: string }).state, "closed");
+
+  const deleted = (await deleteMilestone(
+    create$({
+      context,
+      path: {
+        owner: "counterfact",
+        repo: "platform-api",
+        milestone_number: 3,
+      },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(deleted.status, 204);
+});
+
 test("label routes manage repository and issue labels", async () => {
   const context = createSeededContext();
 
@@ -632,6 +711,80 @@ test("label routes return 404 when the repository or issue does not exist", asyn
             repo: "platform-api",
             issue_number: 999,
             name: "bug",
+          },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+});
+
+test("milestone routes return 404 when repository or milestone does not exist", async () => {
+  const context = createSeededContext();
+
+  assert.equal(
+    (
+      (await getMilestones(
+        create$({
+          context,
+          path: { owner: "nobody", repo: "missing" },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await postMilestone(
+        create$({
+          context,
+          path: { owner: "nobody", repo: "missing" },
+          body: { title: "v1.0" },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await getMilestone(
+        create$({
+          context,
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            milestone_number: 999,
+          },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await patchMilestone(
+        create$({
+          context,
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            milestone_number: 999,
+          },
+          body: { title: "x" },
+        }) as never,
+      )) as RouteResult
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      (await deleteMilestone(
+        create$({
+          context,
+          path: {
+            owner: "counterfact",
+            repo: "platform-api",
+            milestone_number: 999,
           },
         }) as never,
       )) as RouteResult

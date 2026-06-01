@@ -232,6 +232,26 @@ export class Context {
     return this.reposContext().listLabels(...args);
   }
 
+  saveMilestone(...args: Parameters<ReposContext["saveMilestone"]>) {
+    return this.reposContext().saveMilestone(...args);
+  }
+
+  getMilestone(...args: Parameters<ReposContext["getMilestone"]>) {
+    return this.reposContext().getMilestone(...args);
+  }
+
+  updateMilestone(...args: Parameters<ReposContext["updateMilestone"]>) {
+    return this.reposContext().updateMilestone(...args);
+  }
+
+  deleteMilestone(...args: Parameters<ReposContext["deleteMilestone"]>) {
+    return this.reposContext().deleteMilestone(...args);
+  }
+
+  listMilestones(...args: Parameters<ReposContext["listMilestones"]>) {
+    return this.reposContext().listMilestones(...args);
+  }
+
   saveIssue(...args: Parameters<ReposContext["saveIssue"]>) {
     return this.reposContext().saveIssue(...args);
   }

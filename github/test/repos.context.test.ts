@@ -318,6 +318,134 @@ test("Context label methods add, remove, and replace issue labels", () => {
   );
 });
 
+test("Context.saveMilestone creates milestone fields and supports querying/updating/deleting", () => {
+  const context = createContext();
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  const milestone = context.saveMilestone("octocat", "hello-world", {
+    title: "v1.0",
+    description: "First release",
+  });
+  assert.ok(milestone.id > 0);
+  assert.match(milestone.node_id, /^MS_/);
+  assert.equal(milestone.number, 1);
+  assert.equal(milestone.state, "open");
+  assert.equal(milestone.open_issues, 0);
+  assert.equal(milestone.closed_issues, 0);
+  assert.match(milestone.url, /\/repos\/octocat\/hello-world\/milestones\/1$/);
+  assert.match(
+    milestone.labels_url,
+    /\/repos\/octocat\/hello-world\/milestones\/1\/labels$/,
+  );
+
+  context.saveMilestone("octocat", "hello-world", {
+    title: "v0.9",
+    state: "closed",
+  });
+  assert.equal(
+    context.listMilestones("octocat", "hello-world", { state: "all" }).length,
+    2,
+  );
+  assert.equal(
+    context.listMilestones("octocat", "hello-world", { state: "open" }).length,
+    1,
+  );
+  assert.equal(
+    context.listMilestones("octocat", "hello-world", { state: "closed" })
+      .length,
+    1,
+  );
+
+  const updated = context.updateMilestone("octocat", "hello-world", 1, {
+    description: "Updated description",
+    state: "closed",
+  });
+  assert.equal(updated?.title, "v1.0");
+  assert.equal(updated?.description, "Updated description");
+  assert.equal(updated?.state, "closed");
+  assert.notEqual(updated?.closed_at, "");
+
+  const reopened = context.updateMilestone("octocat", "hello-world", 1, {
+    state: "open",
+  });
+  assert.equal(reopened?.closed_at, "");
+
+  context.saveIssue("octocat", "hello-world", {
+    number: 1,
+    title: "Use milestone",
+    milestone: reopened,
+  });
+  context.savePullRequest("octocat", "hello-world", {
+    number: 1,
+    title: "Use milestone in PR",
+    head: "feature/milestone",
+    base: "main",
+    milestone: reopened,
+  });
+
+  const retitled = context.updateMilestone("octocat", "hello-world", 1, {
+    title: "v1.1",
+  });
+  assert.equal(retitled?.title, "v1.1");
+  assert.equal(
+    context.getIssue("octocat", "hello-world", 1)?.milestone?.title,
+    "v1.1",
+  );
+  assert.equal(
+    context.getPullRequest("octocat", "hello-world", 1)?.milestone?.title,
+    "v1.1",
+  );
+
+  assert.equal(context.deleteMilestone("octocat", "hello-world", 999), false);
+  assert.equal(context.deleteMilestone("octocat", "hello-world", 1), true);
+  assert.equal(context.getMilestone("octocat", "hello-world", 1), undefined);
+});
+
+test("Context milestone issue counters update when issue state or milestone assignment changes", () => {
+  const context = createContext();
+  context.saveUser({ id: 1, login: "octocat", name: "Octocat" });
+  context.saveRepository({ id: 101, owner: "octocat", name: "hello-world" });
+
+  const milestone = context.saveMilestone("octocat", "hello-world", {
+    title: "v1.0",
+  });
+
+  context.saveIssue("octocat", "hello-world", {
+    number: 1,
+    title: "Track work",
+    state: "open",
+    milestone,
+  });
+  assert.equal(
+    context.getMilestone("octocat", "hello-world", milestone.number)
+      ?.open_issues,
+    1,
+  );
+  assert.equal(
+    context.getMilestone("octocat", "hello-world", milestone.number)
+      ?.closed_issues,
+    0,
+  );
+
+  context.saveIssue("octocat", "hello-world", {
+    number: 1,
+    title: "Track work",
+    state: "closed",
+    milestone,
+  });
+  assert.equal(
+    context.getMilestone("octocat", "hello-world", milestone.number)
+      ?.open_issues,
+    0,
+  );
+  assert.equal(
+    context.getMilestone("octocat", "hello-world", milestone.number)
+      ?.closed_issues,
+    1,
+  );
+});
+
 test("Context commit methods resolve refs, paginate, and manage statuses/comments", () => {
   const context = createContext();
 

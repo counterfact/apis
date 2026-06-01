@@ -2,9 +2,19 @@ import type { issuesListMilestones } from "../../../../types/paths/repos/{owner}
 import type { issuesCreateMilestone } from "../../../../types/paths/repos/{owner}/{repo}/milestones.types.js";
 
 export const GET: issuesListMilestones = async ($) => {
-  return $.response[200].random();
+  if (!$.context.hasRepository($.path.owner, $.path.repo)) {
+    return $.response[404].empty();
+  }
+  return $.response[200].json(
+    $.context.listMilestones($.path.owner, $.path.repo, $.query),
+  );
 };
 
 export const POST: issuesCreateMilestone = async ($) => {
-  return $.response[201].random();
+  if (!$.context.hasRepository($.path.owner, $.path.repo)) {
+    return $.response[404].empty();
+  }
+  return $.response[201].json(
+    $.context.saveMilestone($.path.owner, $.path.repo, $.body),
+  );
 };
