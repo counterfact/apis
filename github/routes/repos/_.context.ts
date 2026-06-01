@@ -489,6 +489,23 @@ export class Context {
     }
   }
 
+  private syncMilestoneReferences(
+    state: RepoState,
+    number: number,
+    nextMilestone?: milestone,
+  ) {
+    for (const issueItem of state.issues.values()) {
+      if (this.milestoneNumberFrom(issueItem.milestone) === number) {
+        issueItem.milestone = nextMilestone ?? null;
+      }
+    }
+    for (const pullItem of state.pulls.values()) {
+      if (this.milestoneNumberFrom(pullItem.milestone) === number) {
+        pullItem.milestone = nextMilestone ?? null;
+      }
+    }
+  }
+
   private resolveIssueLabels(
     owner: string,
     repo: string,
@@ -1267,10 +1284,18 @@ export class Context {
       input.creator ??
       existing?.creator ??
       toSimpleUser(this.ensureDefaultUser());
+    const nextState = input.state ?? existing?.state ?? "open";
+    const closedAtProvided = "closed_at" in input;
     const closedAt =
-      input.state === "closed"
-        ? (input.closed_at ?? existing?.closed_at ?? now)
-        : (input.closed_at ?? existing?.closed_at ?? "");
+      nextState === "closed"
+        ? closedAtProvided
+          ? (input.closed_at ?? "")
+          : existing?.state === "closed" && existing.closed_at
+            ? existing.closed_at
+            : now
+        : closedAtProvided
+          ? (input.closed_at ?? "")
+          : "";
     const milestoneItem: milestone = {
       ...(existing ?? {}),
       ...input,
@@ -1280,7 +1305,7 @@ export class Context {
       url: `${API_URL}/repos/${owner}/${repo}/milestones/${number}`,
       html_url: `${APP_URL}/${owner}/${repo}/milestone/${number}`,
       labels_url: `${API_URL}/repos/${owner}/${repo}/milestones/${number}/labels`,
-      state: input.state ?? existing?.state ?? "open",
+      state: nextState,
       title: input.title,
       description: input.description ?? existing?.description ?? "",
       creator,
@@ -1293,6 +1318,7 @@ export class Context {
     };
 
     state.milestones.set(number, milestoneItem);
+    this.syncMilestoneReferences(state, number, milestoneItem);
     state.nextMilestoneNumber = Math.max(state.nextMilestoneNumber, number + 1);
     this.nextMilestoneId = Math.max(this.nextMilestoneId, id + 1);
     this.syncMilestoneCounts(state);
@@ -1318,7 +1344,6 @@ export class Context {
       return undefined;
     }
     return this.saveMilestone(owner, repo, {
-      ...existing,
       ...patch,
       number,
       title: patch.title ?? existing.title,
@@ -1332,16 +1357,7 @@ export class Context {
     }
 
     state.milestones.delete(number);
-    for (const issueItem of state.issues.values()) {
-      if (this.milestoneNumberFrom(issueItem.milestone) === number) {
-        issueItem.milestone = null;
-      }
-    }
-    for (const pullItem of state.pulls.values()) {
-      if (this.milestoneNumberFrom(pullItem.milestone) === number) {
-        pullItem.milestone = null;
-      }
-    }
+    this.syncMilestoneReferences(state, number);
     this.syncMilestoneCounts(state);
     return true;
   }

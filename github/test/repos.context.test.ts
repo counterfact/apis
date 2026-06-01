@@ -364,6 +364,38 @@ test("Context.saveMilestone creates milestone fields and supports querying/updat
   assert.equal(updated?.title, "v1.0");
   assert.equal(updated?.description, "Updated description");
   assert.equal(updated?.state, "closed");
+  assert.notEqual(updated?.closed_at, "");
+
+  const reopened = context.updateMilestone("octocat", "hello-world", 1, {
+    state: "open",
+  });
+  assert.equal(reopened?.closed_at, "");
+
+  context.saveIssue("octocat", "hello-world", {
+    number: 1,
+    title: "Use milestone",
+    milestone: reopened,
+  });
+  context.savePullRequest("octocat", "hello-world", {
+    number: 1,
+    title: "Use milestone in PR",
+    head: "feature/milestone",
+    base: "main",
+    milestone: reopened,
+  });
+
+  const retitled = context.updateMilestone("octocat", "hello-world", 1, {
+    title: "v1.1",
+  });
+  assert.equal(retitled?.title, "v1.1");
+  assert.equal(
+    context.getIssue("octocat", "hello-world", 1)?.milestone?.title,
+    "v1.1",
+  );
+  assert.equal(
+    context.getPullRequest("octocat", "hello-world", 1)?.milestone?.title,
+    "v1.1",
+  );
 
   assert.equal(context.deleteMilestone("octocat", "hello-world", 999), false);
   assert.equal(context.deleteMilestone("octocat", "hello-world", 1), true);
