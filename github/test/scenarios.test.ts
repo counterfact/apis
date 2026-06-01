@@ -7,6 +7,7 @@ import {
   identities,
   issues,
   labels,
+  milestones,
   pullRequests,
   releases,
   repositories,
@@ -97,6 +98,7 @@ test("issues, pull requests, and actions scenarios seed related data", () => {
   repositories($);
   labels($);
   issues($);
+  milestones($);
   pullRequests($);
   actions($);
 
@@ -135,6 +137,11 @@ test("issues, pull requests, and actions scenarios seed related data", () => {
       .map((item) => item.name),
     ["bug", "enhancement", "documentation", "question"],
   );
+  assert.equal(
+    $.context.listMilestones("counterfact", "platform-api", { state: "all" })
+      .length,
+    2,
+  );
 });
 
 test("seedGitHub seeds all new GitHub domains together", () => {
@@ -162,6 +169,35 @@ test("seedGitHub seeds all new GitHub domains together", () => {
   assert.equal($.context.listComments("aa5a315d61ae9438b18d").length, 1);
   assert.equal($.context.listReleases("counterfact", "platform-api").length, 3);
   assert.equal($.context.listLabels("counterfact", "platform-api").length, 4);
+  assert.equal(
+    $.context.listMilestones("counterfact", "platform-api", { state: "all" })
+      .length,
+    2,
+  );
+});
+
+test("milestones scenario seeds milestones and links the open issue", () => {
+  const $ = createScenario$();
+
+  identities($);
+  repositories($);
+  labels($);
+  issues($);
+  milestones($);
+
+  const all = $.context.listMilestones("counterfact", "platform-api", {
+    state: "all",
+  });
+  assert.equal(all.length, 2);
+
+  const open = $.context.listMilestones("counterfact", "platform-api", {
+    state: "open",
+  });
+  assert.equal(open.length, 1);
+  assert.equal(open[0].title, "v1.0");
+
+  const seededIssue = $.context.getIssue("counterfact", "platform-api", 1);
+  assert.equal(seededIssue?.milestone?.title, "v1.0");
 });
 
 test("releases scenario seeds stable, pre-release, and draft releases", () => {

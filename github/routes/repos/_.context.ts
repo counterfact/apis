@@ -12,6 +12,7 @@ import type { issue } from "../../types/components/schemas/issue.js";
 import type { issue_comment } from "../../types/components/schemas/issue-comment.js";
 import type { job } from "../../types/components/schemas/job.js";
 import type { label } from "../../types/components/schemas/label.js";
+import type { milestone } from "../../types/components/schemas/milestone.js";
 import type { minimal_repository } from "../../types/components/schemas/minimal-repository.js";
 import type { organization_full } from "../../types/components/schemas/organization-full.js";
 import type { organization_simple } from "../../types/components/schemas/organization-simple.js";
@@ -42,6 +43,7 @@ type RepoState = {
   labels: Map<string, label>;
   issues: Map<number, issue>;
   issueComments: Map<number, Map<number, issue_comment>>;
+  milestones: Map<number, milestone>;
   pulls: Map<number, pull_request>;
   reviews: Map<number, Map<number, pull_request_review>>;
   workflows: Map<number, workflow>;
@@ -50,6 +52,7 @@ type RepoState = {
   releases: Map<number, release>;
   nextCommitCommentId: number;
   nextIssueNumber: number;
+  nextMilestoneNumber: number;
   nextPullNumber: number;
   nextReleaseId: number;
 };
@@ -244,6 +247,7 @@ export class Context {
 
   private nextRepoId = 1000;
   private nextIssueId = 2000;
+  private nextMilestoneId = 2500;
   private nextIssueCommentId = 3000;
   private nextPullId = 4000;
   private nextReviewId = 5000;
@@ -429,6 +433,44 @@ export class Context {
     ).length;
     state.repository.open_issues_count = openIssues;
     state.repository.open_issues = openIssues;
+  }
+
+  private milestoneNumberFrom(
+    value: issue["milestone"] | pull_request["milestone"] | undefined,
+  ): number | undefined {
+    return value && typeof value === "object" ? value.number : undefined;
+  }
+
+  private syncMilestoneCounts(state: RepoState) {
+    for (const milestoneItem of state.milestones.values()) {
+      milestoneItem.open_issues = 0;
+      milestoneItem.closed_issues = 0;
+    }
+
+    const collect = (
+      stateValue: string,
+      milestoneNumber: number | undefined,
+    ) => {
+      if (milestoneNumber == null) {
+        return;
+      }
+      const milestoneItem = state.milestones.get(milestoneNumber);
+      if (!milestoneItem) {
+        return;
+      }
+      if (stateValue === "closed") {
+        milestoneItem.closed_issues += 1;
+        return;
+      }
+      milestoneItem.open_issues += 1;
+    };
+
+    for (const issueItem of state.issues.values()) {
+      collect(issueItem.state, this.milestoneNumberFrom(issueItem.milestone));
+    }
+    for (const pullItem of state.pulls.values()) {
+      collect(pullItem.state, this.milestoneNumberFrom(pullItem.milestone));
+    }
   }
 
   private syncIssueLabels(
@@ -704,6 +746,7 @@ export class Context {
       labels: new Map(),
       issues: new Map(),
       issueComments: new Map(),
+      milestones: new Map(),
       pulls: new Map(),
       reviews: new Map(),
       workflows: new Map(),
@@ -712,6 +755,7 @@ export class Context {
       releases: new Map(),
       nextCommitCommentId: 1,
       nextIssueNumber: 1,
+      nextMilestoneNumber: 1,
       nextPullNumber: 1,
       nextReleaseId: 1,
     };
@@ -721,6 +765,7 @@ export class Context {
     state.commitStatuses ??= new Map();
     state.commitComments ??= new Map();
     state.labels ??= new Map();
+    state.milestones ??= new Map();
     state.nextCommitCommentId ??= 1;
 
     const branches = repository.branches ?? [defaultBranch];
@@ -1204,6 +1249,144 @@ export class Context {
     );
   }
 
+  saveMilestone(
+    owner: string,
+    repo: string,
+    input: Partial<milestone> & { title: string },
+  ): milestone {
+    const state = this.getRepoState(owner, repo);
+    if (!state) {
+      throw new Error(`Repository ${owner}/${repo} does not exist`);
+    }
+
+    const now = isoNow();
+    const number = input.number ?? state.nextMilestoneNumber++;
+    const existing = state.milestones.get(number);
+    const id = input.id ?? existing?.id ?? this.nextMilestoneId++;
+    const creator =
+      input.creator ??
+      existing?.creator ??
+      toSimpleUser(this.ensureDefaultUser());
+    const milestoneItem: milestone = {
+      ...(existing ?? {}),
+      ...input,
+      id,
+      node_id: input.node_id ?? existing?.node_id ?? `MS_${id}`,
+      number,
+      url: `${API_URL}/repos/${owner}/${repo}/milestones/${number}`,
+      html_url: `${APP_URL}/${owner}/${repo}/milestone/${number}`,
+      labels_url: `${API_URL}/repos/${owner}/${repo}/milestones/${number}/labels`,
+      state: input.state ?? existing?.state ?? "open",
+      title: input.title,
+      description: input.description ?? existing?.description ?? "",
+      creator,
+      open_issues: input.open_issues ?? existing?.open_issues ?? 0,
+      closed_issues: input.closed_issues ?? existing?.closed_issues ?? 0,
+      created_at: existing?.created_at ?? input.created_at ?? now,
+      updated_at: now,
+      closed_at:
+        input.state === "closed"
+          ? (input.closed_at ?? existing?.closed_at ?? now)
+          : (input.closed_at ?? existing?.closed_at ?? ""),
+      due_on: input.due_on ?? existing?.due_on ?? "",
+    };
+
+    state.milestones.set(number, milestoneItem);
+    state.nextMilestoneNumber = Math.max(state.nextMilestoneNumber, number + 1);
+    this.nextMilestoneId = Math.max(this.nextMilestoneId, id + 1);
+    this.syncMilestoneCounts(state);
+    return milestoneItem;
+  }
+
+  getMilestone(
+    owner: string,
+    repo: string,
+    number: number,
+  ): milestone | undefined {
+    return this.getRepoState(owner, repo)?.milestones.get(number);
+  }
+
+  updateMilestone(
+    owner: string,
+    repo: string,
+    number: number,
+    patch: Partial<milestone>,
+  ): milestone | undefined {
+    const existing = this.getMilestone(owner, repo, number);
+    if (!existing) {
+      return undefined;
+    }
+    return this.saveMilestone(owner, repo, {
+      ...existing,
+      ...patch,
+      number,
+      title: patch.title ?? existing.title,
+    });
+  }
+
+  deleteMilestone(owner: string, repo: string, number: number): boolean {
+    const state = this.getRepoState(owner, repo);
+    if (!state || !state.milestones.has(number)) {
+      return false;
+    }
+
+    state.milestones.delete(number);
+    for (const issueItem of state.issues.values()) {
+      if (this.milestoneNumberFrom(issueItem.milestone) === number) {
+        issueItem.milestone = null;
+      }
+    }
+    for (const pullItem of state.pulls.values()) {
+      if (this.milestoneNumberFrom(pullItem.milestone) === number) {
+        pullItem.milestone = null;
+      }
+    }
+    this.syncMilestoneCounts(state);
+    return true;
+  }
+
+  listMilestones(
+    owner: string,
+    repo: string,
+    query?: {
+      state?: "open" | "closed" | "all";
+      direction?: string;
+      sort?: string;
+      per_page?: unknown;
+      page?: unknown;
+    },
+  ): milestone[] {
+    const state = this.getRepoState(owner, repo);
+    if (!state) {
+      return [];
+    }
+
+    let milestones = [...state.milestones.values()];
+    if (query?.state && query.state !== "all") {
+      milestones = milestones.filter((item) => item.state === query.state);
+    }
+
+    const direction = query?.direction === "asc" ? 1 : -1;
+    milestones.sort((left, right) => {
+      if (query?.sort === "completeness") {
+        const leftTotal = left.open_issues + left.closed_issues;
+        const rightTotal = right.open_issues + right.closed_issues;
+        const leftCompleteness =
+          leftTotal === 0 ? 0 : left.closed_issues / leftTotal;
+        const rightCompleteness =
+          rightTotal === 0 ? 0 : right.closed_issues / rightTotal;
+        return (leftCompleteness - rightCompleteness) * direction;
+      }
+      return (
+        (new Date(left.due_on || left.created_at).getTime() -
+          new Date(right.due_on || right.created_at).getTime()) *
+        direction
+      );
+    });
+
+    return paginate(milestones, query);
+  }
+
   saveIssue(
     owner: string,
     repo: string,
@@ -1300,6 +1483,7 @@ export class Context {
     state.nextIssueNumber = Math.max(state.nextIssueNumber, number + 1);
     this.nextIssueId = Math.max(this.nextIssueId, id + 1);
     this.syncRepoCounts(owner, repo);
+    this.syncMilestoneCounts(state);
     return nextIssue;
   }
 
@@ -1747,6 +1931,7 @@ export class Context {
     state.pulls.set(number, pullRequest);
     state.nextPullNumber = Math.max(state.nextPullNumber, number + 1);
     this.nextPullId = Math.max(this.nextPullId, id + 1);
+    this.syncMilestoneCounts(state);
     return pullRequest;
   }
 

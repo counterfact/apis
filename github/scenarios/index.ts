@@ -165,6 +165,36 @@ export const issues: Scenario = ($) => {
   });
 };
 
+export const milestones: Scenario = ($) => {
+  const v1 = $.context.saveMilestone("counterfact", "platform-api", {
+    title: "v1.0",
+    description: "Track v1.0 launch",
+    due_on: "2024-05-01T00:00:00Z",
+    state: "open",
+  });
+  $.context.saveMilestone("counterfact", "platform-api", {
+    title: "v0.9",
+    description: "Pre-release cleanup",
+    due_on: "2024-03-01T00:00:00Z",
+    state: "closed",
+    closed_at: "2024-03-05T00:00:00Z",
+  });
+
+  const existingOpenIssue = $.context.getIssue(
+    "counterfact",
+    "platform-api",
+    1,
+  );
+  if (existingOpenIssue) {
+    $.context.saveIssue("counterfact", "platform-api", {
+      ...existingOpenIssue,
+      number: existingOpenIssue.number,
+      title: existingOpenIssue.title,
+      milestone: v1,
+    });
+  }
+};
+
 export const labels: Scenario = ($) => {
   $.context.saveLabel("counterfact", "platform-api", {
     name: "bug",
@@ -324,6 +354,7 @@ export const seedGitHub: Scenario = ($) => {
   void repositories($);
   void labels($);
   void issues($);
+  void milestones($);
   void pullRequests($);
   void actions($);
   void commitStatuses($);
