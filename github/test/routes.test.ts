@@ -1237,13 +1237,19 @@ test("notification thread routes get mark-read and mark-done behavior", async ()
     create$({ context, path: { thread_id: 1 } }) as never,
   )) as RouteResult;
   assert.equal(markedRead.status, 205);
-  assert.equal(context.getNotification("1")?.unread, false);
+  const readThread = (await getThread(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal((readThread.body as { unread: boolean }).unread, false);
 
   const markedDone = (await deleteThread(
     create$({ context, path: { thread_id: 1 } }) as never,
   )) as RouteResult;
   assert.equal(markedDone.status, 204);
-  assert.equal(context.getNotification("1"), undefined);
+  const afterDelete = (await getThread(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(afterDelete.status, 404);
 });
 
 test("notification thread subscription routes manage subscription state", async () => {
@@ -1314,7 +1320,19 @@ test("repository notification routes filter and mark only repository threads", a
   )) as RouteResult;
   assert.equal(repoMarked.status, 202);
 
-  assert.equal(context.getNotification("2")?.unread, false);
-  assert.equal(context.getNotification("3")?.unread, false);
-  assert.equal(context.getNotification("99")?.unread, true);
+  const platformUnread = (await getRepoNotifications(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((platformUnread.body as Array<unknown>).length, 0);
+
+  const helloWorldUnread = (await getRepoNotifications(
+    create$({
+      context,
+      path: { owner: "octocat", repo: "hello-world" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal((helloWorldUnread.body as Array<unknown>).length, 1);
 });

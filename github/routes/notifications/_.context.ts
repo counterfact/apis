@@ -65,7 +65,7 @@ export class Context {
         `${API_URL}/notifications/threads/${id}/subscription`,
     };
     this.notifications.set(id, fullNotification);
-    if (input.id == null) {
+    if (input.id === undefined) {
       this.nextNotificationId = Math.max(
         this.nextNotificationId,
         Number(id) + 1 || this.nextNotificationId,
