@@ -57,7 +57,8 @@ export class Context {
       unread: true,
       updated_at: now,
       last_read_at: input.last_read_at ?? existing?.last_read_at ?? now,
-      url: input.url ?? existing?.url ?? `${API_URL}/notifications/threads/${id}`,
+      url:
+        input.url ?? existing?.url ?? `${API_URL}/notifications/threads/${id}`,
       subscription_url:
         input.subscription_url ??
         existing?.subscription_url ??

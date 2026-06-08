@@ -1202,7 +1202,9 @@ test("release routes return 404 when repository does not exist", async () => {
 test("notification routes list and mark notifications read", async () => {
   const context = createSeededContext();
 
-  const listed = (await getNotifications(create$({ context }) as never)) as RouteResult;
+  const listed = (await getNotifications(
+    create$({ context }) as never,
+  )) as RouteResult;
   assert.equal(listed.status, 200);
   assert.equal((listed.body as Array<unknown>).length, 3);
 

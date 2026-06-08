@@ -9,10 +9,7 @@ const createContext = () =>
     readJson: async () => ({}),
   });
 
-const repositoryFixture = (
-  owner: string,
-  repo: string,
-): minimal_repository =>
+const repositoryFixture = (owner: string, repo: string): minimal_repository =>
   ({
     id: owner.length * 100 + repo.length,
     name: repo,
@@ -69,7 +66,10 @@ test("listNotifications returns unread entries when all is false", () => {
   context.markNotificationRead(second.id);
 
   const unreadOnly = context.listNotifications({ all: false });
-  assert.deepEqual(unreadOnly.map((thread) => thread.id), [first.id]);
+  assert.deepEqual(
+    unreadOnly.map((thread) => thread.id),
+    [first.id],
+  );
 });
 
 test("listNotifications filters by repository owner and name", () => {
@@ -101,7 +101,10 @@ test("listNotifications filters by repository owner and name", () => {
     owner: "counterfact",
     repo: "platform-api",
   });
-  assert.deepEqual(filtered.map((thread) => thread.id), ["1"]);
+  assert.deepEqual(
+    filtered.map((thread) => thread.id),
+    ["1"],
+  );
 });
 
 test("markNotificationRead marks a thread as read", () => {
