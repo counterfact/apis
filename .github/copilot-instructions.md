@@ -38,6 +38,13 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
    - Keep scenarios simple and declarative.
    - Scenario code is intentionally lightweight and **does not require unit tests**.
 
+## Manual acceptance tests
+
+Every PR description must include a section titled exactly `## Manual acceptance tests` with 3–6 unchecked checkboxes. Each checkbox must describe an observable behavior (not an implementation detail), and must not be pre-checked.
+
+- Cover the main success path, at least one edge case, and one regression check where applicable.
+- Exception: if a PR only adds files under `.github/issue-proposals/`, this section may be omitted.
+
 ## Quality bar for every change
 
 - Tests fail first, then pass after implementation.
