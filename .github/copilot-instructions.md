@@ -40,7 +40,7 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
 
 ## Manual acceptance tests
 
-Every PR description must include a section titled exactly `## Manual acceptance tests` with 3–6 unchecked checkboxes. Each checkbox must describe an observable behavior (not an implementation detail), and must not be pre-checked.
+Every PR description must include a section titled exactly `## Manual acceptance tests` with 3–6 checkboxes. Each checkbox must describe an observable behavior (not an implementation detail). When creating the PR, leave all boxes unchecked — the reviewer checks each one after manually verifying the behavior. All boxes must be checked before the PR can be merged.
 
 - Cover the main success path, at least one edge case, and one regression check where applicable.
 - Exception: if a PR only adds files under `.github/issue-proposals/`, this section may be omitted.
