@@ -5,7 +5,11 @@ import type { organization_full } from "../types/components/schemas/organization
 import type { organization_simple } from "../types/components/schemas/organization-simple.js";
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
+import type { minimal_repository } from "../types/components/schemas/minimal-repository.js";
+import type { thread } from "../types/components/schemas/thread.js";
+import type { thread_subscription } from "../types/components/schemas/thread-subscription.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
+import type { Context as NotificationsContext } from "./notifications/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
 
@@ -26,6 +30,10 @@ export class Context {
 
   private reposContext(): ReposContext {
     return this.loadContext("/repos") as ReposContext;
+  }
+
+  private notificationsContext(): NotificationsContext {
+    return this.loadContext("/notifications") as NotificationsContext;
   }
 
   saveGist(
@@ -374,5 +382,56 @@ export class Context {
 
   listReleases(...args: Parameters<ReposContext["listReleases"]>) {
     return this.reposContext().listReleases(...args);
+  }
+
+  saveNotification(
+    input: Partial<thread> & {
+      subject: thread["subject"];
+      repository: minimal_repository;
+    },
+  ): thread {
+    return this.notificationsContext().saveNotification(input);
+  }
+
+  getNotification(id: string): thread | undefined {
+    return this.notificationsContext().getNotification(id);
+  }
+
+  markNotificationRead(id: string): boolean {
+    return this.notificationsContext().markNotificationRead(id);
+  }
+
+  markNotificationDone(id: string): boolean {
+    return this.notificationsContext().markNotificationDone(id);
+  }
+
+  markAllNotificationsRead(owner?: string, repo?: string): void {
+    this.notificationsContext().markAllNotificationsRead(owner, repo);
+  }
+
+  listNotifications(query?: {
+    all?: unknown;
+    participating?: unknown;
+    per_page?: unknown;
+    page?: unknown;
+    owner?: string;
+    repo?: string;
+  }): thread[] {
+    return this.notificationsContext().listNotifications(query);
+  }
+
+  getThreadSubscription(threadId: string): thread_subscription | undefined {
+    return this.notificationsContext().getThreadSubscription(threadId);
+  }
+
+  setThreadSubscription(
+    threadId: string,
+    input: { ignored?: boolean },
+  ): thread_subscription {
+    return this.notificationsContext().setThreadSubscription(threadId, input);
+  }
+
+  deleteThreadSubscription(threadId: string): boolean {
+    return this.notificationsContext().deleteThreadSubscription(threadId);
   }
 }

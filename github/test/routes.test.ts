@@ -79,6 +79,24 @@ import {
 } from "../routes/repos/{owner}/{repo}/releases/{release_id}.ts";
 import { GET as getLatestRelease } from "../routes/repos/{owner}/{repo}/releases/latest.ts";
 import { GET as getReleaseByTag } from "../routes/repos/{owner}/{repo}/releases/tags/{tag}.ts";
+import {
+  GET as getNotifications,
+  PUT as putNotifications,
+} from "../routes/notifications.ts";
+import {
+  GET as getThread,
+  PATCH as patchThread,
+  DELETE as deleteThread,
+} from "../routes/notifications/threads/{thread_id}.ts";
+import {
+  GET as getThreadSubscription,
+  PUT as putThreadSubscription,
+  DELETE as deleteThreadSubscription,
+} from "../routes/notifications/threads/{thread_id}/subscription.ts";
+import {
+  GET as getRepoNotifications,
+  PUT as putRepoNotifications,
+} from "../routes/repos/{owner}/{repo}/notifications.ts";
 import { GET as getSearchIssues } from "../routes/search/issues.ts";
 import { GET as getSearchRepos } from "../routes/search/repositories.ts";
 import {
@@ -1179,4 +1197,122 @@ test("release routes return 404 when repository does not exist", async () => {
     }) as never,
   )) as RouteResult;
   assert.equal(byTag.status, 404);
+});
+
+test("notification routes list and mark notifications read", async () => {
+  const context = createSeededContext();
+
+  const listed = (await getNotifications(create$({ context }) as never)) as RouteResult;
+  assert.equal(listed.status, 200);
+  assert.equal((listed.body as Array<unknown>).length, 3);
+
+  const markAll = (await putNotifications(
+    create$({ context, body: { read: true } }) as never,
+  )) as RouteResult;
+  assert.equal(markAll.status, 202);
+
+  const unreadAfterMarkAll = (await getNotifications(
+    create$({ context }) as never,
+  )) as RouteResult;
+  assert.equal((unreadAfterMarkAll.body as Array<unknown>).length, 0);
+});
+
+test("notification thread routes get mark-read and mark-done behavior", async () => {
+  const context = createSeededContext();
+
+  const fetched = (await getThread(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(fetched.status, 200);
+  assert.equal((fetched.body as { id: string }).id, "1");
+
+  const missing = (await getThread(
+    create$({ context, path: { thread_id: 999 } }) as never,
+  )) as RouteResult;
+  assert.equal(missing.status, 404);
+
+  const markedRead = (await patchThread(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(markedRead.status, 205);
+  assert.equal(context.getNotification("1")?.unread, false);
+
+  const markedDone = (await deleteThread(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(markedDone.status, 204);
+  assert.equal(context.getNotification("1"), undefined);
+});
+
+test("notification thread subscription routes manage subscription state", async () => {
+  const context = createSeededContext();
+
+  const fetched = (await getThreadSubscription(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(fetched.status, 200);
+
+  const updated = (await putThreadSubscription(
+    create$({
+      context,
+      path: { thread_id: 1 },
+      body: { ignored: true },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(updated.status, 200);
+  assert.equal((updated.body as { ignored: boolean }).ignored, true);
+  assert.equal((updated.body as { subscribed: boolean }).subscribed, false);
+
+  const deleted = (await deleteThreadSubscription(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(deleted.status, 204);
+
+  const afterDelete = (await getThreadSubscription(
+    create$({ context, path: { thread_id: 1 } }) as never,
+  )) as RouteResult;
+  assert.equal(afterDelete.status, 404);
+});
+
+test("repository notification routes filter and mark only repository threads", async () => {
+  const context = createSeededContext();
+
+  context.saveRepository({
+    id: 999,
+    owner: "octocat",
+    name: "hello-world",
+  });
+  context.saveNotification({
+    id: "99",
+    repository: context.getRepository("octocat", "hello-world")!,
+    subject: {
+      title: "Issue opened",
+      url: "https://api.github.com/repos/octocat/hello-world/issues/1",
+      latest_comment_url:
+        "https://api.github.com/repos/octocat/hello-world/issues/comments/1",
+      type: "Issue",
+    },
+  });
+
+  const repoListed = (await getRepoNotifications(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+    }) as never,
+  )) as RouteResult;
+  assert.equal(repoListed.status, 200);
+  assert.equal((repoListed.body as Array<unknown>).length, 3);
+
+  const repoMarked = (await putRepoNotifications(
+    create$({
+      context,
+      path: { owner: "counterfact", repo: "platform-api" },
+      body: {},
+    }) as never,
+  )) as RouteResult;
+  assert.equal(repoMarked.status, 202);
+
+  assert.equal(context.getNotification("2")?.unread, false);
+  assert.equal(context.getNotification("3")?.unread, false);
+  assert.equal(context.getNotification("99")?.unread, true);
 });

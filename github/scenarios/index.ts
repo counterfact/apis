@@ -314,6 +314,54 @@ export const commitStatuses: Scenario = ($) => {
   });
 };
 
+export const notifications: Scenario = ($) => {
+  const platformApi = $.context.getRepository("counterfact", "platform-api");
+  if (!platformApi) {
+    return;
+  }
+
+  $.context.saveNotification({
+    id: "1",
+    repository: platformApi,
+    subject: {
+      title: "New comment on issue #1",
+      url: "https://api.github.com/repos/counterfact/platform-api/issues/1",
+      latest_comment_url:
+        "https://api.github.com/repos/counterfact/platform-api/issues/comments/11",
+      type: "Issue",
+    },
+    reason: "mention",
+  });
+
+  $.context.saveNotification({
+    id: "2",
+    repository: platformApi,
+    subject: {
+      title: "PR #1 received a review",
+      url: "https://api.github.com/repos/counterfact/platform-api/pulls/1",
+      latest_comment_url:
+        "https://api.github.com/repos/counterfact/platform-api/pulls/1/reviews/21",
+      type: "PullRequest",
+    },
+    reason: "review_requested",
+  });
+
+  $.context.saveNotification({
+    id: "3",
+    repository: platformApi,
+    subject: {
+      title: "Workflow CI failed on release",
+      url: "https://api.github.com/repos/counterfact/platform-api/actions/runs/402",
+      latest_comment_url:
+        "https://api.github.com/repos/counterfact/platform-api/actions/runs/402",
+      type: "CheckSuite",
+    },
+    reason: "subscribed",
+  });
+
+  $.context.setThreadSubscription("1", { ignored: false });
+};
+
 export const releases: Scenario = ($) => {
   $.context.saveRelease("counterfact", "platform-api", {
     id: 601,
@@ -359,6 +407,7 @@ export const seedGitHub: Scenario = ($) => {
   void actions($);
   void commitStatuses($);
   void releases($);
+  void notifications($);
   void gists($);
   void gistComments($);
 };

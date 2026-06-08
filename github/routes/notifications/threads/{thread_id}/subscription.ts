@@ -5,13 +5,34 @@ import type { activityDeleteThreadSubscription } from "../../../../types/paths/n
 export const GET: activityGetThreadSubscriptionForAuthenticatedUser = async (
   $,
 ) => {
-  return $.response[200].random();
+  const threadId = String($.path.thread_id);
+  if (!$.context.getNotification(threadId)) {
+    return $.response[404].empty();
+  }
+  const subscription = $.context.getThreadSubscription(threadId);
+  if (!subscription) {
+    return $.response[404].empty();
+  }
+  return $.response[200].json(subscription);
 };
 
 export const PUT: activitySetThreadSubscription = async ($) => {
-  return $.response[200].random();
+  const threadId = String($.path.thread_id);
+  if (!$.context.getNotification(threadId)) {
+    return $.response[404].empty();
+  }
+  return $.response[200].json(
+    $.context.setThreadSubscription(threadId, {
+      ignored: $.body.ignored,
+    }),
+  );
 };
 
 export const DELETE: activityDeleteThreadSubscription = async ($) => {
+  const threadId = String($.path.thread_id);
+  if (!$.context.getNotification(threadId)) {
+    return $.response[404].empty();
+  }
+  $.context.deleteThreadSubscription(threadId);
   return $.response[204].empty();
 };
