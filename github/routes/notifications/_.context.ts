@@ -129,7 +129,7 @@ export class Context {
         query?.repo ? notification.repository.name === query.repo : true,
       )
       .filter((notification) =>
-        participating ? notification.reason === DEFAULT_REASON : true,
+        participating ? notification.reason !== DEFAULT_REASON : true,
       )
       .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
     return paginate(filtered, query);
