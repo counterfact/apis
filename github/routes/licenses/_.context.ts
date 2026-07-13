@@ -33,10 +33,8 @@ const makeSimpleLicense = (entry: license): license_simple => ({
   html_url: entry.html_url,
 });
 
-const makeLicense = (licenseData: license): license => licenseData;
-
 const LICENSES: Array<license> = [
-  makeLicense({
+  {
     key: "mit",
     name: "MIT License",
     spdx_id: "MIT",
@@ -51,8 +49,8 @@ const LICENSES: Array<license> = [
     limitations: ["no-liability"],
     body: "MIT License body",
     featured: true,
-  }),
-  makeLicense({
+  },
+  {
     key: "apache-2.0",
     name: "Apache License 2.0",
     spdx_id: "Apache-2.0",
@@ -73,8 +71,8 @@ const LICENSES: Array<license> = [
     limitations: ["trademark-use", "no-liability"],
     body: "Apache License 2.0 body",
     featured: true,
-  }),
-  makeLicense({
+  },
+  {
     key: "bsd-3-clause",
     name: 'BSD 3-Clause "New" or "Revised" License',
     spdx_id: "BSD-3-Clause",
@@ -90,8 +88,8 @@ const LICENSES: Array<license> = [
     limitations: ["liability", "warranty"],
     body: "BSD 3-Clause body",
     featured: true,
-  }),
-  makeLicense({
+  },
+  {
     key: "gpl-3.0",
     name: "GNU General Public License v3.0",
     spdx_id: "GPL-3.0",
@@ -107,8 +105,8 @@ const LICENSES: Array<license> = [
     limitations: ["liability", "warranty"],
     body: "GPL-3.0 body",
     featured: true,
-  }),
-  makeLicense({
+  },
+  {
     key: "lgpl-3.0",
     name: "GNU Lesser General Public License v3.0",
     spdx_id: "LGPL-3.0",
@@ -124,8 +122,8 @@ const LICENSES: Array<license> = [
     limitations: ["liability", "warranty"],
     body: "LGPL-3.0 body",
     featured: false,
-  }),
-  makeLicense({
+  },
+  {
     key: "mpl-2.0",
     name: "Mozilla Public License 2.0",
     spdx_id: "MPL-2.0",
@@ -140,8 +138,8 @@ const LICENSES: Array<license> = [
     limitations: ["liability", "warranty"],
     body: "MPL-2.0 body",
     featured: false,
-  }),
-  makeLicense({
+  },
+  {
     key: "unlicense",
     name: "The Unlicense",
     spdx_id: "Unlicense",
@@ -156,7 +154,7 @@ const LICENSES: Array<license> = [
     limitations: ["liability", "warranty"],
     body: "Unlicense body",
     featured: false,
-  }),
+  },
 ];
 
 export class Context {
@@ -171,7 +169,7 @@ export class Context {
   saveLicense(licenseData: license): license {
     const key = licenseData.key.toLowerCase();
     const existing = this.licensesByKey.get(key);
-    const entry = makeLicense({
+    const entry: license = {
       ...existing,
       ...licenseData,
       key,
@@ -180,7 +178,7 @@ export class Context {
         licenseData.html_url ??
         existing?.html_url ??
         `${APP_URL}/licenses/${key}`,
-    });
+    };
     this.licensesByKey.set(key, entry);
     return entry;
   }

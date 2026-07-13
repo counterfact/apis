@@ -3,7 +3,6 @@ import type { gist_comment } from "../types/components/schemas/gist-comment.js";
 import type { gist_simple } from "../types/components/schemas/gist-simple.js";
 import type { organization_full } from "../types/components/schemas/organization-full.js";
 import type { organization_simple } from "../types/components/schemas/organization-simple.js";
-import type { license_simple } from "../types/components/schemas/license-simple.js";
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";

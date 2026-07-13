@@ -455,13 +455,13 @@ export const seedGitHub: Scenario = ($) => {
   void identities($);
   void repositories($);
   void labels($);
-  void licenses($);
   void issues($);
   void milestones($);
   void pullRequests($);
   void actions($);
   void commitStatuses($);
   void releases($);
+  void licenses($);
   void gists($);
   void gistComments($);
 };
@@ -486,6 +486,6 @@ export const help: Scenario = ($) => {
     "\nScenarios (including this one) are defined in the ./scenarios directory.",
   );
   console.log(
-    "\nTry .scenario seedGitHub to load users, repos, issues, pull requests, workflows, licenses, gists, and comments.",
+    "\nTry .scenario seedGitHub to load users, repos, issues, pull requests, workflows, gists, licenses, and comments.",
   );
 };
