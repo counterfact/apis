@@ -5,6 +5,7 @@ import { Context } from "../routes/_.context.ts";
 import { GET as getWorkflowJobs } from "../routes/repos/{owner}/{repo}/actions/runs/{run_id}/jobs.ts";
 import { GET as getWorkflowRuns } from "../routes/repos/{owner}/{repo}/actions/runs.ts";
 import { GET as getWorkflows } from "../routes/repos/{owner}/{repo}/actions/workflows.ts";
+import { GET as getEmojis } from "../routes/emojis.ts";
 import { GET as getBranch } from "../routes/repos/{owner}/{repo}/branches/{branch}.ts";
 import { GET as getCommit } from "../routes/repos/{owner}/{repo}/commits/{ref}.ts";
 import {
@@ -135,6 +136,39 @@ const createSeededContext = () => {
     route: () => ({}),
   });
   return context;
+};
+
+const startEmojiRoutesHttpServer = async () => {
+  const context = createSeededContext();
+  const server = createServer(async (req, res) => {
+    if (req.method === "GET" && req.url === "/emojis") {
+      const result = (await getEmojis(create$({ context }) as never)) as RouteResult;
+      res.writeHead(result.status, { "content-type": "application/json" });
+      res.end(JSON.stringify(result.body));
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to start emoji route server");
+  }
+
+  return {
+    request: (pathname: string) =>
+      fetch(`http://127.0.0.1:${address.port}${pathname}`),
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  };
 };
 
 const startCommitRoutesHttpServer = async () => {
@@ -1001,6 +1035,21 @@ test("actions, identity, and search routes return seeded data", async () => {
     }) as never,
   )) as RouteResult;
   assert.equal((issueSearch.body as { total_count: number }).total_count, 1);
+});
+
+test("emoji route returns seeded data over HTTP", async () => {
+  const server = await startEmojiRoutesHttpServer();
+  try {
+    const response = await server.request("/emojis");
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "application/json");
+
+    const emojis = (await response.json()) as Record<string, string>;
+    assert.equal(emojis.smile, "https://github.githubassets.com/images/icons/emoji/unicode/1f604.png");
+    assert.equal(emojis.rocket, "https://github.githubassets.com/images/icons/emoji/unicode/1f680.png");
+  } finally {
+    await server.close();
+  }
 });
 
 test("commit routes return 404 when repository does not exist", async () => {
