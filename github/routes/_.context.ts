@@ -3,10 +3,12 @@ import type { gist_comment } from "../types/components/schemas/gist-comment.js";
 import type { gist_simple } from "../types/components/schemas/gist-simple.js";
 import type { organization_full } from "../types/components/schemas/organization-full.js";
 import type { organization_simple } from "../types/components/schemas/organization-simple.js";
+import type { license_simple } from "../types/components/schemas/license-simple.js";
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
+import type { Context as LicensesContext } from "./licenses/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
 
@@ -25,12 +27,28 @@ export class Context {
     return this.loadContext("/emojis") as EmojisContext;
   }
 
+  private licensesContext(): LicensesContext {
+    return this.loadContext("/licenses") as LicensesContext;
+  }
+
   saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
     return this.emojisContext().saveEmoji(...args);
   }
 
   listEmojis(...args: Parameters<EmojisContext["listEmojis"]>) {
     return this.emojisContext().listEmojis(...args);
+  }
+
+  saveLicense(...args: Parameters<LicensesContext["saveLicense"]>) {
+    return this.licensesContext().saveLicense(...args);
+  }
+
+  getLicense(...args: Parameters<LicensesContext["getLicense"]>) {
+    return this.licensesContext().getLicense(...args);
+  }
+
+  listLicenses(...args: Parameters<LicensesContext["listLicenses"]>) {
+    return this.licensesContext().listLicenses(...args);
   }
 
   private usersContext(): UsersContext {
