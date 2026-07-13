@@ -249,8 +249,7 @@ export const licenses: Scenario = ($) => {
     url: "https://api.github.com/licenses/mit",
     node_id: "MDc6TGljZW5zZW1pdA==",
     html_url: "http://choosealicense.com/licenses/mit/",
-    description:
-      "A permissive license that is short and to the point.",
+    description: "A permissive license that is short and to the point.",
     implementation:
       "Create a LICENSE file in the repository root and copy the MIT text into it.",
     permissions: ["commercial-use", "modifications", "distribution"],
@@ -271,7 +270,12 @@ export const licenses: Scenario = ($) => {
       "A permissive license that provides an express grant of patent rights.",
     implementation:
       "Create a LICENSE file in the repository root and include the Apache 2.0 text.",
-    permissions: ["commercial-use", "modifications", "distribution", "patent-use"],
+    permissions: [
+      "commercial-use",
+      "modifications",
+      "distribution",
+      "patent-use",
+    ],
     conditions: ["include-notice", "state-changes"],
     limitations: ["trademark-use", "no-liability"],
     body: "Apache License 2.0 body",
@@ -280,7 +284,7 @@ export const licenses: Scenario = ($) => {
 
   $.context.saveLicense({
     key: "bsd-3-clause",
-    name: "BSD 3-Clause \"New\" or \"Revised\" License",
+    name: 'BSD 3-Clause "New" or "Revised" License',
     spdx_id: "BSD-3-Clause",
     url: "https://api.github.com/licenses/bsd-3-clause",
     node_id: "MDc6TGljZW5zZWJzZC0zLWNsdWF1c2U=",

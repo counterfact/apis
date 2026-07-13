@@ -71,7 +71,9 @@ const startServer = async () => {
         create$({ context, path: { license } }) as never,
       )) as RouteResult;
       res.writeHead(result.status, { "content-type": "application/json" });
-      res.end(result.body === undefined ? undefined : JSON.stringify(result.body));
+      res.end(
+        result.body === undefined ? undefined : JSON.stringify(result.body),
+      );
       return;
     }
 

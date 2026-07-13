@@ -43,8 +43,7 @@ const LICENSES: Array<license> = [
     url: `${API_URL}/licenses/mit`,
     node_id: "MDc6TGljZW5zZW1pdA==",
     html_url: "http://choosealicense.com/licenses/mit/",
-    description:
-      "A permissive license that is short and to the point.",
+    description: "A permissive license that is short and to the point.",
     implementation:
       "Create a LICENSE file in the repository root and copy the MIT text into it.",
     permissions: ["commercial-use", "modifications", "distribution"],
@@ -60,10 +59,16 @@ const LICENSES: Array<license> = [
     url: `${API_URL}/licenses/apache-2.0`,
     node_id: "MDc6TGljZW5zZWFwYWNoZS0yLjA=",
     html_url: "http://choosealicense.com/licenses/apache-2.0/",
-    description: "A permissive license that provides an express grant of patent rights.",
+    description:
+      "A permissive license that provides an express grant of patent rights.",
     implementation:
       "Create a LICENSE file in the repository root and include the Apache 2.0 text.",
-    permissions: ["commercial-use", "modifications", "distribution", "patent-use"],
+    permissions: [
+      "commercial-use",
+      "modifications",
+      "distribution",
+      "patent-use",
+    ],
     conditions: ["include-notice", "state-changes"],
     limitations: ["trademark-use", "no-liability"],
     body: "Apache License 2.0 body",
@@ -71,12 +76,13 @@ const LICENSES: Array<license> = [
   }),
   makeLicense({
     key: "bsd-3-clause",
-    name: "BSD 3-Clause \"New\" or \"Revised\" License",
+    name: 'BSD 3-Clause "New" or "Revised" License',
     spdx_id: "BSD-3-Clause",
     url: `${API_URL}/licenses/bsd-3-clause`,
     node_id: "MDc6TGljZW5zZWJzZC0zLWNsdWF1c2U=",
     html_url: "http://choosealicense.com/licenses/bsd-3-clause/",
-    description: "A permissive license with minimal restrictions on redistribution.",
+    description:
+      "A permissive license with minimal restrictions on redistribution.",
     implementation:
       "Create a LICENSE file in the repository root and include the BSD 3-Clause text.",
     permissions: ["commercial-use", "modifications", "distribution"],
@@ -92,7 +98,8 @@ const LICENSES: Array<license> = [
     url: `${API_URL}/licenses/gpl-3.0`,
     node_id: "MDc6TGljZW5zZWdwbC0zLjA=",
     html_url: "http://choosealicense.com/licenses/gpl-3.0/",
-    description: "A copyleft license that requires anyone who distributes your code to make the source available under the same terms.",
+    description:
+      "A copyleft license that requires anyone who distributes your code to make the source available under the same terms.",
     implementation:
       "Create a LICENSE file in the repository root and include the GPLv3 text.",
     permissions: ["commercial-use", "modifications", "distribution"],
@@ -108,7 +115,8 @@ const LICENSES: Array<license> = [
     url: `${API_URL}/licenses/lgpl-3.0`,
     node_id: "MDc6TGljZW5zZWxncGwtMy4w",
     html_url: "http://choosealicense.com/licenses/lgpl-3.0/",
-    description: "A weak copyleft license for libraries and reusable components.",
+    description:
+      "A weak copyleft license for libraries and reusable components.",
     implementation:
       "Create a LICENSE file in the repository root and include the LGPLv3 text.",
     permissions: ["commercial-use", "modifications", "distribution"],
@@ -169,7 +177,9 @@ export class Context {
       key,
       url: licenseData.url ?? existing?.url ?? `${API_URL}/licenses/${key}`,
       html_url:
-        licenseData.html_url ?? existing?.html_url ?? `${APP_URL}/licenses/${key}`,
+        licenseData.html_url ??
+        existing?.html_url ??
+        `${APP_URL}/licenses/${key}`,
     });
     this.licensesByKey.set(key, entry);
     return entry;
@@ -179,13 +189,20 @@ export class Context {
     return this.licensesByKey.get(key.toLowerCase());
   }
 
-  listLicenses(query?: { featured?: unknown; per_page?: unknown; page?: unknown }) {
+  listLicenses(query?: {
+    featured?: unknown;
+    per_page?: unknown;
+    page?: unknown;
+  }) {
     const licenses = [...this.licensesByKey.values()].sort((left, right) =>
       left.key.localeCompare(right.key),
     );
     const filtered = asBoolean(query?.featured)
       ? licenses.filter((entry) => entry.featured)
       : licenses;
-    return paginate(filtered.map((entry) => makeSimpleLicense(entry)), query);
+    return paginate(
+      filtered.map((entry) => makeSimpleLicense(entry)),
+      query,
+    );
   }
 }
