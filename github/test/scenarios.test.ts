@@ -32,11 +32,14 @@ test("emojis scenario seeds deterministic emoji data", () => {
   emojis($);
 
   assert.deepEqual($.context.listEmojis(), {
-    smile: "https://github.githubassets.com/images/icons/emoji/unicode/1f604.png",
-    heart: "https://github.githubassets.com/images/icons/emoji/unicode/2764.png",
+    smile:
+      "https://github.githubassets.com/images/icons/emoji/unicode/1f604.png",
+    heart:
+      "https://github.githubassets.com/images/icons/emoji/unicode/2764.png",
     "+1": "https://github.githubassets.com/images/icons/emoji/unicode/1f44d.png",
     tada: "https://github.githubassets.com/images/icons/emoji/unicode/1f389.png",
-    rocket: "https://github.githubassets.com/images/icons/emoji/unicode/1f680.png",
+    rocket:
+      "https://github.githubassets.com/images/icons/emoji/unicode/1f680.png",
   });
 });
 

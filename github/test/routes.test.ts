@@ -142,7 +142,9 @@ const startEmojiRoutesHttpServer = async () => {
   const context = createSeededContext();
   const server = createServer(async (req, res) => {
     if (req.method === "GET" && req.url === "/emojis") {
-      const result = (await getEmojis(create$({ context }) as never)) as RouteResult;
+      const result = (await getEmojis(
+        create$({ context }) as never,
+      )) as RouteResult;
       res.writeHead(result.status, { "content-type": "application/json" });
       res.end(JSON.stringify(result.body));
       return;
@@ -1045,8 +1047,14 @@ test("emoji route returns seeded data over HTTP", async () => {
     assert.equal(response.headers.get("content-type"), "application/json");
 
     const emojis = (await response.json()) as Record<string, string>;
-    assert.equal(emojis.smile, "https://github.githubassets.com/images/icons/emoji/unicode/1f604.png");
-    assert.equal(emojis.rocket, "https://github.githubassets.com/images/icons/emoji/unicode/1f680.png");
+    assert.equal(
+      emojis.smile,
+      "https://github.githubassets.com/images/icons/emoji/unicode/1f604.png",
+    );
+    assert.equal(
+      emojis.rocket,
+      "https://github.githubassets.com/images/icons/emoji/unicode/1f680.png",
+    );
   } finally {
     await server.close();
   }

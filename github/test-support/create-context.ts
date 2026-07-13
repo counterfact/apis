@@ -25,7 +25,10 @@ export const createContextHarness = () => {
     let created: unknown;
     switch (path) {
       case "/emojis":
-        created = new EmojisContext({ loadContext, readJson: async () => ({}) });
+        created = new EmojisContext({
+          loadContext,
+          readJson: async () => ({}),
+        });
         break;
       case "/gists":
         created = new GistsContext({ loadContext, readJson: async () => ({}) });
