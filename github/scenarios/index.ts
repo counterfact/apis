@@ -1,5 +1,28 @@
 import type { Scenario } from "../types/_.context.ts";
 
+export const emojis: Scenario = ($) => {
+  $.context.saveEmoji(
+    "smile",
+    "https://github.githubassets.com/images/icons/emoji/unicode/1f604.png",
+  );
+  $.context.saveEmoji(
+    "heart",
+    "https://github.githubassets.com/images/icons/emoji/unicode/2764.png",
+  );
+  $.context.saveEmoji(
+    "+1",
+    "https://github.githubassets.com/images/icons/emoji/unicode/1f44d.png",
+  );
+  $.context.saveEmoji(
+    "tada",
+    "https://github.githubassets.com/images/icons/emoji/unicode/1f389.png",
+  );
+  $.context.saveEmoji(
+    "rocket",
+    "https://github.githubassets.com/images/icons/emoji/unicode/1f680.png",
+  );
+};
+
 export const gists: Scenario = ($) => {
   $.context.saveGist({
     id: "aa5a315d61ae9438b18d",
@@ -350,6 +373,7 @@ export const releases: Scenario = ($) => {
 };
 
 export const seedGitHub: Scenario = ($) => {
+  void emojis($);
   void identities($);
   void repositories($);
   void labels($);

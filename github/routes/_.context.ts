@@ -6,6 +6,7 @@ import type { organization_simple } from "../types/components/schemas/organizati
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
+import type { Context as EmojisContext } from "./emojis/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
 
@@ -18,6 +19,18 @@ export class Context {
 
   private gistsContext(): GistsContext {
     return this.loadContext("/gists") as GistsContext;
+  }
+
+  private emojisContext(): EmojisContext {
+    return this.loadContext("/emojis") as EmojisContext;
+  }
+
+  saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
+    return this.emojisContext().saveEmoji(...args);
+  }
+
+  listEmojis(...args: Parameters<EmojisContext["listEmojis"]>) {
+    return this.emojisContext().listEmojis(...args);
   }
 
   private usersContext(): UsersContext {

@@ -1,5 +1,6 @@
 import type { Context$ } from "../types/_.context.ts";
 import { Context } from "../routes/_.context.ts";
+import { Context as EmojisContext } from "../routes/emojis/_.context.ts";
 import { Context as GistsContext } from "../routes/gists/_.context.ts";
 import { Context as ReposContext } from "../routes/repos/_.context.ts";
 import { Context as UsersContext } from "../routes/users/_.context.ts";
@@ -23,6 +24,12 @@ export const createContextHarness = () => {
 
     let created: unknown;
     switch (path) {
+      case "/emojis":
+        created = new EmojisContext({
+          loadContext,
+          readJson: async () => ({}),
+        });
+        break;
       case "/gists":
         created = new GistsContext({ loadContext, readJson: async () => ({}) });
         break;
