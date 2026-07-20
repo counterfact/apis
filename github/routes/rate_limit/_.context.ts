@@ -2,59 +2,59 @@ import type { Context$ } from "../../types/_.context.js";
 import type { rate_limit } from "../../types/components/schemas/rate-limit.js";
 import type { rate_limit_overview } from "../../types/components/schemas/rate-limit-overview.js";
 
-const ONE_HOUR_FROM_NOW = () => Math.floor(Date.now() / 1000) + 3600;
+const resetTimestamp = () => Math.floor(Date.now() / 1000) + 3600;
 
 const DEFAULT_LIMITS: Record<string, rate_limit> = {
-  core: { limit: 5000, remaining: 5000, used: 0, reset: ONE_HOUR_FROM_NOW() },
-  search: { limit: 30, remaining: 30, used: 0, reset: ONE_HOUR_FROM_NOW() },
+  core: { limit: 5000, remaining: 5000, used: 0, reset: resetTimestamp() },
+  search: { limit: 30, remaining: 30, used: 0, reset: resetTimestamp() },
   graphql: {
     limit: 5000,
     remaining: 5000,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
   code_search: {
     limit: 10,
     remaining: 10,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
   integration_manifest: {
     limit: 5000,
     remaining: 5000,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
   code_scanning_upload: {
     limit: 1000,
     remaining: 1000,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
   actions_runner_registration: {
     limit: 10000,
     remaining: 10000,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
-  scim: { limit: 15000, remaining: 15000, used: 0, reset: ONE_HOUR_FROM_NOW() },
+  scim: { limit: 15000, remaining: 15000, used: 0, reset: resetTimestamp() },
   dependency_snapshots: {
     limit: 100,
     remaining: 100,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
   dependency_sbom: {
     limit: 100,
     remaining: 100,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
   code_scanning_autofix: {
     limit: 10,
     remaining: 10,
     used: 0,
-    reset: ONE_HOUR_FROM_NOW(),
+    reset: resetTimestamp(),
   },
 };
 
@@ -67,7 +67,7 @@ export class Context {
     resource: string,
     limit: Partial<rate_limit> & { limit: number },
   ): void {
-    const reset = limit.reset ?? ONE_HOUR_FROM_NOW();
+    const reset = limit.reset ?? resetTimestamp();
     const remaining = limit.remaining ?? limit.limit;
     const used = limit.used ?? 0;
     this.limits.set(resource, { limit: limit.limit, remaining, used, reset });
@@ -91,7 +91,7 @@ export class Context {
         ...existing,
         remaining: existing.limit,
         used: 0,
-        reset: ONE_HOUR_FROM_NOW(),
+        reset: resetTimestamp(),
       });
     }
   }
@@ -103,7 +103,7 @@ export class Context {
         limit: 0,
         remaining: 0,
         used: 0,
-        reset: ONE_HOUR_FROM_NOW(),
+        reset: resetTimestamp(),
       }
     );
   }
