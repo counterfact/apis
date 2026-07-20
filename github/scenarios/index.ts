@@ -450,6 +450,13 @@ export const releases: Scenario = ($) => {
   });
 };
 
+export const rateLimit: Scenario = ($) => {
+  $.context.setRateLimit("core", { limit: 5000 });
+  $.context.setRateLimit("search", { limit: 30 });
+  $.context.setRateLimit("graphql", { limit: 5000 });
+  $.context.setRateLimit("code_search", { limit: 10 });
+};
+
 export const seedGitHub: Scenario = ($) => {
   void emojis($);
   void identities($);
@@ -464,6 +471,7 @@ export const seedGitHub: Scenario = ($) => {
   void licenses($);
   void gists($);
   void gistComments($);
+  void rateLimit($);
 };
 
 export const startup: Scenario = ($) => {

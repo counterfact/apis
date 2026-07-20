@@ -8,6 +8,7 @@ import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
 import type { Context as LicensesContext } from "./licenses/_.context.js";
+import type { Context as RateLimitContext } from "./rate_limit/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
 
@@ -30,6 +31,10 @@ export class Context {
     return this.loadContext("/licenses") as LicensesContext;
   }
 
+  private rateLimitContext(): RateLimitContext {
+    return this.loadContext("/rate_limit") as RateLimitContext;
+  }
+
   saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
     return this.emojisContext().saveEmoji(...args);
   }
@@ -48,6 +53,28 @@ export class Context {
 
   listLicenses(...args: Parameters<LicensesContext["listLicenses"]>) {
     return this.licensesContext().listLicenses(...args);
+  }
+
+  getRateLimitOverview(
+    ...args: Parameters<RateLimitContext["getRateLimitOverview"]>
+  ) {
+    return this.rateLimitContext().getRateLimitOverview(...args);
+  }
+
+  getRateLimit(...args: Parameters<RateLimitContext["getRateLimit"]>) {
+    return this.rateLimitContext().getRateLimit(...args);
+  }
+
+  setRateLimit(...args: Parameters<RateLimitContext["setRateLimit"]>) {
+    return this.rateLimitContext().setRateLimit(...args);
+  }
+
+  consumeRequest(...args: Parameters<RateLimitContext["consumeRequest"]>) {
+    return this.rateLimitContext().consumeRequest(...args);
+  }
+
+  resetRateLimit(...args: Parameters<RateLimitContext["resetRateLimit"]>) {
+    return this.rateLimitContext().resetRateLimit(...args);
   }
 
   private usersContext(): UsersContext {

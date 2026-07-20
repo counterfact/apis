@@ -3,6 +3,7 @@ import { Context } from "../routes/_.context.ts";
 import { Context as EmojisContext } from "../routes/emojis/_.context.ts";
 import { Context as GistsContext } from "../routes/gists/_.context.ts";
 import { Context as LicensesContext } from "../routes/licenses/_.context.ts";
+import { Context as RateLimitContext } from "../routes/rate_limit/_.context.ts";
 import { Context as ReposContext } from "../routes/repos/_.context.ts";
 import { Context as UsersContext } from "../routes/users/_.context.ts";
 
@@ -36,6 +37,12 @@ export const createContextHarness = () => {
         break;
       case "/licenses":
         created = new LicensesContext({
+          loadContext,
+          readJson: async () => ({}),
+        });
+        break;
+      case "/rate_limit":
+        created = new RateLimitContext({
           loadContext,
           readJson: async () => ({}),
         });
