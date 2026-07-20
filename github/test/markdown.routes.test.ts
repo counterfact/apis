@@ -4,38 +4,12 @@ import test from "node:test";
 import { POST as postMarkdown } from "../routes/markdown.ts";
 import { POST as postMarkdownRaw } from "../routes/markdown/raw.ts";
 import { createContextHarness } from "../test-support/create-context.ts";
+import { createResponse } from "../test-support/create-response.ts";
 
 type RouteResult = {
   status: number;
   body?: unknown;
   headers: Record<string, string>;
-};
-
-const createResponse = () => {
-  const makeBuilder = (
-    status: number,
-    headers: Record<string, string> = {},
-  ): never => {
-    const builder = {
-      status,
-      headers,
-      header: (name: string, value: string) =>
-        makeBuilder(status, { ...headers, [name]: value }),
-      html: (body: unknown): RouteResult => ({ status, headers, body }),
-      text: (body: unknown): RouteResult => ({ status, headers, body }),
-      json: (body: unknown): RouteResult => ({ status, headers, body }),
-      empty: (): RouteResult => ({ status, headers }),
-      random: (): RouteResult => ({ status, headers }),
-    };
-    return builder as never;
-  };
-
-  return new Proxy(
-    {},
-    {
-      get: (_, key) => makeBuilder(Number(key)),
-    },
-  ) as never;
 };
 
 const createContextForTest = () => createContextHarness().context;

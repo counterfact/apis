@@ -6,7 +6,7 @@ export const POST: markdownRender = async ($) => {
     $.body.mode,
     $.body.context,
   );
-  const version = $.context.markdownCommonMarkerVersion();
+  const version = $.context.commonMarkerVersion();
   return $.response[200]
     .header("Content-Type", "text/html; charset=utf-8")
     .header("Content-Length", String(Buffer.byteLength(html, "utf8")))

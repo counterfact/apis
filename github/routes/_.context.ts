@@ -63,10 +63,9 @@ export class Context {
     return this.markdownContext().renderRaw(...args);
   }
 
-  markdownCommonMarkerVersion() {
+  commonMarkerVersion() {
     return this.markdownContext().commonMarkerVersion();
   }
-
   private usersContext(): UsersContext {
     return this.loadContext("/users") as UsersContext;
   }
