@@ -241,6 +241,84 @@ export const labels: Scenario = ($) => {
   });
 };
 
+export const licenses: Scenario = ($) => {
+  $.context.saveLicense({
+    key: "mit",
+    name: "MIT License",
+    spdx_id: "MIT",
+    url: "https://api.github.com/licenses/mit",
+    node_id: "MDc6TGljZW5zZW1pdA==",
+    html_url: "http://choosealicense.com/licenses/mit/",
+    description: "A permissive license that is short and to the point.",
+    implementation:
+      "Create a LICENSE file in the repository root and copy the MIT text into it.",
+    permissions: ["commercial-use", "modifications", "distribution"],
+    conditions: ["include-copyright"],
+    limitations: ["no-liability"],
+    body: "MIT License body",
+    featured: true,
+  });
+
+  $.context.saveLicense({
+    key: "apache-2.0",
+    name: "Apache License 2.0",
+    spdx_id: "Apache-2.0",
+    url: "https://api.github.com/licenses/apache-2.0",
+    node_id: "MDc6TGljZW5zZWFwYWNoZS0yLjA=",
+    html_url: "http://choosealicense.com/licenses/apache-2.0/",
+    description:
+      "A permissive license that provides an express grant of patent rights.",
+    implementation:
+      "Create a LICENSE file in the repository root and include the Apache 2.0 text.",
+    permissions: [
+      "commercial-use",
+      "modifications",
+      "distribution",
+      "patent-use",
+    ],
+    conditions: ["include-notice", "state-changes"],
+    limitations: ["trademark-use", "no-liability"],
+    body: "Apache License 2.0 body",
+    featured: true,
+  });
+
+  $.context.saveLicense({
+    key: "bsd-3-clause",
+    name: 'BSD 3-Clause "New" or "Revised" License',
+    spdx_id: "BSD-3-Clause",
+    url: "https://api.github.com/licenses/bsd-3-clause",
+    node_id: "MDc6TGljZW5zZWJzZC0zLWNsdWF1c2U=",
+    html_url: "http://choosealicense.com/licenses/bsd-3-clause/",
+    description:
+      "A permissive license with minimal restrictions on redistribution.",
+    implementation:
+      "Create a LICENSE file in the repository root and include the BSD 3-Clause text.",
+    permissions: ["commercial-use", "modifications", "distribution"],
+    conditions: ["include-notice"],
+    limitations: ["liability", "warranty"],
+    body: "BSD 3-Clause body",
+    featured: true,
+  });
+
+  $.context.saveLicense({
+    key: "gpl-3.0",
+    name: "GNU General Public License v3.0",
+    spdx_id: "GPL-3.0",
+    url: "https://api.github.com/licenses/gpl-3.0",
+    node_id: "MDc6TGljZW5zZWdwbC0zLjA=",
+    html_url: "http://choosealicense.com/licenses/gpl-3.0/",
+    description:
+      "A copyleft license that requires anyone who distributes your code to make the source available under the same terms.",
+    implementation:
+      "Create a LICENSE file in the repository root and include the GPLv3 text.",
+    permissions: ["commercial-use", "modifications", "distribution"],
+    conditions: ["disclose-source", "same-license"],
+    limitations: ["liability", "warranty"],
+    body: "GPL-3.0 body",
+    featured: true,
+  });
+};
+
 export const pullRequests: Scenario = ($) => {
   $.context.savePullRequest("counterfact", "platform-api", {
     number: 1,
@@ -383,6 +461,7 @@ export const seedGitHub: Scenario = ($) => {
   void actions($);
   void commitStatuses($);
   void releases($);
+  void licenses($);
   void gists($);
   void gistComments($);
 };
@@ -407,6 +486,6 @@ export const help: Scenario = ($) => {
     "\nScenarios (including this one) are defined in the ./scenarios directory.",
   );
   console.log(
-    "\nTry .scenario seedGitHub to load users, repos, issues, pull requests, workflows, gists, and comments.",
+    "\nTry .scenario seedGitHub to load users, repos, issues, pull requests, workflows, gists, licenses, and comments.",
   );
 };
