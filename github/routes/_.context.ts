@@ -8,6 +8,7 @@ import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
 import type { Context as LicensesContext } from "./licenses/_.context.js";
+import type { Context as MarkdownContext } from "./markdown/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
 
@@ -30,6 +31,10 @@ export class Context {
     return this.loadContext("/licenses") as LicensesContext;
   }
 
+  private markdownContext(): MarkdownContext {
+    return this.loadContext("/markdown") as MarkdownContext;
+  }
+
   saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
     return this.emojisContext().saveEmoji(...args);
   }
@@ -48,6 +53,18 @@ export class Context {
 
   listLicenses(...args: Parameters<LicensesContext["listLicenses"]>) {
     return this.licensesContext().listLicenses(...args);
+  }
+
+  renderMarkdown(...args: Parameters<MarkdownContext["renderMarkdown"]>) {
+    return this.markdownContext().renderMarkdown(...args);
+  }
+
+  renderRaw(...args: Parameters<MarkdownContext["renderRaw"]>) {
+    return this.markdownContext().renderRaw(...args);
+  }
+
+  markdownCommonMarkerVersion() {
+    return this.markdownContext().commonMarkerVersion();
   }
 
   private usersContext(): UsersContext {
