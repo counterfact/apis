@@ -162,8 +162,8 @@ test("POST /markdown in gfm mode renders issue reference links", async () => {
     assert.equal(res.status, 200);
     const body = await res.text();
     assert.ok(
-      body.includes("https://github.com/octocat/hello-world/issues/42"),
-      `should contain issue link, got: ${body}`,
+      body.includes('href="https://github.com/octocat/hello-world/issues/42"'),
+      `should contain issue link href, got: ${body}`,
     );
   } finally {
     await server.close();
