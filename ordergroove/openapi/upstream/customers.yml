@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: Ordergroove REST Customers API
+  description: 'The Ordergroove REST API operates an enterprise subscription and relationship-commerce program on top of a merchant''s eCommerce store. It is organized around a four-object data model - Customer, Subscription, Item, and Order - plus supporting resources for Products, Offers and Incentives, Payments, Addresses, and Entitlements. Two authentication scopes exist: an Application API scope for server-to-server calls using an x-api-key header (one of ten keys per store), and a Storefront API scope using an HMAC-SHA256-signed request scoped to a single customer. All traffic is HTTPS only. This document models the publicly documented REST surface at restapi.ordergroove.com; endpoint paths are drawn from the public API reference. Ordergroove is an enterprise platform sold through sales, so an account and API keys are required to call the API, but the reference is publicly readable.'
+  version: '1.0'
+  contact:
+    name: Ordergroove Developer
+    url: https://developer.ordergroove.com
+servers:
+- url: https://restapi.ordergroove.com
+  description: Production
+- url: https://staging.restapi.ordergroove.com
+  description: Staging
+security:
+- apiKeyAuth: []
+tags:
+- name: Customers
+  description: Central customer profiles.
+paths:
+  /customers/:
+    get:
+      operationId: listCustomers
+      tags:
+      - Customers
+      summary: List customers
+      responses:
+        '200':
+          description: A paginated list of customers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createCustomer
+      tags:
+      - Customers
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '201':
+          description: The created customer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+  /customers/{public_id}/:
+    get:
+      operationId: retrieveCustomer
+      tags:
+      - Customers
+      summary: Retrieve a customer
+      parameters:
+      - $ref: '#/components/parameters/PublicId'
+      responses:
+        '200':
+          description: A customer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+    put:
+      operationId: updateCustomer
+      tags:
+      - Customers
+      summary: Update a customer
+      parameters:
+      - $ref: '#/components/parameters/PublicId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '200':
+          description: The updated customer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+components:
+  responses:
+    Unauthorized:
+      description: Authentication failed or the API key is missing or invalid.
+  parameters:
+    PublicId:
+      name: public_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The public identifier of the resource.
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        public_id:
+          type: string
+        merchant_id:
+          type: string
+        merchant_user_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+    CustomerList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Customer'
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Application API scope. Send one of the ten store API keys in the x-api-key header for server-to-server requests. Storefront requests use an HMAC-SHA256 signature scoped to a single customer instead (out of band of this scheme).
