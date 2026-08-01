@@ -6,7 +6,7 @@ import { counterfact } from "counterfact";
 
 const basePath = fileURLToPath(new URL("../../", import.meta.url));
 const openApiPath = fileURLToPath(
-  new URL("../../openapi/upstream/subscriptions.yml", import.meta.url),
+  new URL("../../openapi/subscriptions.yml", import.meta.url),
 );
 const specifications = [
   "customers",
@@ -17,7 +17,7 @@ const specifications = [
   "subscriptions",
 ].map((group) => ({
   source: fileURLToPath(
-    new URL(`../../openapi/upstream/${group}.yml`, import.meta.url),
+    new URL(`../../openapi/${group}.yml`, import.meta.url),
   ),
   group,
   prefix: "",

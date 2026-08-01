@@ -16,7 +16,7 @@ const groups = [
 ] as const;
 const specifications = groups.map((group) => ({
   source: fileURLToPath(
-    new URL(`../openapi/upstream/${group}.yml`, import.meta.url),
+    new URL(`../openapi/${group}.yml`, import.meta.url),
   ),
   group,
   prefix: "",

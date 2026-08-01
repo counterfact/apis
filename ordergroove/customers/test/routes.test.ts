@@ -7,7 +7,7 @@ import type { Context } from "../routes/_.context.ts";
 
 const basePath = fileURLToPath(new URL("../../", import.meta.url));
 const openApiPath = fileURLToPath(
-  new URL("../../openapi/upstream/customers.yml", import.meta.url),
+  new URL("../../openapi/customers.yml", import.meta.url),
 );
 const specifications = [
   "customers",
@@ -18,7 +18,7 @@ const specifications = [
   "subscriptions",
 ].map((group) => ({
   source: fileURLToPath(
-    new URL(`../../openapi/upstream/${group}.yml`, import.meta.url),
+    new URL(`../../openapi/${group}.yml`, import.meta.url),
   ),
   group,
   prefix: "",

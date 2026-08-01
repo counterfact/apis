@@ -145,7 +145,7 @@ customer for entitlements.
 
 ## Contracts and scope
 
-`openapi/upstream/` contains the six unchanged published REST contracts. The
+`openapi/` contains the six unchanged published REST contracts. The
 multi-spec `counterfact.yaml` consumes them directly with an empty prefix for
 each API; there are no normalized contract copies or duplicated group paths.
 
