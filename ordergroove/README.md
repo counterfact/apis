@@ -75,6 +75,20 @@ State changes persist for the lifetime of the server. Created customers,
 one-time discounts, and items can be retrieved or listed afterward; product,
 customer, subscription, and order updates are also visible to later requests.
 
+## Shared state
+
+The root `_.store.ts` is one in-memory store shared by all six API groups. This
+lets requests to different services observe the same customers, products,
+subscriptions, orders, and items instead of maintaining isolated copies. The
+store retains its identity across route reloads and a stop/start cycle of the
+same programmatic simulator; a new simulator instance or process restart gets
+fresh state, which the `startup` scenarios seed deterministically.
+
+In interactive development, the live store is available as `store` in the
+Counterfact REPL. Programmatic callers can supply the local `Store` type to
+`counterfact<Store>(...)` and access that same object through the simulator's
+optional `store` property.
+
 ## Example flows
 
 Inspect the seeded resources for the first customer:

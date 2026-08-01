@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Store } from "../../_.store.ts";
 import { Context } from "../routes/_.context.ts";
+import type { Context$ } from "../types/_.context.ts";
 
-const createContext = () => new Context({} as never);
+const createContext = () => new Context({ store: new Store() } as Context$);
 
 const seed = (context: Context) => {
   context.seedSubscriptions([

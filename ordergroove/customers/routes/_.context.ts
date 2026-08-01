@@ -5,8 +5,8 @@ import type { Customer } from "../types/components/schemas/Customer.js";
 export class Context {
   readonly store: Store;
 
-  constructor($: Context$ & { store?: Store }) {
-    this.store = $.store ?? new Store();
+  constructor($: Context$) {
+    this.store = $.store;
   }
 
   get apiKey(): string {

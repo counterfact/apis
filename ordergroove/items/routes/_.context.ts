@@ -8,8 +8,8 @@ import type { ItemFilters } from "../../_.store.js";
 export class Context {
   readonly store: Store;
 
-  constructor($: Context$ & { store?: Store }) {
-    this.store = $.store ?? new Store();
+  constructor($: Context$) {
+    this.store = $.store;
   }
 
   get apiKey(): string {
