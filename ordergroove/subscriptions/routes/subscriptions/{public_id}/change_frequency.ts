@@ -1,6 +1,8 @@
 import type { changeSubscriptionFrequency } from "../../../types/paths/subscriptions/{public_id}/change_frequency.types.js";
 
-export const POST: changeSubscriptionFrequency = async ($) => {
+// https://developer.ordergroove.com/reference/subscriptions-change-frequency
+// The documented cadence update is PATCH with `every` and `every_period`.
+export const PATCH: changeSubscriptionFrequency = async ($) => {
   const subscription = $.context.changeSubscriptionFrequency(
     $.path.public_id,
     $.body,

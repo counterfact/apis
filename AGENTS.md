@@ -12,7 +12,23 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
    - Work on one API or one subset of an API in each iteration.
    - Do not mix unrelated endpoints or behaviors in the same change.
 
-2. **Use TDD for simulator behavior**
+2. **Research and record public API documentation**
+   - Before inferring or changing externally visible behavior, find the API
+     provider's current public documentation for the endpoint or behavior.
+   - Prefer the provider's own API reference and guides over search-result
+     summaries, third-party posts, or assumptions from similar APIs.
+   - Compare the implementation and OpenAPI contract with the documented HTTP
+     method, path, authentication scope, request fields, response status/body,
+     query filters, and state-transition semantics.
+   - Add a concise source URL comment next to every behavior derived from the
+     documentation (normally in the route handler, middleware, or context
+     method that implements it). Explain the documented rule when the link
+     alone would not make the inference clear.
+   - Treat documentation gaps as simulator limitations: preserve the smallest
+     faithful behavior, state the unsupported portion in a comment or README,
+     and do not invent production semantics.
+
+3. **Use TDD for simulator behavior**
    - Start by writing or updating tests that describe expected HTTP behavior.
    - Execute tests against a **running Counterfact instance**.
    - In tests, start Counterfact via the **programmatic API** instead of shelling
@@ -23,7 +39,7 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      - resulting state changes
      - no placeholder `dummy` test files
 
-3. **Use middleware for shared cross-cutting request behavior**
+4. **Use middleware for shared cross-cutting request behavior**
    - Put authentication, authorization, and other behavior shared by all routes
      in a scope into a `routes/**/_.middleware.ts` file.
    - Export a `middleware` function that either returns a response or calls
@@ -32,16 +48,16 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      uniform authentication check in every handler.
    - Follow Counterfact's [middleware pattern](https://github.com/counterfact/api-simulator/blob/main/docs/features/middleware.md), including its path-scoping and chaining semantics.
 
-4. **Implement state and business logic in route context files**
+5. **Implement state and business logic in route context files**
    - Put simulator state and business rules in `routes/**/_.context.ts`.
    - Do not edit generated `types/_.context.ts` files.
    - Keep route handlers thin by delegating behavior to context classes/methods.
 
-5. **Unit test Context classes directly**
+6. **Unit test Context classes directly**
    - Add direct unit tests for `Context` class behavior in `routes/**/_.context.ts`.
    - Cover state transitions and core business logic independently of HTTP tests.
 
-6. **Use scenarios for startup init and REPL setup flows**
+7. **Use scenarios for startup init and REPL setup flows**
    - Use `startup` to initialize simulator state when the server starts.
    - Use other scenario functions for REPL-invoked setup/actions after startup.
    - Keep scenarios simple and declarative.
@@ -58,6 +74,8 @@ Every PR description must include a section titled exactly `## Manual acceptance
 
 - Run the applicable lint command and resolve any failures before committing.
 - Tests fail first, then pass after implementation.
+- Documentation-derived behavior is traceable to the provider's public docs in
+  the implementation and is covered by tests.
 - HTTP-level tests verify externally visible API behavior and state effects.
 - Context unit tests verify internal logic.
 - Scenario updates follow the startup-init and REPL-invoked scenario model.

@@ -148,7 +148,7 @@ test("stores orders with clone safety, filters, cancellation, and send-now", () 
       public_id: "order-001",
       customer_id: "customer-001",
       place: "2026-03-15T12:00:00Z",
-      status: "unsent",
+      status: 1,
       total: "27.00",
     },
     {
@@ -156,7 +156,7 @@ test("stores orders with clone safety, filters, cancellation, and send-now", () 
       public_id: "order-002",
       customer_id: "customer-002",
       place: "2026-02-20T12:00:00Z",
-      status: "success",
+      status: 5,
       total: "42.00",
     },
   ]);
@@ -169,10 +169,10 @@ test("stores orders with clone safety, filters, cancellation, and send-now", () 
   listed[0]!.total = "0.00";
   assert.equal(store.getOrder("order-001")?.total, "27.00");
 
-  assert.equal(store.cancelOrder("order-001")?.status, "cancelled");
+  assert.equal(store.cancelOrder("order-001")?.status, 4);
   const sent = store.sendOrderNow("order-001", "2026-03-01T10:30:00.000Z");
   assert.equal(sent?.place, "2026-03-01T10:30:00.000Z");
-  assert.equal(sent?.status, "pending");
+  assert.equal(sent?.status, 6);
   assert.deepEqual(store.getOrder("order-001"), sent);
   assert.equal(store.cancelOrder("missing"), undefined);
 });

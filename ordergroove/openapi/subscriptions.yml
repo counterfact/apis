@@ -97,7 +97,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subscription'
   /subscriptions/{public_id}/cancel/:
-    post:
+    patch:
       operationId: cancelSubscription
       tags:
       - Subscriptions
@@ -112,7 +112,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subscription'
   /subscriptions/{public_id}/reactivate/:
-    post:
+    patch:
       operationId: reactivateSubscription
       tags:
       - Subscriptions
@@ -127,7 +127,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subscription'
   /subscriptions/{public_id}/change_frequency/:
-    post:
+    patch:
       operationId: changeSubscriptionFrequency
       tags:
       - Subscriptions

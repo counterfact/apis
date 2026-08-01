@@ -93,8 +93,8 @@ test("requires a valid API key for collection, detail, and actions", async () =>
   for (const [pathname, method] of [
     ["/orders/", "GET"],
     ["/orders/order-001/", "GET"],
-    ["/orders/order-001/cancel/", "POST"],
-    ["/orders/order-001/send_now/", "POST"],
+    ["/orders/order-001/cancel/", "PATCH"],
+    ["/orders/order-001/send_now/", "PATCH"],
   ] as const) {
     const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
       method,
@@ -117,8 +117,8 @@ test("lists deterministic orders and filters by customer and status", async () =
 
   for (const [query, expected] of [
     ["customer=customer-001", ["order-001"]],
-    ["status=success", ["order-002"]],
-    ["customer=customer-001&status=success", []],
+    ["status=5", ["order-002"]],
+    ["customer=customer-001&status=5", []],
   ] as const) {
     const filtered = await request(`/orders/?${query}`);
     assert.equal(filtered.status, 200);
@@ -140,7 +140,7 @@ test("retrieves an order", async () => {
     public_id: "order-001",
     customer_id: "customer-001",
     place: "2026-03-15T12:00:00Z",
-    status: "unsent",
+    status: 1,
     sub_total: "25.00",
     shipping_total: "2.00",
     total: "27.00",
@@ -151,37 +151,60 @@ test("retrieves an order", async () => {
 });
 
 test("cancels an order and persists the transition", async () => {
-  const response = await request("/orders/order-002/cancel/", {
-    method: "POST",
+  const response = await request("/orders/order-001/cancel/", {
+    method: "PATCH",
   });
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).status, "cancelled");
+  assert.equal((await response.json()).status, 4);
 
-  const persisted = await request("/orders/order-002/");
+  const persisted = await request("/orders/order-001/");
   assert.equal(persisted.status, 200);
-  assert.equal((await persisted.json()).status, "cancelled");
+  assert.equal((await persisted.json()).status, 4);
+
+  const nextOrders = await request("/orders/?customer=customer-001&status=1");
+  assert.equal(nextOrders.status, 200);
+  assert.deepEqual(
+    (await nextOrders.json()).results.map(
+      ({ public_id }: { public_id: string }) => public_id,
+    ),
+    ["order-003"],
+  );
+  const nextItems = await request("/items/?order=order-003");
+  assert.equal(nextItems.status, 200);
+  assert.equal(
+    (await nextItems.json()).results[0].subscription_id,
+    "subscription-001",
+  );
 });
 
-test("sends an order now and persists its immediate pending state", async () => {
+test("sends an order now and persists its immediate SEND_NOW state", async () => {
   const response = await request("/orders/order-001/send_now/", {
-    method: "POST",
+    method: "PATCH",
   });
   assert.equal(response.status, 200);
   const sent = await response.json();
-  assert.equal(sent.status, "pending");
+  assert.equal(sent.status, 6);
   assert.notEqual(sent.place, "2026-03-15T12:00:00Z");
   assert.equal(Number.isNaN(Date.parse(sent.place)), false);
 
   const persisted = await request("/orders/order-001/");
   assert.equal(persisted.status, 200);
   assert.equal((await persisted.json()).place, sent.place);
+
+  const futureOrders = await request("/orders/?customer=customer-001&status=1");
+  assert.equal(futureOrders.status, 200);
+  assert.ok(
+    (await futureOrders.json()).results.some(
+      ({ public_id }: { public_id: string }) => public_id === "order-004",
+    ),
+  );
 });
 
 test("returns 404 for every operation on unknown orders", async () => {
   for (const [pathname, method] of [
     ["/orders/not-found/", "GET"],
-    ["/orders/not-found/cancel/", "POST"],
-    ["/orders/not-found/send_now/", "POST"],
+    ["/orders/not-found/cancel/", "PATCH"],
+    ["/orders/not-found/send_now/", "PATCH"],
   ] as const) {
     const response = await request(pathname, { method });
     assert.equal(response.status, 404, pathname);

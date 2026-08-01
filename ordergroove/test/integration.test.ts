@@ -235,18 +235,19 @@ test("persists representative cross-resource changes on the combined server", as
   const discount = (await discountResponse.json()) as Resource;
   assert.equal(discount.customer_id, "customer-001");
 
+  const sendNowResponse = await request("/orders/order-001/send_now/", {
+    method: "PATCH",
+  });
+  assert.equal(sendNowResponse.status, 200);
+  assert.equal(((await sendNowResponse.json()) as Resource).status, 6);
+
   const cancelResponse = await request(
     "/subscriptions/subscription-001/cancel/",
-    { method: "POST" },
+    { method: "PATCH" },
   );
   assert.equal(cancelResponse.status, 200);
   assert.equal(((await cancelResponse.json()) as Resource).live, false);
-
-  const sendNowResponse = await request("/orders/order-001/send_now/", {
-    method: "POST",
-  });
-  assert.equal(sendNowResponse.status, 200);
-  assert.equal(((await sendNowResponse.json()) as Resource).status, "pending");
+  assert.equal((await request("/orders/order-003/")).status, 404);
 
   const createItemResponse = await request("/items/", {
     method: "POST",
@@ -276,7 +277,7 @@ test("persists representative cross-resource changes on the combined server", as
   assert.equal(persistedSubscription.status, 200);
   assert.equal(((await persistedSubscription.json()) as Resource).live, false);
   assert.equal(persistedOrder.status, 200);
-  assert.equal(((await persistedOrder.json()) as Resource).status, "pending");
+  assert.equal(((await persistedOrder.json()) as Resource).status, 6);
   assert.equal(persistedItem.status, 200);
   assert.equal(
     ((await persistedItem.json()) as Resource).subscription_id,

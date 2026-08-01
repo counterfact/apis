@@ -167,16 +167,29 @@ test("retrieves, replaces, and persists a subscription", async () => {
 
 test("persists cancellation, reactivation, and frequency changes", async () => {
   const cancel = await request("/subscriptions/subscription-001/cancel/", {
-    method: "POST",
+    method: "PATCH",
   });
   assert.equal(cancel.status, 200);
   assert.equal((await cancel.json()).live, false);
   const persistedCancel = await request("/subscriptions/subscription-001/");
   assert.equal((await persistedCancel.json()).live, false);
+  const cancelledShipment = await request("/orders/order-001/");
+  assert.equal(cancelledShipment.status, 404);
+  const removedItems = await request("/items/?order=order-001");
+  assert.equal(removedItems.status, 200);
+  assert.deepEqual((await removedItems.json()).results, []);
 
   const reactivate = await request(
     "/subscriptions/subscription-001/reactivate/",
-    { method: "POST" },
+    {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        every: 1,
+        every_period: "month",
+        start_date: "2026-03-01",
+      }),
+    },
   );
   assert.equal(reactivate.status, 200);
   assert.equal((await reactivate.json()).live, true);
@@ -184,7 +197,7 @@ test("persists cancellation, reactivation, and frequency changes", async () => {
   const frequency = await request(
     "/subscriptions/subscription-001/change_frequency/",
     {
-      method: "POST",
+      method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ every: 2, every_period: "year" }),
     },
@@ -206,12 +219,12 @@ test("returns 404 for every operation on unknown subscriptions", async () => {
         body: JSON.stringify({ quantity: 1 }),
       },
     ],
-    ["/subscriptions/not-found/cancel/", { method: "POST" }],
-    ["/subscriptions/not-found/reactivate/", { method: "POST" }],
+    ["/subscriptions/not-found/cancel/", { method: "PATCH" }],
+    ["/subscriptions/not-found/reactivate/", { method: "PATCH" }],
     [
       "/subscriptions/not-found/change_frequency/",
       {
-        method: "POST",
+        method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ every: 1, every_period: "month" }),
       },

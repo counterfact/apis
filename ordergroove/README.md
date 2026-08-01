@@ -143,10 +143,10 @@ curl -H 'x-api-key: ordergroove-local-api-key' \
 Cancel and reactivate a subscription:
 
 ```sh
-curl -X POST -H 'x-api-key: ordergroove-local-api-key' \
+curl -X PATCH -H 'x-api-key: ordergroove-local-api-key' \
   http://localhost:3100/subscriptions/subscription-001/cancel/
 
-curl -X POST -H 'x-api-key: ordergroove-local-api-key' \
+curl -X PATCH -H 'x-api-key: ordergroove-local-api-key' \
   http://localhost:3100/subscriptions/subscription-001/reactivate/
 ```
 
@@ -154,7 +154,7 @@ Send the seeded unsent order immediately, then retrieve its persisted pending
 state:
 
 ```sh
-curl -X POST -H 'x-api-key: ordergroove-local-api-key' \
+curl -X PATCH -H 'x-api-key: ordergroove-local-api-key' \
   http://localhost:3100/orders/order-001/send_now/
 
 curl -H 'x-api-key: ordergroove-local-api-key' \
@@ -178,7 +178,9 @@ customer for entitlements.
 
 ## Contracts and scope
 
-`openapi/` contains the six unchanged published REST contracts. The
+`openapi/` contains the six authoritative local REST contracts. Differences
+between those contracts and the current public API reference are recorded in
+[`DOCUMENTATION_DIFFERENCES.md`](./DOCUMENTATION_DIFFERENCES.md). The
 multi-spec `counterfact.yaml` consumes them directly with an empty prefix for
 each API; there are no normalized contract copies or duplicated group paths.
 

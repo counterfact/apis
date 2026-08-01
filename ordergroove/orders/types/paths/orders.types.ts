@@ -45,6 +45,6 @@ export type listOrders = (
   }>,
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
-export type listOrders_Query = { customer?: string; status?: string };
+export type listOrders_Query = { customer?: string; status?: number };
 
 export type listOrders_Headers = { "x-api-key": string };

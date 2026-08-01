@@ -126,8 +126,40 @@ test("cancels, reactivates, and changes subscription frequency persistently", ()
   const context = createContext();
   seed(context);
 
+  context.store.seedOrders([
+    {
+      public_id: "future-order",
+      customer_id: "customer-001",
+      status: 1,
+    },
+    {
+      public_id: "placed-order",
+      customer_id: "customer-001",
+      status: 5,
+    },
+  ]);
+  context.store.seedItems([
+    {
+      public_id: "future-item",
+      order_id: "future-order",
+      subscription_id: "subscription-001",
+    },
+    {
+      public_id: "placed-item",
+      order_id: "placed-order",
+      subscription_id: "subscription-001",
+    },
+  ]);
+
   assert.equal(context.cancelSubscription("subscription-001")?.live, false);
   assert.equal(context.getSubscription("subscription-001")?.live, false);
+  assert.equal(context.store.getOrder("future-order"), undefined);
+  assert.deepEqual(context.store.listItems({ order: "future-order" }), []);
+  assert.equal(context.store.getOrder("placed-order")?.status, 5);
+  assert.equal(
+    context.store.listItems({ order: "placed-order" })[0]?.public_id,
+    "placed-item",
+  );
   assert.equal(context.reactivateSubscription("subscription-001")?.live, true);
 
   const changed = context.changeSubscriptionFrequency("subscription-001", {

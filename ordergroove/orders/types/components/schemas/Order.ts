@@ -7,9 +7,9 @@ export type Order = {
    */
   place?: string;
   /**
-   * Order status: unsent, pending, success, rejected, etc.
+   * Order status code. See https://developer.ordergroove.com/reference/order-status-codes.
    */
-  status?: string;
+  status?: 1 | 3 | 4 | 5 | 6 | 9 | 10;
   sub_total?: string;
   shipping_total?: string;
   total?: string;

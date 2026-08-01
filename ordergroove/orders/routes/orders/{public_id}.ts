@@ -1,5 +1,6 @@
 import type { retrieveOrder } from "../../types/paths/orders/{public_id}.types.js";
 
+// https://developer.ordergroove.com/reference/orders-retrieve
 export const GET: retrieveOrder = async ($) => {
   const order = $.context.getOrder($.path.public_id);
   return order
