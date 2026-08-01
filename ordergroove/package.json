@@ -1,0 +1,24 @@
+{
+  "name": "@counterfact/ordergroove",
+  "version": "1.0.0",
+  "description": "Combined Counterfact simulator package for Ordergroove's REST APIs",
+  "scripts": {
+    "start": "counterfact --config counterfact.yaml",
+    "generate": "counterfact --config counterfact.yaml --generate",
+    "serve": "counterfact --config counterfact.yaml --serve",
+    "lint": "eslint . && prettier --check .",
+    "test": "node --import tsx --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "counterfact": "2.12.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.3",
+    "typescript-eslint": "^8.60.0"
+  }
+}

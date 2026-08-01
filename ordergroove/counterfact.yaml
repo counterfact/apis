@@ -1,0 +1,14 @@
+spec:
+  - source: ./openapi/customers.yml
+    group: customers
+  - source: ./openapi/items.yml
+    group: items
+  - source: ./openapi/offers.yml
+    group: offers
+  - source: ./openapi/orders.yml
+    group: orders
+  - source: ./openapi/products.yml
+    group: products
+  - source: ./openapi/subscriptions.yml
+    group: subscriptions
+destination: .
