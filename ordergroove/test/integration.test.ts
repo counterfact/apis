@@ -113,8 +113,8 @@ test("runs the combined simulator on the pinned Counterfact version", async () =
     ),
   ) as { version: string };
 
-  assert.equal(packageManifest.dependencies.counterfact, "2.14.2");
-  assert.equal(installedManifest.version, "2.14.2");
+  assert.equal(packageManifest.dependencies.counterfact, "^2.15.0");
+  assert.equal(installedManifest.version, "2.15.0");
 });
 
 test("starts all six APIs with their seeded scenarios at canonical paths", async () => {
