@@ -2,8 +2,8 @@ import type { listCustomers } from "../types/paths/customers.types.js";
 import type { createCustomer } from "../types/paths/customers.types.js";
 
 export const GET: listCustomers = async ($) => {
-  if (!$.context.isAuthorized($.x.headers)) {
-    return $.x.response[401].json({ error: "Unauthorized" });
+  if (!$.context.isAuthorized($.auth.apiKey)) {
+    return $.response[401].json({ error: "Unauthorized" });
   }
 
   return $.response[200].json({
@@ -14,7 +14,7 @@ export const GET: listCustomers = async ($) => {
 };
 
 export const POST: createCustomer = async ($) => {
-  if (!$.context.isAuthorized($.x.headers)) {
+  if (!$.context.isAuthorized($.auth.apiKey)) {
     return $.x.response[401].json({ error: "Unauthorized" });
   }
 

@@ -18,7 +18,7 @@ export type changeSubscriptionFrequency = (
     query: never;
     querystring: never;
     path: changeSubscriptionFrequency_Path;
-    headers: never;
+    headers: changeSubscriptionFrequency_Headers;
     cookie: never;
     body: { every?: number; every_period?: "day" | "week" | "month" | "year" };
     context: Context;
@@ -36,6 +36,7 @@ export type changeSubscriptionFrequency = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type changeSubscriptionFrequency = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type changeSubscriptionFrequency_Path = { public_id: string };
+
+export type changeSubscriptionFrequency_Headers = { "x-api-key": string };

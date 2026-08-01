@@ -18,7 +18,7 @@ export type sendOrderNow = (
     query: never;
     querystring: never;
     path: sendOrderNow_Path;
-    headers: never;
+    headers: sendOrderNow_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type sendOrderNow = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type sendOrderNow = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type sendOrderNow_Path = { public_id: string };
+
+export type sendOrderNow_Headers = { "x-api-key": string };

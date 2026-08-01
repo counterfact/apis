@@ -18,7 +18,7 @@ export type listEntitlements = (
     query: listEntitlements_Query;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listEntitlements_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type listEntitlements = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type listEntitlements = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type listEntitlements_Query = { customer?: string };
+
+export type listEntitlements_Headers = { "x-api-key": string };

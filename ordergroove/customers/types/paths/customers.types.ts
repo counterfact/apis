@@ -20,7 +20,7 @@ export type listCustomers = (
     query: never;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listCustomers_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -39,6 +39,7 @@ export type listCustomers = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -53,7 +54,7 @@ export type createCustomer = (
     query: never;
     querystring: never;
     path: never;
-    headers: never;
+    headers: createCustomer_Headers;
     cookie: never;
     body: Customer;
     context: Context;
@@ -71,8 +72,13 @@ export type createCustomer = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
   }>,
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
+
+export type listCustomers_Headers = { "x-api-key": string };
+
+export type createCustomer_Headers = { "x-api-key": string };

@@ -18,7 +18,7 @@ export type cancelSubscription = (
     query: never;
     querystring: never;
     path: cancelSubscription_Path;
-    headers: never;
+    headers: cancelSubscription_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type cancelSubscription = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type cancelSubscription = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type cancelSubscription_Path = { public_id: string };
+
+export type cancelSubscription_Headers = { "x-api-key": string };

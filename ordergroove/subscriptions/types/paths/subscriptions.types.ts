@@ -20,7 +20,7 @@ export type listSubscriptions = (
     query: listSubscriptions_Query;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listSubscriptions_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -40,6 +40,7 @@ export type listSubscriptions = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -56,3 +57,5 @@ export type listSubscriptions_Query = {
   created_start?: string;
   created_end?: string;
 };
+
+export type listSubscriptions_Headers = { "x-api-key": string };

@@ -19,7 +19,7 @@ export type listOrders = (
     query: listOrders_Query;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listOrders_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -38,6 +38,7 @@ export type listOrders = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -45,3 +46,5 @@ export type listOrders = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type listOrders_Query = { customer?: string; status?: string };
+
+export type listOrders_Headers = { "x-api-key": string };

@@ -18,7 +18,7 @@ export type retrieveCustomer = (
     query: never;
     querystring: never;
     path: retrieveCustomer_Path;
-    headers: never;
+    headers: retrieveCustomer_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type retrieveCustomer = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -50,7 +51,7 @@ export type updateCustomer = (
     query: never;
     querystring: never;
     path: updateCustomer_Path;
-    headers: never;
+    headers: updateCustomer_Headers;
     cookie: never;
     body: Customer;
     context: Context;
@@ -68,6 +69,7 @@ export type updateCustomer = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -76,4 +78,8 @@ export type updateCustomer = (
 
 export type retrieveCustomer_Path = { public_id: string };
 
+export type retrieveCustomer_Headers = { "x-api-key": string };
+
 export type updateCustomer_Path = { public_id: string };
+
+export type updateCustomer_Headers = { "x-api-key": string };

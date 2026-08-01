@@ -19,7 +19,7 @@ export type retrieveSubscription = (
     query: never;
     querystring: never;
     path: retrieveSubscription_Path;
-    headers: never;
+    headers: retrieveSubscription_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -38,6 +38,7 @@ export type retrieveSubscription = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -52,7 +53,7 @@ export type updateSubscription = (
     query: never;
     querystring: never;
     path: updateSubscription_Path;
-    headers: never;
+    headers: updateSubscription_Headers;
     cookie: never;
     body: Subscription;
     context: Context;
@@ -70,6 +71,7 @@ export type updateSubscription = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -78,4 +80,8 @@ export type updateSubscription = (
 
 export type retrieveSubscription_Path = { public_id: string };
 
+export type retrieveSubscription_Headers = { "x-api-key": string };
+
 export type updateSubscription_Path = { public_id: string };
+
+export type updateSubscription_Headers = { "x-api-key": string };

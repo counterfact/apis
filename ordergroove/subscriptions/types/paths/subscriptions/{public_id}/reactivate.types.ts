@@ -18,7 +18,7 @@ export type reactivateSubscription = (
     query: never;
     querystring: never;
     path: reactivateSubscription_Path;
-    headers: never;
+    headers: reactivateSubscription_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type reactivateSubscription = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type reactivateSubscription = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type reactivateSubscription_Path = { public_id: string };
+
+export type reactivateSubscription_Headers = { "x-api-key": string };

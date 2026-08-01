@@ -1,14 +1,20 @@
 spec:
-  - source: ./openapi/customers.yml
+  - source: ./openapi/upstream/customers.yml
     group: customers
-  - source: ./openapi/items.yml
+    prefix: ""
+  - source: ./openapi/upstream/items.yml
     group: items
-  - source: ./openapi/offers.yml
+    prefix: ""
+  - source: ./openapi/upstream/offers.yml
     group: offers
-  - source: ./openapi/orders.yml
+    prefix: ""
+  - source: ./openapi/upstream/orders.yml
     group: orders
-  - source: ./openapi/products.yml
+    prefix: ""
+  - source: ./openapi/upstream/products.yml
     group: products
-  - source: ./openapi/subscriptions.yml
+    prefix: ""
+  - source: ./openapi/upstream/subscriptions.yml
     group: subscriptions
+    prefix: ""
 destination: .

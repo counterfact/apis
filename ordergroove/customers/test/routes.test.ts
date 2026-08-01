@@ -7,8 +7,22 @@ import type { Context } from "../routes/_.context.ts";
 
 const basePath = fileURLToPath(new URL("../../", import.meta.url));
 const openApiPath = fileURLToPath(
-  new URL("../../openapi/customers.yml", import.meta.url),
+  new URL("../../openapi/upstream/customers.yml", import.meta.url),
 );
+const specifications = [
+  "customers",
+  "items",
+  "offers",
+  "orders",
+  "products",
+  "subscriptions",
+].map((group) => ({
+  source: fileURLToPath(
+    new URL(`../../openapi/upstream/${group}.yml`, import.meta.url),
+  ),
+  group,
+  prefix: "",
+}));
 const apiKey = "ordergroove-local-api-key";
 
 let port: number;
@@ -39,7 +53,7 @@ const getFreePort = async () =>
 const waitForServer = async () => {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const response = await request("/customers/customers");
+      const response = await request("/customers/");
       if (response.ok) return;
     } catch {
       // The listener may not be ready yet.
@@ -59,7 +73,7 @@ test.before(async () => {
     generate: { prune: false, routes: false, types: false },
     openApiPath,
     port,
-    prefix: "/customers",
+    prefix: "",
     proxyPaths: new Map([["", false]]),
     proxyUrl: "",
     startAdminApi: false,
@@ -70,9 +84,7 @@ test.before(async () => {
     watch: { routes: false, types: false },
   };
 
-  const app = await counterfact(config, [
-    { source: openApiPath, group: "customers", prefix: "/customers" },
-  ]);
+  const app = await counterfact(config, specifications);
   server = await app.start(config);
   context = app.contextRegistry.find("/") as Context;
   await waitForServer();
@@ -83,18 +95,35 @@ test.after(async () => {
 });
 
 test("requires a valid API key", async () => {
-  const missing = await fetch(`http://127.0.0.1:${port}/customers/customers`);
+  const missing = await fetch(`http://127.0.0.1:${port}/customers/`);
   assert.equal(missing.status, 401);
   assert.deepEqual(await missing.json(), { error: "Unauthorized" });
 
-  const invalid = await request("/customers/customers", {
+  const invalid = await request("/customers/", {
     headers: { "x-api-key": "invalid" },
   });
   assert.equal(invalid.status, 401);
 });
 
+test("serves every API at its canonical collection path", async () => {
+  for (const pathname of [
+    "/customers/",
+    "/items/",
+    "/offer_profiles/",
+    "/orders/",
+    "/products/",
+    "/subscriptions/",
+  ]) {
+    const response = await request(pathname);
+    assert.notEqual(response.status, 404, `${pathname} should be registered`);
+  }
+
+  const duplicated = await request("/customers/customers");
+  assert.equal(duplicated.status, 404);
+});
+
 test("lists deterministic startup customers", async () => {
-  const response = await request("/customers/customers");
+  const response = await request("/customers/");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
     results: [
@@ -123,7 +152,7 @@ test("lists deterministic startup customers", async () => {
 });
 
 test("creates and retrieves a persisted customer", async () => {
-  const createResponse = await request("/customers/customers", {
+  const createResponse = await request("/customers/", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -143,13 +172,13 @@ test("creates and retrieves a persisted customer", async () => {
     "katherine@example.com",
   );
 
-  const retrieveResponse = await request("/customers/customers/customer-003");
+  const retrieveResponse = await request("/customers/customer-003/");
   assert.equal(retrieveResponse.status, 200);
   assert.deepEqual(await retrieveResponse.json(), created);
 });
 
 test("replaces a customer and returns 404 for unknown customers", async () => {
-  const updateResponse = await request("/customers/customers/customer-003", {
+  const updateResponse = await request("/customers/customer-003/", {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -168,11 +197,11 @@ test("replaces a customer and returns 404 for unknown customers", async () => {
   });
   assert.equal(context.getCustomer("customer-003")?.merchant_id, undefined);
 
-  const missingGet = await request("/customers/customers/not-found");
+  const missingGet = await request("/customers/not-found/");
   assert.equal(missingGet.status, 404);
   assert.deepEqual(await missingGet.json(), { error: "Customer not found" });
 
-  const missingPut = await request("/customers/customers/not-found", {
+  const missingPut = await request("/customers/not-found/", {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ first_name: "Nobody" }),

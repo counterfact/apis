@@ -19,7 +19,7 @@ export type listItems = (
     query: listItems_Query;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listItems_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -37,6 +37,7 @@ export type listItems = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -51,7 +52,7 @@ export type createItem = (
     query: never;
     querystring: never;
     path: never;
-    headers: never;
+    headers: createItem_Headers;
     cookie: never;
     body: Item;
     context: Context;
@@ -69,6 +70,7 @@ export type createItem = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -76,3 +78,7 @@ export type createItem = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type listItems_Query = { subscription?: string; order?: string };
+
+export type listItems_Headers = { "x-api-key": string };
+
+export type createItem_Headers = { "x-api-key": string };

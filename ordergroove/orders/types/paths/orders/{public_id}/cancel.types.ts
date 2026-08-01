@@ -18,7 +18,7 @@ export type cancelOrder = (
     query: never;
     querystring: never;
     path: cancelOrder_Path;
-    headers: never;
+    headers: cancelOrder_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type cancelOrder = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type cancelOrder = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type cancelOrder_Path = { public_id: string };
+
+export type cancelOrder_Headers = { "x-api-key": string };

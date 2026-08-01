@@ -18,7 +18,7 @@ export type retrieveItem = (
     query: never;
     querystring: never;
     path: retrieveItem_Path;
-    headers: never;
+    headers: retrieveItem_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type retrieveItem = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -50,7 +51,7 @@ export type deleteItem = (
     query: never;
     querystring: never;
     path: deleteItem_Path;
-    headers: never;
+    headers: deleteItem_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -64,6 +65,7 @@ export type deleteItem = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -72,4 +74,8 @@ export type deleteItem = (
 
 export type retrieveItem_Path = { public_id: string };
 
+export type retrieveItem_Headers = { "x-api-key": string };
+
 export type deleteItem_Path = { public_id: string };
+
+export type deleteItem_Headers = { "x-api-key": string };

@@ -18,7 +18,7 @@ export type retrieveOrder = (
     query: never;
     querystring: never;
     path: retrieveOrder_Path;
-    headers: never;
+    headers: retrieveOrder_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type retrieveOrder = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -43,3 +44,5 @@ export type retrieveOrder = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type retrieveOrder_Path = { public_id: string };
+
+export type retrieveOrder_Headers = { "x-api-key": string };

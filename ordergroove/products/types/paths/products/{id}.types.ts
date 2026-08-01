@@ -18,7 +18,7 @@ export type retrieveProduct = (
     query: never;
     querystring: never;
     path: retrieveProduct_Path;
-    headers: never;
+    headers: retrieveProduct_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type retrieveProduct = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -50,7 +51,7 @@ export type updateProduct = (
     query: never;
     querystring: never;
     path: updateProduct_Path;
-    headers: never;
+    headers: updateProduct_Headers;
     cookie: never;
     body: Product;
     context: Context;
@@ -68,6 +69,7 @@ export type updateProduct = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -76,4 +78,8 @@ export type updateProduct = (
 
 export type retrieveProduct_Path = { id: string };
 
+export type retrieveProduct_Headers = { "x-api-key": string };
+
 export type updateProduct_Path = { id: string };
+
+export type updateProduct_Headers = { "x-api-key": string };

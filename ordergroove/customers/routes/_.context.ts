@@ -22,11 +22,8 @@ export class Context {
     void $;
   }
 
-  isAuthorized(headers: Record<string, string>): boolean {
-    const apiKeyHeader = Object.entries(headers).find(
-      ([name]) => name.toLowerCase() === "x-api-key",
-    );
-    return apiKeyHeader?.[1] === this.apiKey;
+  isAuthorized(apiKey: string | undefined): boolean {
+    return apiKey === this.apiKey;
   }
 
   seedCustomers(customers: Customer[]): void {

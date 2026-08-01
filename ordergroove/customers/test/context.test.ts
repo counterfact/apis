@@ -7,9 +7,9 @@ const createContext = () => new Context({} as never);
 test("authorizes only the configured API key", () => {
   const context = createContext();
 
-  assert.equal(context.isAuthorized({ "x-api-key": context.apiKey }), true);
-  assert.equal(context.isAuthorized({ "x-api-key": "wrong" }), false);
-  assert.equal(context.isAuthorized({}), false);
+  assert.equal(context.isAuthorized(context.apiKey), true);
+  assert.equal(context.isAuthorized("wrong"), false);
+  assert.equal(context.isAuthorized(undefined), false);
 });
 
 test("seeds, lists, and retrieves customers without exposing mutable state", () => {

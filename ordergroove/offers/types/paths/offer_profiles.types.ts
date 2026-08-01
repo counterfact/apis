@@ -18,7 +18,7 @@ export type listOfferProfiles = (
     query: never;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listOfferProfiles_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,8 +36,11 @@ export type listOfferProfiles = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
   }>,
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
+
+export type listOfferProfiles_Headers = { "x-api-key": string };

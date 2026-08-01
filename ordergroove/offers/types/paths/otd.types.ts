@@ -18,7 +18,7 @@ export type listOneTimeDiscounts = (
     query: never;
     querystring: never;
     path: never;
-    headers: never;
+    headers: listOneTimeDiscounts_Headers;
     cookie: never;
     body: never;
     context: Context;
@@ -36,6 +36,7 @@ export type listOneTimeDiscounts = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
@@ -50,7 +51,7 @@ export type createOneTimeDiscount = (
     query: never;
     querystring: never;
     path: never;
-    headers: never;
+    headers: createOneTimeDiscount_Headers;
     cookie: never;
     body: OneTimeDiscount;
     context: Context;
@@ -68,8 +69,13 @@ export type createOneTimeDiscount = (
     }>;
     x: WideOperationArgument;
     proxy: (url: string) => COUNTERFACT_RESPONSE;
+    auth: { apiKey: string };
     user: never;
     delay: (milliseconds: number, maxMilliseconds?: number) => Promise<void>;
     version: never;
   }>,
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
+
+export type listOneTimeDiscounts_Headers = { "x-api-key": string };
+
+export type createOneTimeDiscount_Headers = { "x-api-key": string };
