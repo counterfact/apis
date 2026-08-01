@@ -56,6 +56,7 @@ Every PR description must include a section titled exactly `## Manual acceptance
 
 ## Quality bar for every change
 
+- Run the applicable lint command and resolve any failures before committing.
 - Tests fail first, then pass after implementation.
 - HTTP-level tests verify externally visible API behavior and state effects.
 - Context unit tests verify internal logic.

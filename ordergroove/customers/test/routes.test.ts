@@ -17,9 +17,7 @@ const specifications = [
   "products",
   "subscriptions",
 ].map((group) => ({
-  source: fileURLToPath(
-    new URL(`../../openapi/${group}.yml`, import.meta.url),
-  ),
+  source: fileURLToPath(new URL(`../../openapi/${group}.yml`, import.meta.url)),
   group,
   prefix: "",
 }));
