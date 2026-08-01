@@ -1,83 +1,42 @@
+import { Store } from "../../_.store.js";
 import type { Context$ } from "../types/_.context.js";
 import type { Order } from "../types/components/schemas/Order.js";
 
-export type OrderFilters = {
-  customer?: string;
-  status?: string;
-};
-
-/**
- * This is the default context for Counterfact.
- *
- * It defines the context object in the REPL
- * and the $.context object in the code.
- *
- * Add properties and methods to suit your needs.
- *
- * See https://github.com/counterfact/api-simulator/blob/main/docs/features/state.md
- */
+export type { OrderFilters } from "../../_.store.js";
+import type { OrderFilters } from "../../_.store.js";
 
 export class Context {
-  readonly apiKey = "ordergroove-local-api-key";
+  readonly store: Store;
 
-  readonly #orders = new Map<string, Order>();
+  constructor($: Context$ & { store?: Store }) {
+    this.store = $.store ?? new Store();
+  }
 
-  constructor($: Context$) {
-    void $;
+  get apiKey(): string {
+    return this.store.apiKey;
   }
 
   isAuthorized(apiKey: string | undefined): boolean {
-    return apiKey === this.apiKey;
+    return this.store.isAuthorized(apiKey);
   }
 
   seedOrders(orders: Order[]): void {
-    this.#orders.clear();
-
-    for (const order of orders) {
-      if (order.public_id) {
-        this.#orders.set(order.public_id, structuredClone(order));
-      }
-    }
+    this.store.seedOrders(orders);
   }
 
   listOrders(filters: OrderFilters): Order[] {
-    return [...this.#orders.values()]
-      .filter(
-        (order) =>
-          (!filters.customer || order.customer_id === filters.customer) &&
-          (!filters.status || order.status === filters.status),
-      )
-      .map((order) => structuredClone(order));
+    return this.store.listOrders(filters);
   }
 
   getOrder(publicId: string): Order | undefined {
-    const order = this.#orders.get(publicId);
-    return order ? structuredClone(order) : undefined;
+    return this.store.getOrder(publicId);
   }
 
   cancelOrder(publicId: string): Order | undefined {
-    return this.#updateOrder(publicId, { status: "cancelled" });
+    return this.store.cancelOrder(publicId);
   }
 
-  sendOrderNow(
-    publicId: string,
-    placedAt = new Date().toISOString(),
-  ): Order | undefined {
-    return this.#updateOrder(publicId, {
-      place: placedAt,
-      status: "pending",
-    });
-  }
-
-  #updateOrder(
-    publicId: string,
-    changes: Pick<Order, "place" | "status">,
-  ): Order | undefined {
-    const existing = this.#orders.get(publicId);
-    if (!existing) return undefined;
-
-    const order = { ...existing, ...changes };
-    this.#orders.set(publicId, order);
-    return structuredClone(order);
+  sendOrderNow(publicId: string, placedAt?: string): Order | undefined {
+    return this.store.sendOrderNow(publicId, placedAt);
   }
 }
