@@ -1,9 +1,42 @@
-# Ordergroove simulator
+# Ordergroove REST API simulator
 
-This package runs the Customers, Items, Offers, Orders, Products, and
-Subscriptions REST APIs together on one Counterfact server. It uses
-Counterfact `2.14.2` and serves every operation at its canonical Ordergroove
-path, without an API-group prefix.
+This runnable, stateful simulator lets client developers explore the published
+Ordergroove REST API contracts together: Customers, Items, Offers, Orders,
+Products, and Subscriptions all run at their canonical paths, without
+API-group prefixes. Use it to build and try an integration locally, including
+requests that change state across related resources.
+
+It is a first draft built by an engineer outside of Ordergroove from the
+published specifications. It is not an official Ordergroove project, and its
+business behavior should be read as explicit, testable assumptions—not as a
+claim about production semantics. An Ordergroove expert can use this as a
+starting point to validate those assumptions, supply the real rules, and add
+the corresponding acceptance tests.
+
+> **Implementation note:** this project also demonstrates Counterfact with
+> AI-assisted engineering. See [how the simulator was built](./COUNTERFACT_DEMO.md).
+
+## About Counterfact
+
+[Counterfact](https://github.com/counterfact/api-simulator) is a local API simulator driven by OpenAPI contracts. It reads the specifications in `openapi/`, starts an HTTP server that validates requests and responses against them, and lets this project provide the stateful behavior behind each operation.
+
+For a client developer, that means you can run this package locally and point
+an integration at it as if it were the relevant Ordergroove REST endpoints. Use
+`npm run serve` for a straightforward local server. Use `npm start` when you
+want Counterfact's interactive development mode, including its REPL and file
+watching, while you experiment with or refine simulator behavior.
+
+## Generated and maintained code
+
+The `openapi/` documents are the input contracts. Counterfact-generated files
+under `types/` and `counterfact-types/` provide the typed, validated interface
+to those contracts. The maintained behavior is concentrated in `_.store.ts`,
+`routes/`, `scenarios/`, and `test/`. In particular, generated context type
+files are not edited; the route contexts adapt them to the shared store.
+
+That separation is deliberate: a new API specification can receive a complete
+validated scaffold quickly, while the code a team owns remains focused on
+product-specific behavior.
 
 ## Install and start
 
