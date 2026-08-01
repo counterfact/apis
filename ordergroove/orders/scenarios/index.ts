@@ -1,4 +1,5 @@
 import type { Scenario } from "../types/_.context.js";
+import type { Context } from "../routes/_.context.js";
 
 /**
  * Scenario scripts are plain TypeScript functions that receive the live REPL
@@ -29,7 +30,35 @@ import type { Scenario } from "../types/_.context.js";
  * If you don't need a startup scenario, delete this function or leave it empty.
  */
 export const startup: Scenario = ($) => {
-  void $;
+  const context = $.context as Context;
+  context.seedOrders([
+    {
+      id: "order-internal-001",
+      public_id: "order-001",
+      customer_id: "customer-001",
+      place: "2026-03-15T12:00:00Z",
+      status: "unsent",
+      sub_total: "25.00",
+      shipping_total: "2.00",
+      total: "27.00",
+      order_merchant_id: "merchant-order-001",
+      payment_id: "payment-001",
+      shipping_address_id: "address-001",
+    },
+    {
+      id: "order-internal-002",
+      public_id: "order-002",
+      customer_id: "customer-002",
+      place: "2026-02-20T12:00:00Z",
+      status: "success",
+      sub_total: "40.00",
+      shipping_total: "2.00",
+      total: "42.00",
+      order_merchant_id: "merchant-order-002",
+      payment_id: "payment-002",
+      shipping_address_id: "address-002",
+    },
+  ]);
 };
 
 /**
