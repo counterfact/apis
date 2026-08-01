@@ -151,6 +151,21 @@ test("starts all six APIs with their seeded scenarios at canonical paths", async
   }
 });
 
+test("requires an API key for every API group", async () => {
+  for (const pathname of [
+    "/customers/",
+    "/items/",
+    "/offer_profiles/",
+    "/orders/",
+    "/products/",
+    "/subscriptions/",
+  ]) {
+    const response = await fetch(`http://127.0.0.1:${port}${pathname}`);
+    assert.equal(response.status, 401, pathname);
+    assert.deepEqual(await response.json(), { error: "Unauthorized" });
+  }
+});
+
 test("keeps seeded customer commerce chains coherent across APIs", async () => {
   const [
     customers,

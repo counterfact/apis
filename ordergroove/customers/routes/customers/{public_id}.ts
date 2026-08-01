@@ -2,10 +2,6 @@ import type { retrieveCustomer } from "../../types/paths/customers/{public_id}.t
 import type { updateCustomer } from "../../types/paths/customers/{public_id}.types.js";
 
 export const GET: retrieveCustomer = async ($) => {
-  if (!$.context.isAuthorized($.auth.apiKey)) {
-    return $.x.response[401].json({ error: "Unauthorized" });
-  }
-
   const customer = $.context.getCustomer($.path.public_id);
   return customer
     ? $.response[200].json(customer)
@@ -13,10 +9,6 @@ export const GET: retrieveCustomer = async ($) => {
 };
 
 export const PUT: updateCustomer = async ($) => {
-  if (!$.context.isAuthorized($.auth.apiKey)) {
-    return $.x.response[401].json({ error: "Unauthorized" });
-  }
-
   const customer = $.context.replaceCustomer($.path.public_id, $.body);
   return customer
     ? $.response[200].json(customer)
