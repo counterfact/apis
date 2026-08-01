@@ -1,4 +1,4 @@
-# Copilot Instructions for `counterfact/apis`
+# Repository Instructions for `counterfact/apis`
 
 This repository contains Counterfact-based API simulators.
 
@@ -21,18 +21,27 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      - response status
      - response body/headers as applicable
      - resulting state changes
-     placeholder `dummy` test files.
+     - no placeholder `dummy` test files
 
-3. **Implement state and business logic in route context files**
+3. **Use middleware for shared cross-cutting request behavior**
+   - Put authentication, authorization, and other behavior shared by all routes
+     in a scope into a `routes/**/_.middleware.ts` file.
+   - Export a `middleware` function that either returns a response or calls
+     `respondTo($)` to continue the request chain.
+   - Keep operation-specific behavior in route handlers; do not duplicate a
+     uniform authentication check in every handler.
+   - Follow Counterfact's [middleware pattern](https://github.com/counterfact/api-simulator/blob/main/docs/features/middleware.md), including its path-scoping and chaining semantics.
+
+4. **Implement state and business logic in route context files**
    - Put simulator state and business rules in `routes/**/_.context.ts`.
    - Do not edit generated `types/_.context.ts` files.
    - Keep route handlers thin by delegating behavior to context classes/methods.
 
-4. **Unit test Context classes directly**
+5. **Unit test Context classes directly**
    - Add direct unit tests for `Context` class behavior in `routes/**/_.context.ts`.
    - Cover state transitions and core business logic independently of HTTP tests.
 
-5. **Use scenarios for startup init and REPL setup flows**
+6. **Use scenarios for startup init and REPL setup flows**
    - Use `startup` to initialize simulator state when the server starts.
    - Use other scenario functions for REPL-invoked setup/actions after startup.
    - Keep scenarios simple and declarative.
