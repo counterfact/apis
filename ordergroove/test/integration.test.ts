@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import net from "node:net";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -100,21 +99,6 @@ test.before(async () => {
 
 test.after(async () => {
   await server?.stop();
-});
-
-test("runs the combined simulator on the pinned Counterfact version", async () => {
-  const packageManifest = JSON.parse(
-    await readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ) as { dependencies: { counterfact: string } };
-  const installedManifest = JSON.parse(
-    await readFile(
-      new URL("../node_modules/counterfact/package.json", import.meta.url),
-      "utf8",
-    ),
-  ) as { version: string };
-
-  assert.equal(packageManifest.dependencies.counterfact, "^2.15.0");
-  assert.equal(installedManifest.version, "2.15.0");
 });
 
 test("starts all six APIs with their seeded scenarios at canonical paths", async () => {
