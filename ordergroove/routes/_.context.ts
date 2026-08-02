@@ -1,4 +1,5 @@
 import type { Context$ } from "../types/_.context.js";
+import { CommerceStore } from "../domain/store.ts";
 
 /**
  * This is the default context for Counterfact.
@@ -12,7 +13,13 @@ import type { Context$ } from "../types/_.context.js";
  */
 
 export class Context {
+  readonly store = new CommerceStore();
+
   constructor($: Context$) {
     void $;
+  }
+
+  reset() {
+    this.store.reset();
   }
 }

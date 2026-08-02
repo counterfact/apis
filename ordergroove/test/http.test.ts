@@ -58,19 +58,27 @@ test("real HTTP workflow persists changes and rejects unsafe repeats", async () 
   const simulator = await startSimulator();
   try {
     const unauthenticated = await fetch(
-      (await simulator.request("/customers/customer_demo/", { headers: {} })).url,
+      (await simulator.request("/customers/customer_demo/", { headers: {} }))
+        .url,
     );
     assert.equal(unauthenticated.status, 403);
 
     const customer = await simulator.request("/customers/customer_demo/");
     assert.equal(customer.status, 200);
+    assert.match(
+      customer.headers.get("content-type") ?? "",
+      /application\/json/,
+    );
     assert.equal((await customer.json()).merchant_user_id, "customer_demo");
 
     const subscriptions = await simulator.request(
       "/subscriptions/?customer=customer_demo&page_size=1",
     );
     assert.equal(subscriptions.status, 200);
-    assert.equal((await subscriptions.json()).results.length, 1);
+    const subscriptionPage = await subscriptions.json();
+    assert.equal(subscriptionPage.results.length, 1);
+    assert.equal(subscriptionPage.results[0].public_id, "subscription_coffee");
+    assert.equal(typeof subscriptionPage.next, "string");
 
     const product = await simulator.request("/products/coffee_demo/");
     assert.equal(product.status, 200);
@@ -78,7 +86,9 @@ test("real HTTP workflow persists changes and rejects unsafe repeats", async () 
     const order = await simulator.request("/orders/order_upcoming/");
     assert.equal(order.status, 200);
 
-    const originalItems = await simulator.request("/items/?order=order_upcoming");
+    const originalItems = await simulator.request(
+      "/items/?order=order_upcoming",
+    );
     assert.equal((await originalItems.json()).results.length, 2);
 
     const changed = await simulator.request(
@@ -157,6 +167,44 @@ test("request validation rejects malformed actions before mutation", async () =>
       "/subscriptions/subscription_coffee/",
     );
     assert.equal((await unchanged.json()).quantity, 2);
+  } finally {
+    await simulator.close();
+  }
+});
+
+test("customer creation persists and duplicate identifiers are rejected", async () => {
+  const simulator = await startSimulator();
+  const input = {
+    merchant: "merchant_demo",
+    merchant_user_id: "customer_created",
+    session_id: "merchant_demo.session_created",
+    user_token_id: "",
+    first_name: "Lin",
+    last_name: "Example",
+    email: "lin@example.invalid",
+    phone_number: "+15555550102",
+    phone_type: "mobile",
+    live: true,
+    created: "2026-08-02 12:00:00",
+    last_updated: "2026-08-02 12:00:00",
+    last_login: null,
+    locale: "en-US",
+  };
+  try {
+    const create = () =>
+      simulator.request("/customers/create/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+    assert.equal((await create()).status, 200);
+    const retrieved = await simulator.request("/customers/customer_created/");
+    assert.equal(retrieved.status, 200);
+    assert.equal((await retrieved.json()).email, "lin@example.invalid");
+    assert.equal((await create()).status, 400);
+
+    const unknown = await simulator.request("/items/not_a_real_item/");
+    assert.equal(unknown.status, 404);
   } finally {
     await simulator.close();
   }

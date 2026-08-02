@@ -9,8 +9,7 @@
     "test": "node --import tsx --test",
     "lint": "eslint . && prettier --check .",
     "typecheck": "tsc --noEmit",
-    "validate:openapi": "redocly lint openapi.yaml",
-    "check": "npm run validate:openapi && npm test && npm run lint && npm run typecheck"
+    "validate:openapi": "redocly lint openapi.yaml"
   },
   "dependencies": {
     "counterfact": "2.16.0"
