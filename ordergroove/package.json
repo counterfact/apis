@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "generate": "counterfact openapi.yaml . --generate --no-update-check",
-    "start": "counterfact openapi.yaml . --serve --no-update-check",
+    "start": "node --import tsx scripts/start.ts",
     "test": "node --import tsx --test",
     "lint": "eslint . && prettier --check .",
     "typecheck": "tsc --noEmit",

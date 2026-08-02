@@ -15,6 +15,7 @@
     "domain/**/*.ts",
     "routes/**/*.ts",
     "scenarios/**/*.ts",
+    "scripts/**/*.ts",
     "test/**/*.ts",
     "types/**/*.ts"
   ]
