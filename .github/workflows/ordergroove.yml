@@ -1,0 +1,33 @@
+name: Ordergroove simulator
+
+on:
+  pull_request:
+    paths:
+      - "ordergroove/**"
+      - ".github/workflows/ordergroove.yml"
+  push:
+    paths:
+      - "ordergroove/**"
+      - ".github/workflows/ordergroove.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ordergroove
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ordergroove/package-lock.json
+      - run: npm ci
+      - run: npm run validate:openapi
+      - run: npm test
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Check whitespace
+        working-directory: .
+        run: git diff --check
