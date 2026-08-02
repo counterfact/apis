@@ -1,0 +1,610 @@
+openapi: 3.1.0
+info:
+  title: Ordergroove REST API simulator subset
+  version: 0.1.0
+  description: |
+    A simulation contract inferred from Ordergroove-owned public documentation,
+    reviewed 2026-08-02. It is not an Ordergroove-authored specification and is
+    not a drop-in replacement for production.
+servers:
+  - url: https://restapi.ordergroove.com
+    description: Documented production origin; the simulator uses a local origin.
+security:
+  - ApplicationApiKey: []
+  - StorefrontAuthorization: []
+tags:
+  - name: Customers
+    description: Customer accounts and merchant-facing identifiers.
+  - name: Products
+    description: Merchant product catalog reads used by subscriptions and items.
+  - name: Subscriptions
+    description: Recurring purchase configuration and supported changes.
+  - name: Orders
+    description: Upcoming and historical recurring orders and lifecycle actions.
+  - name: Items
+    description: Product line items related to orders and subscriptions.
+paths:
+  /customers/:
+    get:
+      tags: [Customers]
+      operationId: customers-list
+      summary: List customers
+      description: |
+        Lists customers. Application scope requires Bulk Operations permission to
+        return more than one customer. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/customers-list
+      x-ordergroove-source: https://developer.ordergroove.com/reference/customers-list
+      x-simulator-limitation: Uses only the documented API-v2 cursor envelope; exact production cursor encoding is unknown.
+      parameters:
+        - $ref: '#/components/parameters/ApiVersion'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+        - name: live
+          in: query
+          schema: { type: string }
+          description: Account status; documented example uses the string `True`.
+        - name: email
+          in: query
+          schema: { type: string, format: email }
+        - $ref: '#/components/parameters/Created'
+        - $ref: '#/components/parameters/CreatedStart'
+        - $ref: '#/components/parameters/CreatedEnd'
+        - $ref: '#/components/parameters/Updated'
+        - $ref: '#/components/parameters/UpdatedStart'
+        - $ref: '#/components/parameters/UpdatedEnd'
+      responses:
+        '200':
+          description: Cursor page of customers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerPage' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /customers/create/:
+    post:
+      tags: [Customers]
+      operationId: customers-create
+      summary: Create a customer
+      description: |
+        Creates a customer account. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/customers-create
+      x-ordergroove-source: https://developer.ordergroove.com/reference/customers-create
+      x-simulator-limitation: The official fragment leaves the body optional while listing required properties; this contract requires the body and those properties.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerCreate' }
+      responses:
+        '200':
+          description: Customer created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+  /customers/{merchant_user_id}/:
+    get:
+      tags: [Customers]
+      operationId: customers-retrieve
+      summary: Retrieve a customer
+      description: |
+        Retrieves a customer by the e-commerce platform's customer identifier.
+        Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/customers-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/customers-retrieve
+      x-simulator-limitation: The documented 404 media type conflicts with its JSON example; simulator returns application/json.
+      parameters:
+        - name: merchant_user_id
+          in: path
+          required: true
+          description: Merchant user ID, distinct from Ordergroove public IDs.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Customer account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /products/{product_id}/:
+    get:
+      tags: [Products]
+      operationId: products-retrieve
+      summary: Retrieve a product
+      description: |
+        Retrieves a product by merchant product ID. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/products-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/products-retrieve
+      x-simulator-limitation: Rotating-product selection rules are outside the initial simulator.
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema: { type: string }
+          description: Merchant product ID.
+        - name: include_product_selection_rules
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /subscriptions/:
+    get:
+      tags: [Subscriptions]
+      operationId: subscriptions-list
+      summary: List subscriptions
+      description: |
+        Lists subscriptions for a merchant or customer. Application scope requires
+        Bulk Operations permission for multiple customers. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/subscriptions-list
+      x-ordergroove-source: https://developer.ordergroove.com/reference/subscriptions-list
+      x-simulator-limitation: Uses the documented API-v2 cursor envelope and an opaque simulator cursor.
+      parameters:
+        - $ref: '#/components/parameters/ApiVersion'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+        - name: customer
+          in: query
+          schema: { type: string }
+          description: Customer ID; documented as application-scope only.
+        - name: product
+          in: query
+          schema: { type: string }
+        - name: live
+          in: query
+          schema:
+            type: array
+            items: { type: boolean }
+          style: form
+          explode: true
+        - name: shipping_address
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Created'
+        - $ref: '#/components/parameters/CreatedStart'
+        - $ref: '#/components/parameters/CreatedEnd'
+        - $ref: '#/components/parameters/Updated'
+        - $ref: '#/components/parameters/UpdatedStart'
+        - $ref: '#/components/parameters/UpdatedEnd'
+      responses:
+        '200':
+          description: Cursor page of subscriptions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionPage' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+  /subscriptions/{subscription_id}/:
+    get:
+      tags: [Subscriptions]
+      operationId: subscriptions-retrieve
+      summary: Retrieve a subscription
+      description: |
+        Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/subscriptions-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/subscriptions-retrieve
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        '200':
+          description: Subscription.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /subscriptions/{subscription_id}/change_quantity/:
+    patch:
+      tags: [Subscriptions]
+      operationId: subscriptions-change-quantity
+      summary: Change subscription quantity
+      description: |
+        Updates quantity; prepaid subscriptions return 400. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/subscriptions-change-quantity
+      x-ordergroove-source: https://developer.ordergroove.com/reference/subscriptions-change-quantity
+      x-simulator-limitation: Quantity is required and must be positive; matching unsent items are updated atomically, which production docs do not specify.
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Updated subscription.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /orders/:
+    get:
+      tags: [Orders]
+      operationId: orders-list
+      summary: List orders
+      description: |
+        Lists a customer's orders. Recognized Storefront trust is documented as
+        allowed. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/orders-list
+      x-ordergroove-source: https://developer.ordergroove.com/reference/orders-list
+      x-simulator-limitation: Initial runtime accepts only the simulator application key and uses v2 cursor pagination.
+      parameters:
+        - $ref: '#/components/parameters/ApiVersion'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+        - name: customer
+          in: query
+          schema: { type: string }
+          description: Customer ID; documented as application-scope only.
+        - name: subscription
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/OrderStatus' }
+        - $ref: '#/components/parameters/Place'
+        - $ref: '#/components/parameters/PlaceStart'
+        - $ref: '#/components/parameters/PlaceEnd'
+      responses:
+        '200':
+          description: Cursor page of orders.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderPage' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+  /orders/{order_id}/:
+    get:
+      tags: [Orders]
+      operationId: orders-retrieve
+      summary: Retrieve an order
+      description: |
+        Recognized Storefront trust is documented as allowed. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/orders-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/orders-retrieve
+      x-simulator-limitation: Initial runtime accepts only the simulator application key.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /orders/{order_id}/skip_subscription/:
+    patch:
+      tags: [Orders]
+      operationId: skip-subscription
+      summary: Skip a subscription in an order
+      description: |
+        Removes all items belonging to the subscription from the order and generates
+        the next order for those items. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/skip-subscription
+      x-ordergroove-source: https://developer.ordergroove.com/reference/skip-subscription
+      x-simulator-limitation: Calendar overflow, generated IDs, timestamps, empty-order retention, and repeated-action response are deterministic simulator conventions.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subscription]
+              properties:
+                subscription: { type: string }
+      responses:
+        '200':
+          description: Source order after matching items were moved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /items/:
+    get:
+      tags: [Items]
+      operationId: items-list
+      summary: List items
+      description: |
+        Lists order items for a customer. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/items-list
+      x-ordergroove-source: https://developer.ordergroove.com/reference/items-list
+      x-simulator-limitation: The official success schema is absent; this contract uses documented item fields and the v2 cursor envelope.
+      parameters:
+        - $ref: '#/components/parameters/ApiVersion'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+        - name: order
+          in: query
+          schema: { type: string }
+        - name: subscription
+          in: query
+          schema: { type: string }
+        - name: product
+          in: query
+          schema: { type: string }
+        - name: one_time
+          in: query
+          schema: { type: boolean }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/OrderStatus' }
+        - $ref: '#/components/parameters/Place'
+        - $ref: '#/components/parameters/PlaceStart'
+        - $ref: '#/components/parameters/PlaceEnd'
+      responses:
+        '200':
+          description: Cursor page of items.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ItemPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /items/{item_id}/:
+    get:
+      tags: [Items]
+      operationId: items-retrieve
+      summary: Retrieve an item
+      description: |
+        Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/items-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/items-retrieve
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Item.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Item' }
+        '403': { $ref: '#/components/responses/AuthenticationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    ApplicationApiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Documented Application API Scope. Simulator accepts `ordergroove-simulator-key` only.
+    StorefrontAuthorization:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Documented JSON HMAC-SHA256 Storefront authorization value; not implemented by the initial simulator.
+  parameters:
+    ApiVersion:
+      name: X-OG-API-VERSION
+      in: header
+      schema: { type: string, const: '2' }
+      description: Version 2 enables the documented cursor response shape.
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque pagination cursor.
+    SubscriptionId:
+      name: subscription_id
+      in: path
+      required: true
+      schema: { type: string }
+    OrderId:
+      name: order_id
+      in: path
+      required: true
+      schema: { type: string }
+    Created: { name: created, in: query, schema: { type: string, format: date } }
+    CreatedStart: { name: created_start, in: query, schema: { type: string, format: date } }
+    CreatedEnd: { name: created_end, in: query, schema: { type: string, format: date } }
+    Updated: { name: updated, in: query, schema: { type: string, format: date } }
+    UpdatedStart: { name: updated_start, in: query, schema: { type: string }, description: Date or date-time lower bound. }
+    UpdatedEnd: { name: updated_end, in: query, schema: { type: string }, description: Date or date-time upper bound. }
+    Place: { name: place, in: query, schema: { type: string, format: date } }
+    PlaceStart: { name: place_start, in: query, schema: { type: string, format: date } }
+    PlaceEnd: { name: place_end, in: query, schema: { type: string, format: date } }
+  responses:
+    AuthenticationFailed:
+      description: Authentication failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { detail: Authentication Failed }
+    BadRequest:
+      description: Invalid request or state transition.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { detail: Unable to find requested asset. }
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [detail]
+      properties:
+        detail: { type: string }
+    CustomerCreate:
+      type: object
+      additionalProperties: false
+      required: [merchant, merchant_user_id, session_id, user_token_id, first_name, last_name, email, phone_number, phone_type, live, created, last_updated, last_login, locale]
+      properties:
+        merchant: { type: string }
+        merchant_user_id: { type: string }
+        session_id: { type: string }
+        user_token_id: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string, format: email }
+        phone_number: { type: string }
+        phone_type: { oneOf: [{ type: integer }, { type: string, enum: [invalid, landline, mobile, voip] }] }
+        live: { type: boolean }
+        created: { type: string }
+        last_updated: { type: string }
+        last_login: { type: [string, 'null'] }
+        extra_data: { type: [string, 'null'] }
+        locale: { oneOf: [{ type: integer }, { type: string }] }
+        experiences: { type: string }
+        price_code: { type: string }
+    Customer:
+      allOf:
+        - $ref: '#/components/schemas/CustomerCreate'
+        - type: object
+          example:
+            merchant: merchant_demo
+            merchant_user_id: customer_demo
+            session_id: merchant_demo.session_demo
+            user_token_id: ''
+            first_name: Ada
+            last_name: Example
+            email: ada@example.invalid
+            phone_number: '+15555550100'
+            phone_type: mobile
+            live: true
+            created: '2026-08-02 12:00:00'
+            last_updated: '2026-08-02 12:00:00'
+            last_login: null
+            locale: en-US
+    Product:
+      type: object
+      additionalProperties: true
+      required: [merchant, external_product_id, name, price, autoship_enabled]
+      properties:
+        merchant: { type: string }
+        external_product_id: { type: string }
+        name: { type: string }
+        price: { type: string, pattern: '^\\d+\\.\\d{2}$' }
+        autoship_enabled: { type: boolean }
+        discontinued: { type: boolean }
+      example: { merchant: merchant_demo, external_product_id: coffee_demo, name: Example Coffee, price: '18.00', autoship_enabled: true, discontinued: false }
+    Subscription:
+      type: object
+      additionalProperties: true
+      required: [customer, merchant, product, public_id, quantity, frequency_days, every, every_period, start_date, live, created, updated]
+      properties:
+        customer: { type: string }
+        merchant: { type: string }
+        product: { type: string }
+        payment: { type: [string, 'null'] }
+        shipping_address: { type: [string, 'null'] }
+        offer: { type: [string, 'null'] }
+        subscription_type: { type: string }
+        components: { type: array, items: { type: object, additionalProperties: true } }
+        extra_data: { type: [object, string, 'null'], additionalProperties: true }
+        public_id: { type: string }
+        product_attribute: { type: [string, 'null'] }
+        quantity: { type: integer, minimum: 1 }
+        price: { type: [string, 'null'] }
+        frequency_days: { type: integer, minimum: 1 }
+        reminder_days: { type: integer }
+        every: { type: integer, minimum: 1 }
+        every_period: { type: integer, enum: [1, 2, 3, 4], description: 1 days; 2 weeks; 3 months; 4 years. }
+        start_date: { type: string, format: date }
+        cancelled: { type: [string, 'null'] }
+        cancel_reason: { type: [string, 'null'] }
+        cancel_reason_code: { type: [string, 'null'] }
+        merchant_order_id: { type: [string, 'null'] }
+        created: { type: string }
+        updated: { type: string }
+        live: { type: boolean }
+        prepaid_subscription_context: { type: object, additionalProperties: true }
+    OrderStatus:
+      type: integer
+      enum: [1, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20]
+      description: 'All statuses documented 2026-08-02: 1 UNSENT; 3 REJECTED; 4 CANCELLED; 5 SUCCESS; 6 SEND_NOW; 9 PENDING_BATCH_RESPONSE; 10 PENDING_VERIFICATION; 11 PENDING_PLACEMENT; 12 EXCEPTION_DURING_PLACEMENT_PREPARATION; 13 CONNECTION_ERROR_DURING_PLACEMENT; 14 RESPONSE_PROCESSING_ERROR; 15 GENERIC_ERROR_RESPONSE; 17 MERGED; 18 CREDIT_CARD_RETRY; 19 AWAITING_RETRY_INSTRUCTIONS; 20 AWAITING_RESPONSE_CLASSIFICATION. Source: https://developer.ordergroove.com/reference/order-status-codes'
+    Order:
+      type: object
+      additionalProperties: true
+      required: [merchant, customer, public_id, created, updated, place, status]
+      properties:
+        merchant: { type: string }
+        customer: { type: string }
+        payment: { type: [string, 'null'] }
+        shipping_address: { type: [string, 'null'] }
+        public_id: { type: string }
+        sub_total: { type: string }
+        tax_total: { type: string }
+        shipping_total: { type: string }
+        discount_total: { type: string }
+        total: { type: string }
+        created: { type: string }
+        updated: { type: string }
+        place: { type: string }
+        cancelled: { type: [string, 'null'] }
+        tries: { type: integer }
+        generic_error_count: { type: integer }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        type: { type: integer }
+        merchant_order_id: { type: [string, 'null'] }
+        extra_data: { type: [object, string, 'null'], additionalProperties: true }
+    Item:
+      type: object
+      additionalProperties: true
+      required: [public_id, order, product, quantity, one_time]
+      properties:
+        public_id: { type: string }
+        order: { type: string }
+        subscription: { type: [string, 'null'] }
+        product: { type: string }
+        offer: { type: [string, 'null'] }
+        quantity: { type: integer, minimum: 1 }
+        price: { type: [string, 'null'] }
+        total_cost: { type: [string, 'null'] }
+        extra_cost: { type: [string, 'null'] }
+        one_time: { type: boolean }
+        components: { type: array, items: { type: object, additionalProperties: true } }
+    CustomerPage:
+      type: object
+      required: [next, previous, results]
+      properties:
+        next: { type: [string, 'null'], format: uri }
+        previous: { type: [string, 'null'], format: uri }
+        results: { type: array, items: { $ref: '#/components/schemas/Customer' } }
+    SubscriptionPage:
+      type: object
+      required: [next, previous, results]
+      properties:
+        next: { type: [string, 'null'], format: uri }
+        previous: { type: [string, 'null'], format: uri }
+        results: { type: array, items: { $ref: '#/components/schemas/Subscription' } }
+    OrderPage:
+      type: object
+      required: [next, previous, results]
+      properties:
+        next: { type: [string, 'null'], format: uri }
+        previous: { type: [string, 'null'], format: uri }
+        results: { type: array, items: { $ref: '#/components/schemas/Order' } }
+    ItemPage:
+      type: object
+      required: [next, previous, results]
+      properties:
+        next: { type: [string, 'null'], format: uri }
+        previous: { type: [string, 'null'], format: uri }
+        results: { type: array, items: { $ref: '#/components/schemas/Item' } }

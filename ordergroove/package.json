@@ -1,0 +1,29 @@
+{
+  "name": "@counterfact/ordergroove",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "counterfact openapi.yaml . --generate --no-update-check",
+    "start": "counterfact openapi.yaml . --serve --no-update-check",
+    "test": "node --import tsx --test",
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "validate:openapi": "redocly lint openapi.yaml",
+    "check": "npm run validate:openapi && npm test && npm run lint && npm run typecheck"
+  },
+  "dependencies": {
+    "counterfact": "2.16.0"
+  },
+  "devDependencies": {
+    "@redocly/cli": "1.34.5",
+    "eslint": "9.39.4",
+    "prettier": "3.8.3",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.60.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
