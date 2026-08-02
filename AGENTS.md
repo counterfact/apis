@@ -28,7 +28,18 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      faithful behavior, state the unsupported portion in a comment or README,
      and do not invent production semantics.
 
-3. **Use TDD for simulator behavior**
+3. **Write documentation for first-time readers**
+   - Write for what a reader knows at that point in the document, not for
+     knowledge they may have gained from this repository or an earlier
+     iteration.
+   - Introduce a concept before referring to it, and state the relationship
+     between concepts explicitly on first use (for example, say that a project
+     is a simulator before calling it “the simulator”).
+   - Prefer concrete examples and links over internal shorthand, historical
+     references, or configuration terminology whose meaning depends on prior
+     context.
+
+4. **Use TDD for simulator behavior**
    - Start by writing or updating tests that describe expected HTTP behavior.
    - Execute tests against a **running Counterfact instance**.
    - In tests, start Counterfact via the **programmatic API** instead of shelling
@@ -39,7 +50,7 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      - resulting state changes
      - no placeholder `dummy` test files
 
-4. **Use middleware for shared cross-cutting request behavior**
+5. **Use middleware for shared cross-cutting request behavior**
    - Put authentication, authorization, and other behavior shared by all routes
      in a scope into a `routes/**/_.middleware.ts` file.
    - Export a `middleware` function that either returns a response or calls
@@ -48,16 +59,16 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
      uniform authentication check in every handler.
    - Follow Counterfact's [middleware pattern](https://github.com/counterfact/api-simulator/blob/main/docs/features/middleware.md), including its path-scoping and chaining semantics.
 
-5. **Implement state and business logic in route context files**
+6. **Implement state and business logic in route context files**
    - Put simulator state and business rules in `routes/**/_.context.ts`.
    - Do not edit generated `types/_.context.ts` files.
    - Keep route handlers thin by delegating behavior to context classes/methods.
 
-6. **Unit test Context classes directly**
+7. **Unit test Context classes directly**
    - Add direct unit tests for `Context` class behavior in `routes/**/_.context.ts`.
    - Cover state transitions and core business logic independently of HTTP tests.
 
-7. **Use scenarios for startup init and REPL setup flows**
+8. **Use scenarios for startup init and REPL setup flows**
    - Use `startup` to initialize simulator state when the server starts.
    - Use other scenario functions for REPL-invoked setup/actions after startup.
    - Keep scenarios simple and declarative.

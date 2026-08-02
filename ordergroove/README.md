@@ -1,46 +1,46 @@
 # Ordergroove REST API simulator
 
-This runnable, stateful simulator lets client developers explore the published
-Ordergroove REST API contracts together: Customers, Items, Offers, Orders,
-Products, and Subscriptions all run at their canonical paths, without
-API-group prefixes. Use it to build and try an integration locally, including
-requests that change state across related resources.
+This project is a runnable, stateful simulator for a subset of
+[Ordergroove's public REST API](https://developer.ordergroove.com/reference/introduction).
+Built with [Counterfact](https://github.com/counterfact/api-simulator), it runs
+Customers, Items, Offers, Orders, Products, and Subscriptions endpoints together
+on one local server. Use it to develop and test an integration without sending
+requests to Ordergroove.
 
-It is a first draft built by an engineer outside of Ordergroove from the
-published specifications. It is not an official Ordergroove project, and its
-business behavior should be read as explicit, testable assumptions—not as a
-claim about production semantics. An Ordergroove expert can use this as a
-starting point to validate those assumptions, supply the real rules, and add
-the corresponding acceptance tests.
+This is an independent proof of concept, not an official Ordergroove project.
+Its business rules are explicit, testable assumptions derived from the local
+OpenAPI contracts and the public API reference; they are not a guarantee of
+production behavior. An Ordergroove domain expert should validate those rules
+before the simulator is used as a production-fidelity test double.
 
 > **Implementation note:** this project also demonstrates Counterfact with
 > AI-assisted engineering. See [how the simulator was built](./COUNTERFACT_DEMO.md).
 
 ## About Counterfact
 
-[Counterfact](https://github.com/counterfact/api-simulator) is a local API simulator driven by OpenAPI contracts. It reads the specifications in `openapi/`, starts an HTTP server that validates requests and responses against them, and lets this project provide the stateful behavior behind each operation.
+[Counterfact](https://github.com/counterfact/api-simulator) is a local API
+simulator driven by OpenAPI contracts. It uses the specifications in `openapi/`
+to route and validate HTTP requests and responses. This project supplies the
+state and business behavior behind each operation.
 
-For a client developer, that means you can run this package locally and point
-an integration at it as if it were the relevant Ordergroove REST endpoints. Use
-`npm run serve` for a straightforward local server. Use `npm start` when you
-want Counterfact's interactive development mode, including its REPL and file
-watching, while you experiment with or refine simulator behavior.
+Run `npm run serve` for a local server. Run `npm start` for Counterfact's
+interactive development mode, which adds a read-eval-print loop (REPL) and
+reloads route changes as you work.
 
 ## Generated and maintained code
 
-The `openapi/` documents are the input contracts. Counterfact-generated files
-under `types/` and `counterfact-types/` provide the typed, validated interface
-to those contracts. The maintained behavior is concentrated in `_.store.ts`,
-`routes/`, `scenarios/`, and `test/`. In particular, generated context type
-files are not edited; the route contexts adapt them to the shared store.
-
-That separation is deliberate: a new API specification can receive a complete
-validated scaffold quickly, while the code a team owns remains focused on
-product-specific behavior.
+The documents in `openapi/` are the simulator's input contracts.
+Counterfact-generated files under each API group's `types/` and
+`counterfact-types/` directories provide typed interfaces to those contracts.
+Maintained behavior lives in `_.store.ts` and in the `routes/`, `scenarios/`, and
+`test/` directories. In particular, do not edit generated `types/_.context.ts`
+files; the maintained route contexts connect those generated types to the shared
+store.
 
 ## Install and start
 
-From this directory, install the locked dependencies and start the HTTP server:
+From the repository root, install the locked dependencies and start the HTTP
+server:
 
 ```sh
 cd ordergroove
@@ -48,15 +48,14 @@ npm ci
 npm run serve
 ```
 
-The server listens at `http://localhost:3100` by default. Use `npm start` instead
-when you want Counterfact's full interactive development mode, including its
-REPL and file watching. Stop either process with Ctrl-C. Restarting the server
-resets all resources to the deterministic startup data below.
+The server listens at `http://localhost:3100` by default. Stop it with Ctrl-C.
+Because state is stored in memory, restarting the process resets all resources
+to the deterministic startup data described below.
 
 ## Authentication
 
-All REST operations require the `x-api-key` request header. The simulator's
-local test key is:
+Every simulated operation requires the `x-api-key` request header. Use this
+local-only key:
 
 ```text
 ordergroove-local-api-key
@@ -83,43 +82,64 @@ All six specifications are mounted on the same origin:
 | Orders        | `/orders/`                                    |
 | Items         | `/items/`                                     |
 
-Detail and action URLs extend those paths directly. Examples include
-`/customers/customer-001/`, `/products/product-001/`,
-`/subscriptions/subscription-001/cancel/`, `/orders/order-001/send_now/`, and
-`/items/item-001/`. Paths such as `/customers/customers/` or
-`/subscriptions/subscriptions/` do not exist.
+Detail and action URLs extend those paths directly. Examples include `/customers/customer-001/`, `/products/product-001/`, `/subscriptions/subscription-001/cancel/`, `/orders/order-001/send_now/`, and `/items/item-001/`. Paths such as `/customers/customers/` or `/subscriptions/subscriptions/` do not exist.
+
+## Supported operations
+
+The simulator implements this subset of the six resource groups:
+
+| Resource           | Collection operations | Detail and action operations                            |
+| ------------------ | --------------------- | ------------------------------------------------------- |
+| Customers          | List, create          | Retrieve, replace                                       |
+| Products           | List                  | Retrieve, replace                                       |
+| Offer profiles     | List                  | None                                                    |
+| One-time discounts | List, create          | None                                                    |
+| Entitlements       | List                  | None                                                    |
+| Subscriptions      | List                  | Retrieve, replace, cancel, reactivate, change frequency |
+| Orders             | List                  | Retrieve, cancel, send now                              |
+| Items              | List, create          | Retrieve, delete                                        |
+
+The local OpenAPI contracts define the exact HTTP methods, request bodies,
+response bodies, and status codes. See
+[`DOCUMENTATION_DIFFERENCES.md`](./DOCUMENTATION_DIFFERENCES.md) before adapting
+a client built for the production API; several local operations intentionally
+differ from Ordergroove's current public reference.
 
 ## Seeded data
 
-Every API has a `startup` scenario. Together they create two coherent commerce
-chains:
+Each API group has a `startup` scenario. Together, those scenarios create two
+connected sets of commerce data:
 
 | Customer                      | Product                       | Offer profile       | Subscription       | Order       | Item       |
 | ----------------------------- | ----------------------------- | ------------------- | ------------------ | ----------- | ---------- |
 | `customer-001` (Ada Lovelace) | `product-001` (`sku-coffee`)  | `offer-profile-001` | `subscription-001` | `order-001` | `item-001` |
 | `customer-002` (Grace Hopper) | `product-002` (`sku-filters`) | `offer-profile-002` | `subscription-002` | `order-002` | `item-002` |
 
-The first subscription is live and monthly; the second is inactive and runs
-every two weeks. `order-001` starts unsent, while `order-002` starts successful.
-The offer data also includes `discount-001` for `customer-001` and three
-entitlements: two for `customer-001` and one for `customer-002`.
+The first subscription is active and monthly; the second is inactive and runs
+every two weeks. `order-001` starts with status `1` (`UNSENT`), and `order-002`
+starts with status `5` (`SUCCESS`). The offer data also includes `discount-001`
+for `customer-001` and three entitlements: two for `customer-001` and one for
+`customer-002`.
 
-State changes persist for the lifetime of the server. Created customers,
-one-time discounts, and items can be retrieved or listed afterward; product,
-customer, subscription, and order updates are also visible to later requests.
+State changes remain visible to later requests while the server process is
+running. For example, a created customer or item can be retrieved, a created
+one-time discount appears in later list responses, and replacements or lifecycle
+actions update the corresponding stored resources.
 
 ## Shared state
 
-The root `_.store.ts` is one in-memory store shared by all six API groups. This
-lets requests to different services observe the same customers, products,
-subscriptions, orders, and items instead of maintaining isolated copies. The
-store retains its identity across route reloads and a stop/start cycle of the
-same programmatic simulator; a new simulator instance or process restart gets
-fresh state, which the `startup` scenarios seed deterministically.
+The root `_.store.ts` defines one in-memory store shared by all six API groups.
+Requests to different groups therefore observe the same customers, products,
+subscriptions, orders, and items instead of isolated copies.
+
+Counterfact retains the store across route reloads. It also retains the same
+store when a programmatic caller stops and restarts one simulator instance. A
+new simulator instance or process receives a new store, which the startup
+scenarios seed deterministically.
 
 In interactive development, the live store is available as `store` in the
-Counterfact REPL. Programmatic callers can supply the local `Store` type to
-`counterfact<Store>(...)` and access that same object through the simulator's
+Counterfact REPL. Programmatic callers can use the local `Store` type with
+`counterfact<Store>(...)` and access the same object through the simulator's
 optional `store` property.
 
 ## Example flows
@@ -150,8 +170,8 @@ curl -X PATCH -H 'x-api-key: ordergroove-local-api-key' \
   http://localhost:3100/subscriptions/subscription-001/reactivate/
 ```
 
-Send the seeded unsent order immediately, then retrieve its persisted pending
-state:
+Send the seeded unsent order immediately, then retrieve its persisted
+`SEND_NOW` state:
 
 ```sh
 curl -X PATCH -H 'x-api-key: ordergroove-local-api-key' \
@@ -171,21 +191,35 @@ curl -X POST \
   http://localhost:3100/items/
 ```
 
-Unknown detail IDs return realistic `404` responses. Collection filters include
-customer and status for orders; subscription and order for items; customer,
-product, live state, and documented creation dates for subscriptions; and
-customer for entitlements.
+Unknown detail IDs return `404` responses. Supported collection filters are:
 
-## Contracts and scope
+- `customer` and `status` for orders;
+- `subscription` and `order` for items;
+- `customer`, `product`, `live`, `created_start`, and `created_end` for
+  subscriptions; and
+- `customer` for entitlements.
 
-`openapi/` contains the six authoritative local REST contracts. Differences
-between those contracts and the current public API reference are recorded in
-[`DOCUMENTATION_DIFFERENCES.md`](./DOCUMENTATION_DIFFERENCES.md). The
-multi-spec `counterfact.yaml` consumes them directly with an empty prefix for
-each API; there are no normalized contract copies or duplicated group paths.
+## Contracts, documentation, and limitations
 
-Ordergroove's Early Access GraphQL API is explicitly out of scope because no
-public schema or confirmed endpoint is available.
+The six files in `openapi/` are reduced local contracts derived from
+Ordergroove's public REST API reference. They define the simulator's HTTP
+interface; they are not copies of an official Ordergroove OpenAPI distribution.
+The server mounts their paths directly at its root. For example, the Customers
+API is available at `http://localhost:3100/customers/`, not at
+`/customers/customers/`.
+
+Before adding or changing visible behavior, contributors consult Ordergroove's
+public documentation. When the public reference and a local contract disagree,
+the simulator follows its local contract for the HTTP method, path,
+authentication, request and response shapes, and modeled status codes. Known
+differences and the resulting simulator choices are recorded in
+[`DOCUMENTATION_DIFFERENCES.md`](./DOCUMENTATION_DIFFERENCES.md).
+
+Only behavior implemented in this repository is supported. In particular, the
+simulator does not implement the rest of Ordergroove's REST resources,
+Storefront HMAC authentication, production permissions, rate limiting, or full
+pagination. Treat unmodeled production behavior as a simulator limitation, not
+as an implied default.
 
 ## Validation
 

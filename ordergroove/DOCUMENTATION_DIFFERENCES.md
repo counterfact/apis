@@ -1,13 +1,18 @@
 # OpenAPI and public documentation differences
 
-This is the decision record for places where the authoritative OpenAPI files in
-`openapi/` differ from Ordergroove's current public documentation. Simulator
-behavior follows OpenAPI in each case. Public documentation was reviewed on
-2026-08-01.
+This document records known differences between the simulator's local OpenAPI
+contracts in `openapi/` and
+[Ordergroove's public REST API reference](https://developer.ordergroove.com/reference/introduction).
+Because Counterfact generates and validates the simulated interface from the
+local contracts, simulator behavior follows those contracts in each case below.
+These decisions define the simulator; they are not claims about Ordergroove's
+production behavior.
+
+The linked public documentation was last reviewed on August 1, 2026.
 
 ## Subscriptions
 
-| Area                    | Authoritative local OpenAPI                                       | Public documentation                                                                                                 | Simulator decision                                                                                                                                                                                                                                       |
+| Area                    | Local simulator contract                                          | Ordergroove public reference                                                                                         | Simulator behavior                                                                                                                                                                                                                                       |
 | ----------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Authentication          | Application-scope `x-api-key` only                                | Documents both Application `x-api-key` and Storefront HMAC scopes                                                    | Implement only `x-api-key`; Storefront HMAC is outside the contract. [Authentication](https://developer.ordergroove.com/reference/authentication)                                                                                                        |
 | List filters            | `customer`, `product`, `live`, `created_start`, and `created_end` | Also documents `shipping_address`, exact `created`, and exact/range `updated` filters                                | Implement only the OpenAPI filters. [List subscriptions](https://developer.ordergroove.com/reference/subscriptions-list)                                                                                                                                 |
@@ -18,7 +23,7 @@ behavior follows OpenAPI in each case. Public documentation was reviewed on
 
 ## Orders
 
-| Area                   | Authoritative local OpenAPI                                                | Public documentation                                                                                     | Simulator decision                                                                                                                                                                                                                                                           |
+| Area                   | Local simulator contract                                                   | Ordergroove public reference                                                                             | Simulator behavior                                                                                                                                                                                                                                                           |
 | ---------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Authentication         | Application-scope `x-api-key` only                                         | List and action references also permit Storefront authentication, with action-specific trust-level rules | Implement only `x-api-key`. [Authentication](https://developer.ordergroove.com/reference/authentication), [list orders](https://developer.ordergroove.com/reference/orders-list)                                                                                             |
 | List filters           | `customer` and integer `status`                                            | Also documents exact/range `created` and `updated` filters and other optional expansions                 | Implement only the OpenAPI filters. [List orders](https://developer.ordergroove.com/reference/orders-list)                                                                                                                                                                   |
@@ -28,7 +33,7 @@ behavior follows OpenAPI in each case. Public documentation was reviewed on
 
 ## Customers
 
-| Area                | Authoritative local OpenAPI                                          | Public documentation                                                                              | Simulator decision                                                                                                         |
+| Area                | Local simulator contract                                             | Ordergroove public reference                                                                      | Simulator behavior                                                                                                         |
 | ------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | List filters        | No query parameters                                                  | Documents `live`, `email`, and exact/range created and updated filters                            | Return the complete in-memory collection. [List customers](https://developer.ordergroove.com/reference/customers-list)     |
 | Create              | `POST /customers/`, response `201`, reduced optional `Customer` body | `POST /customers/create/`, response `200`, with many required fields                              | Keep the OpenAPI path, status, and schema. [Create customer](https://developer.ordergroove.com/reference/customers-create) |
@@ -37,7 +42,7 @@ behavior follows OpenAPI in each case. Public documentation was reviewed on
 
 ## Items
 
-| Area                | Authoritative local OpenAPI                                 | Public documentation                                                                                                                            | Simulator decision                                                                                                                                                                               |
+| Area                | Local simulator contract                                    | Ordergroove public reference                                                                                                                    | Simulator behavior                                                                                                                                                                               |
 | ------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | List filters        | `subscription` and `order`                                  | Also documents offer, one-time status, order status/place ranges, product, price omission, updated ranges, and incentive expansion              | Implement only OpenAPI filters. [List items](https://developer.ordergroove.com/reference/items-list)                                                                                             |
 | Relationship fields | `order_id`, `subscription_id`, `product_id`, and `offer_id` | Response fields omit `_id`: `order`, `subscription`, `product`, and `offer`                                                                     | Preserve OpenAPI field names. [List items](https://developer.ordergroove.com/reference/items-list)                                                                                               |
@@ -46,7 +51,7 @@ behavior follows OpenAPI in each case. Public documentation was reviewed on
 
 ## Products
 
-| Area       | Authoritative local OpenAPI                      | Public documentation                                                                                                                         | Simulator decision                                                                                                          |
+| Area       | Local simulator contract                         | Ordergroove public reference                                                                                                                 | Simulator behavior                                                                                                          |
 | ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | List       | No filters; reduced Product schema               | Documents many search/status/group filters and optional rotating-product expansions; defaults to autoship-enabled, non-discontinued products | Return all products in the OpenAPI-shaped store. [List products](https://developer.ordergroove.com/reference/products-list) |
 | Identifier | Detail path is `{id}` and state is keyed by `id` | Describes the path value as the external product ID                                                                                          | Preserve OpenAPI `id` identity. [Retrieve product](https://developer.ordergroove.com/reference/products-retrieve)           |
@@ -54,7 +59,7 @@ behavior follows OpenAPI in each case. Public documentation was reviewed on
 
 ## Offers and entitlements
 
-| Area                         | Authoritative local OpenAPI                                                       | Public documentation                                                                                                    | Simulator decision                                                                                                                                                                    |
+| Area                         | Local simulator contract                                                          | Ordergroove public reference                                                                                            | Simulator behavior                                                                                                                                                                    |
 | ---------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Offer-profile filters        | No filters                                                                        | Documents `offer_profile_category` and `status`                                                                         | Return all seeded offer profiles. [List offer profiles](https://developer.ordergroove.com/reference/offer-profile-list)                                                               |
 | One-time-incentive paths     | `GET` and `POST /otd/`                                                            | `GET /one_time_incentives/` and `POST /one_time_incentives/create/`                                                     | Keep `/otd/` for both operations. [List incentives](https://developer.ordergroove.com/reference/otd-list), [create incentive](https://developer.ordergroove.com/reference/otd-create) |
