@@ -23,7 +23,7 @@ Commits before this handoff file, oldest first:
 
 ## Implemented API surface
 
-The simulator implements 12 HTTP operations across 12 production-style trailing-slash paths:
+The simulator implements 20 HTTP operations across 20 production-style trailing-slash paths:
 
 | Resource      | Method | Path                                                |
 | ------------- | ------ | --------------------------------------------------- |
@@ -31,16 +31,24 @@ The simulator implements 12 HTTP operations across 12 production-style trailing-
 | Customers     | POST   | `/customers/create/`                                |
 | Customers     | GET    | `/customers/{merchant_user_id}/`                    |
 | Products      | GET    | `/products/{product_id}/`                           |
+| Addresses     | GET    | `/addresses/`                                       |
+| Addresses     | GET    | `/addresses/{address_id}/`                          |
+| Payments      | GET    | `/payments/`                                        |
+| Payments      | GET    | `/payments/{payment_id}/`                           |
 | Subscriptions | GET    | `/subscriptions/`                                   |
 | Subscriptions | GET    | `/subscriptions/{subscription_id}/`                 |
 | Subscriptions | PATCH  | `/subscriptions/{subscription_id}/change_quantity/` |
+| Subscriptions | PATCH  | `/subscriptions/{subscription_id}/change_shipping/` |
+| Subscriptions | PATCH  | `/subscriptions/{subscription_id}/change_payment/`  |
 | Orders        | GET    | `/orders/`                                          |
 | Orders        | GET    | `/orders/{order_id}/`                               |
+| Orders        | PATCH  | `/orders/{order_id}/change_shipping/`               |
+| Orders        | PATCH  | `/orders/{order_id}/change_payment/`                |
 | Orders        | PATCH  | `/orders/{order_id}/skip_subscription/`             |
 | Items         | GET    | `/items/`                                           |
 | Items         | GET    | `/items/{item_id}/`                                 |
 
-The official `llms.txt` index contained 116 API-reference entries when reviewed. Roughly 90–100 appeared to represent callable operations, making the current operation-count coverage approximately 12–13%, or approximately 10% of the complete reference index. This estimate is not complexity-weighted.
+The official `llms.txt` index contained 116 API-reference entries when reviewed. Roughly 90–100 appeared to represent callable operations, making current operation-count coverage approximately 20–22%, or approximately 17% of the complete reference index. This estimate is not complexity-weighted.
 
 ## Important files
 
@@ -71,7 +79,7 @@ The official `llms.txt` index contained 116 API-reference entries when reviewed.
 
 ## Architecture and explicit conventions
 
-One `CommerceStore` owns customers, products, subscriptions, orders, and items. It validates relationships before mutation, performs cross-resource changes atomically, and returns deep clones from public reads.
+One `CommerceStore` owns customers, products, addresses, payments, subscriptions, orders, and items. It validates relationships before mutation, performs cross-resource changes atomically, and returns deep clones from public reads.
 
 The runtime currently supports only Application API Scope. The deterministic non-secret key is:
 
@@ -84,6 +92,9 @@ Storefront HMAC and trust-level authentication are documented but intentionally 
 The following are explicitly simulator-only conventions rather than confirmed production behavior:
 
 - API-v2 cursor envelopes with a simulator-defined opaque cursor encoding;
+- association actions require their address/payment body ID;
+- replacement addresses and payments must be live and belong to the resource's customer;
+- changing one order or subscription association does not cascade to related resources;
 - changing a subscription quantity also updates matching unsent items;
 - skip moves only matching subscription items and retains the source order;
 - repeated skip and invalid cross-customer relationships return 400 without mutation;
@@ -93,9 +104,9 @@ The following are explicitly simulator-only conventions rather than confirmed pr
 
 ## Deterministic seed and acceptance result
 
-The seed includes customer `customer_demo`, products `coffee_demo` and `tea_demo`, subscriptions `subscription_coffee` and `subscription_tea`, multi-subscription order `order_upcoming`, and items `item_coffee` and `item_tea`.
+The seed includes customers `customer_demo` and `customer_other`; addresses `address_demo`, `address_alternate`, and `address_other_customer`; payments `payment_demo`, `payment_alternate`, and `payment_other_customer`; products `coffee_demo` and `tea_demo`; subscriptions `subscription_coffee`, `subscription_tea`, and the cross-customer fixture `subscription_other_customer`; multi-subscription order `order_upcoming`; and items `item_coffee` and `item_tea`.
 
-Manual live acceptance demonstrated:
+The initial manual live acceptance demonstrated:
 
 - missing authentication returns 403;
 - subscription quantity changes from 2 to 3 and persists;
@@ -105,12 +116,14 @@ Manual live acceptance demonstrated:
 - repeated and cross-customer skips return 400 without mutation; and
 - restart restores quantity 2 and removes the generated order.
 
+The expanded automated suite additionally covers address/payment filtering, cursor pagination and retrieval; all four association actions; required request bodies; missing, inactive, and cross-customer targets; non-cascading individual changes; and deterministic restart of the added seed records.
+
 ## Verification status
 
-The following passed after a clean `npm ci`:
+After the focused address/payment expansion, the following passed:
 
 - OpenAPI validation without warnings;
-- 10 tests: 6 direct domain tests and 4 real-HTTP tests;
+- 16 tests: 9 direct domain tests and 7 real-HTTP tests;
 - ESLint and Prettier;
 - strict TypeScript typechecking; and
 - `git diff --check`.
@@ -144,10 +157,12 @@ The API listens on `http://localhost:3100` by default. Set `ORDERGROOVE_SIMULATO
 
 ## Recommended next work
 
-The highest-value next independently researched slice is addresses and payments. It would enable documented subscription and order shipping/payment changes without first introducing offers, discounts, or order-placement integrations.
+The immediate follow-up is the remaining focused address/payment mutation surface: create, update (activation/deactivation), and `use_for_all` for both resources. These operations need explicit conventions for defaults, nullable fields, bulk propagation, empty success bodies, and Shopify-specific payment warnings before implementation.
+
+The legacy `POST https://api.ordergroove.com/customer/update_payment_default` integration is out of scope because it uses a different host, authentication, URL-encoding, encryption, and response model.
 
 Major deferred areas include Storefront authentication, offers and incentives, discounts, purchase post/cart, product mutation, prepaid subscriptions, bundles/components, webhooks, bulk operations, one-click actions, and order placement.
 
-Important unresolved production questions include list shapes without API version 2, required action fields, quantity propagation, recurrence timezone and month-end behavior, empty-order handling after skip, repeated-action behavior, exact error bodies/media types, and slashless-path behavior.
+Important unresolved production questions include list shapes without API version 2, required action fields, association ownership/live validation, individual-change propagation, quantity propagation, recurrence timezone and month-end behavior, empty-order handling after skip, repeated-action behavior, exact error bodies/media types, and slashless-path behavior.
 
 No subagents were used for the initial implementation.

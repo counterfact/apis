@@ -12,16 +12,24 @@ The contract was inferred from Ordergroove-owned public documentation reviewed o
 | Customers     | POST   | `/customers/create/`                                | Create and persist a customer                     |
 | Customers     | GET    | `/customers/{merchant_user_id}/`                    | Retrieve a customer                               |
 | Products      | GET    | `/products/{product_id}/`                           | Retrieve a product                                |
+| Addresses     | GET    | `/addresses/`                                       | Filtered, cursor-paginated list                   |
+| Addresses     | GET    | `/addresses/{address_id}/`                          | Retrieve an address                               |
+| Payments      | GET    | `/payments/`                                        | Filtered, cursor-paginated list                   |
+| Payments      | GET    | `/payments/{payment_id}/`                           | Retrieve a payment method                         |
 | Subscriptions | GET    | `/subscriptions/`                                   | Filtered, cursor-paginated list                   |
 | Subscriptions | GET    | `/subscriptions/{subscription_id}/`                 | Retrieve a subscription                           |
 | Subscriptions | PATCH  | `/subscriptions/{subscription_id}/change_quantity/` | Change quantity and simulator-linked unsent items |
+| Subscriptions | PATCH  | `/subscriptions/{subscription_id}/change_shipping/` | Change only this subscription's shipping address  |
+| Subscriptions | PATCH  | `/subscriptions/{subscription_id}/change_payment/`  | Change only this subscription's payment method    |
 | Orders        | GET    | `/orders/`                                          | Filtered, cursor-paginated list                   |
 | Orders        | GET    | `/orders/{order_id}/`                               | Retrieve an order                                 |
+| Orders        | PATCH  | `/orders/{order_id}/change_shipping/`               | Change only this order's shipping address         |
+| Orders        | PATCH  | `/orders/{order_id}/change_payment/`                | Change only this order's payment method           |
 | Orders        | PATCH  | `/orders/{order_id}/skip_subscription/`             | Move matching items to a generated upcoming order |
 | Items         | GET    | `/items/`                                           | Filtered, cursor-paginated list                   |
 | Items         | GET    | `/items/{item_id}/`                                 | Retrieve an item                                  |
 
-Addresses, payments, offers, discounts, entitlements, purchase post, product mutation, prepaid and bundle actions, webhooks, bulk operations, Storefront actions, one-click actions, and order placement are intentionally unsupported. See [`docs/API_COVERAGE.md`](./docs/API_COVERAGE.md) and [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md) for evidence and limitations.
+Address and payment creation, activation/deactivation, and `use_for_all` actions remain unsupported, as do offers, discounts, entitlements, purchase post, product mutation, prepaid and bundle actions, webhooks, bulk operations, Storefront actions, one-click actions, and order placement. The legacy `api.ordergroove.com/customer/update_payment_default` integration is outside this REST simulator's scope. See [`docs/API_COVERAGE.md`](./docs/API_COVERAGE.md) and [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md) for evidence and limitations.
 
 ## Authentication
 
@@ -50,7 +58,9 @@ The canonical local API origin is `http://localhost:3100`; Swagger UI is at `htt
 Every fresh process starts with:
 
 - merchant `merchant_demo`;
-- customer `customer_demo` (`ada@example.invalid`);
+- customers `customer_demo` (`ada@example.invalid`) and `customer_other` (`grace@example.invalid`);
+- addresses `address_demo`, `address_alternate`, and cross-customer validation fixture `address_other_customer`;
+- payments `payment_demo`, `payment_alternate`, and cross-customer validation fixture `payment_other_customer`;
 - products `coffee_demo` and `tea_demo`;
 - subscriptions `subscription_coffee` and `subscription_tea`;
 - unsent order `order_upcoming`, placed on `2026-08-31`; and
@@ -68,6 +78,8 @@ KEY=ordergroove-simulator-key
 
 curl -sS -H "x-api-key: $KEY" "$API/customers/customer_demo/"
 curl -sS -H "x-api-key: $KEY" "$API/products/coffee_demo/"
+curl -sS -H "x-api-key: $KEY" "$API/addresses/?customer=customer_demo"
+curl -sS -H "x-api-key: $KEY" "$API/payments/?customer=customer_demo"
 curl -sS -H "x-api-key: $KEY" "$API/subscriptions/?customer=customer_demo"
 curl -sS -H "x-api-key: $KEY" "$API/orders/?subscription=subscription_coffee"
 curl -sS -H "x-api-key: $KEY" "$API/items/?order=order_upcoming"
@@ -84,11 +96,23 @@ curl -sS -X PATCH \
   -d '{"subscription":"subscription_coffee"}' \
   "$API/orders/order_upcoming/skip_subscription/"
 
+curl -sS -X PATCH \
+  -H "x-api-key: $KEY" \
+  -H "content-type: application/json" \
+  -d '{"shipping_address":"address_alternate"}' \
+  "$API/subscriptions/subscription_coffee/change_shipping/"
+
+curl -sS -X PATCH \
+  -H "x-api-key: $KEY" \
+  -H "content-type: application/json" \
+  -d '{"payment":"payment_alternate"}' \
+  "$API/subscriptions/subscription_coffee/change_payment/"
+
 curl -sS -H "x-api-key: $KEY" "$API/items/?subscription=subscription_coffee"
 curl -sS -H "x-api-key: $KEY" "$API/orders/order_generated_1/"
 ```
 
-The coffee item now has quantity 3 and belongs to `order_generated_1`, whose simulator-defined place date is `2026-09-30`. Repeating the skip returns 400 without mutation. These generated identifiers and month-end clamping are explicitly simulator-only conventions.
+The coffee item now has quantity 3 and belongs to `order_generated_1`, whose simulator-defined place date is `2026-09-30`. The subscription uses the alternate address and payment; those individual changes do not cascade to its orders or to other subscriptions. Association actions require the documented body ID, and the target must be live and belong to the same customer. Repeating the skip or supplying an inactive or cross-customer target returns 400 without mutation. These validation rules, generated identifiers, and month-end clamping are explicitly documented simulator conventions where production behavior is incomplete.
 
 ## Quality checks
 

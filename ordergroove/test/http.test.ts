@@ -172,6 +172,198 @@ test("request validation rejects malformed actions before mutation", async () =>
   }
 });
 
+test("address and payment lists support filters, pagination, and retrieves", async () => {
+  const simulator = await startSimulator();
+  try {
+    const addresses = await simulator.request(
+      "/addresses/?customer=customer_demo&live=true&page_size=1",
+    );
+    assert.equal(addresses.status, 200);
+    const addressPage = await addresses.json();
+    assert.equal(addressPage.results.length, 1);
+    assert.equal(addressPage.results[0].public_id, "address_demo");
+    assert.equal(typeof addressPage.next, "string");
+
+    const addressCursor = new URL(addressPage.next).searchParams.get("cursor");
+    assert.ok(addressCursor);
+    const nextAddresses = await simulator.request(
+      `/addresses/?customer=customer_demo&live=true&page_size=1&cursor=${encodeURIComponent(addressCursor)}`,
+    );
+    assert.equal(nextAddresses.status, 200);
+    assert.equal(
+      (await nextAddresses.json()).results[0].public_id,
+      "address_alternate",
+    );
+
+    const address = await simulator.request("/addresses/address_demo/");
+    assert.equal(address.status, 200);
+    assert.equal((await address.json()).customer, "customer_demo");
+
+    const payments = await simulator.request(
+      "/payments/?customer=customer_demo&page_size=1",
+    );
+    assert.equal(payments.status, 200);
+    const paymentPage = await payments.json();
+    assert.equal(paymentPage.results.length, 1);
+    assert.equal(paymentPage.results[0].public_id, "payment_demo");
+    assert.equal(typeof paymentPage.next, "string");
+
+    const payment = await simulator.request("/payments/payment_demo/");
+    assert.equal(payment.status, 200);
+    assert.equal((await payment.json()).billing_address, "address_demo");
+
+    assert.equal(
+      (await simulator.request("/addresses/address_missing/")).status,
+      404,
+    );
+    assert.equal(
+      (await simulator.request("/payments/payment_missing/")).status,
+      404,
+    );
+  } finally {
+    await simulator.close();
+  }
+});
+
+test("shipping and payment actions persist through real HTTP", async () => {
+  const simulator = await startSimulator();
+  const patchAssociation = (pathname: string, body: object) =>
+    simulator.request(pathname, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  try {
+    const subscriptionShipping = await patchAssociation(
+      "/subscriptions/subscription_coffee/change_shipping/",
+      { shipping_address: "address_alternate" },
+    );
+    assert.equal(subscriptionShipping.status, 200);
+    assert.equal(
+      (await subscriptionShipping.json()).shipping_address,
+      "address_alternate",
+    );
+
+    const subscriptionPayment = await patchAssociation(
+      "/subscriptions/subscription_coffee/change_payment/",
+      { payment: "payment_alternate" },
+    );
+    assert.equal(subscriptionPayment.status, 200);
+    assert.equal(
+      (await subscriptionPayment.json()).payment,
+      "payment_alternate",
+    );
+
+    const orderShipping = await patchAssociation(
+      "/orders/order_upcoming/change_shipping/",
+      { shipping_address: "address_alternate" },
+    );
+    assert.equal(orderShipping.status, 200);
+    assert.equal(
+      (await orderShipping.json()).shipping_address,
+      "address_alternate",
+    );
+
+    const orderPayment = await patchAssociation(
+      "/orders/order_upcoming/change_payment/",
+      { payment: "payment_alternate" },
+    );
+    assert.equal(orderPayment.status, 200);
+    assert.equal((await orderPayment.json()).payment, "payment_alternate");
+
+    const subscription = await (
+      await simulator.request("/subscriptions/subscription_coffee/")
+    ).json();
+    assert.equal(subscription.shipping_address, "address_alternate");
+    assert.equal(subscription.payment, "payment_alternate");
+
+    const order = await (
+      await simulator.request("/orders/order_upcoming/")
+    ).json();
+    assert.equal(order.shipping_address, "address_alternate");
+    assert.equal(order.payment, "payment_alternate");
+  } finally {
+    await simulator.close();
+  }
+});
+
+test("association actions reject malformed and unsafe changes atomically", async () => {
+  const simulator = await startSimulator();
+  const patchAssociation = (pathname: string, body: object) =>
+    simulator.request(pathname, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  try {
+    const subscriptionBefore = await (
+      await simulator.request("/subscriptions/subscription_coffee/")
+    ).json();
+    const orderBefore = await (
+      await simulator.request("/orders/order_upcoming/")
+    ).json();
+
+    assert.equal(
+      (
+        await patchAssociation(
+          "/subscriptions/subscription_coffee/change_shipping/",
+          {},
+        )
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await patchAssociation("/orders/order_upcoming/change_payment/", {
+          payment: "payment_other_customer",
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await patchAssociation(
+          "/subscriptions/subscription_coffee/change_shipping/",
+          { shipping_address: "address_missing" },
+        )
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await patchAssociation(
+          "/subscriptions/subscription_missing/change_payment/",
+          { payment: "payment_demo" },
+        )
+      ).status,
+      404,
+    );
+    assert.equal(
+      (
+        await patchAssociation("/orders/order_missing/change_shipping/", {
+          shipping_address: "address_demo",
+        })
+      ).status,
+      404,
+    );
+
+    assert.deepEqual(
+      await (
+        await simulator.request("/subscriptions/subscription_coffee/")
+      ).json(),
+      subscriptionBefore,
+    );
+    assert.deepEqual(
+      await (await simulator.request("/orders/order_upcoming/")).json(),
+      orderBefore,
+    );
+  } finally {
+    await simulator.close();
+  }
+});
+
 test("customer creation persists and duplicate identifiers are rejected", async () => {
   const simulator = await startSimulator();
   const input = {
@@ -218,7 +410,15 @@ test("a fresh Counterfact instance deterministically resets state", async () => 
     );
     assert.equal((await subscription.json()).quantity, 2);
     const order = await simulator.request("/orders/order_upcoming/");
-    assert.equal((await order.json()).status, 1);
+    const orderBody = await order.json();
+    assert.equal(orderBody.status, 1);
+    assert.equal(orderBody.shipping_address, "address_demo");
+    assert.equal(orderBody.payment, "payment_demo");
+
+    const address = await simulator.request("/addresses/address_demo/");
+    assert.equal((await address.json()).live, true);
+    const payment = await simulator.request("/payments/payment_demo/");
+    assert.equal((await payment.json()).live, true);
   } finally {
     await simulator.close();
   }

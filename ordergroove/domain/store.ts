@@ -1,13 +1,17 @@
+import type { Address } from "../types/components/schemas/Address.ts";
 import type { CustomerCreate } from "../types/components/schemas/CustomerCreate.ts";
 import type { Customer } from "../types/components/schemas/Customer.ts";
 import type { Item } from "../types/components/schemas/Item.ts";
 import type { Order } from "../types/components/schemas/Order.ts";
+import type { Payment } from "../types/components/schemas/Payment.ts";
 import type { Product } from "../types/components/schemas/Product.ts";
 import type { Subscription } from "../types/components/schemas/Subscription.ts";
 import { addRecurrence } from "./recurrence.ts";
 
 export interface CommerceState {
   customers: Customer[];
+  addresses: Address[];
+  payments: Payment[];
   products: Product[];
   subscriptions: Subscription[];
   orders: Order[];
@@ -64,6 +68,118 @@ export const createSeedData = (): CommerceState => ({
       locale: "en-US",
     },
   ],
+  addresses: [
+    {
+      customer: "customer_demo",
+      public_id: "address_demo",
+      label: "Home",
+      first_name: "Ada",
+      last_name: "Example",
+      company_name: null,
+      address: "100 Example Avenue",
+      address2: null,
+      city: "New York",
+      state_province_code: "NY",
+      zip_postal_code: "10001",
+      phone: "+15555550100",
+      fax: null,
+      country_code: "US",
+      live: true,
+      created: fixedTimestamp,
+      updated: fixedTimestamp,
+      token_id: null,
+      store_public_id: null,
+    },
+    {
+      customer: "customer_demo",
+      public_id: "address_alternate",
+      label: "Office",
+      first_name: "Ada",
+      last_name: "Example",
+      company_name: "Example Co",
+      address: "200 Alternate Street",
+      address2: "Suite 2",
+      city: "Brooklyn",
+      state_province_code: "NY",
+      zip_postal_code: "11201",
+      phone: "+15555550100",
+      fax: null,
+      country_code: "US",
+      live: true,
+      created: fixedTimestamp,
+      updated: fixedTimestamp,
+      token_id: null,
+      store_public_id: null,
+    },
+    {
+      customer: "customer_other",
+      public_id: "address_other_customer",
+      label: "Home",
+      first_name: "Grace",
+      last_name: "Example",
+      company_name: null,
+      address: "300 Other Road",
+      address2: null,
+      city: "Arlington",
+      state_province_code: "VA",
+      zip_postal_code: "22201",
+      phone: "+15555550101",
+      fax: null,
+      country_code: "US",
+      live: true,
+      created: fixedTimestamp,
+      updated: fixedTimestamp,
+      token_id: null,
+      store_public_id: null,
+    },
+  ],
+  payments: [
+    {
+      customer: "customer_demo",
+      billing_address: "address_demo",
+      cc_number_ending: "4242",
+      public_id: "payment_demo",
+      label: "Primary Visa",
+      token_id: "token_demo",
+      cc_holder: "Ada Example",
+      cc_type: 1,
+      cc_exp_date: "12/2030",
+      payment_method: "credit card",
+      live: true,
+      created: fixedTimestamp,
+      last_updated: fixedTimestamp,
+    },
+    {
+      customer: "customer_demo",
+      billing_address: "address_alternate",
+      cc_number_ending: "1111",
+      public_id: "payment_alternate",
+      label: "Alternate Mastercard",
+      token_id: "token_alternate",
+      cc_holder: "Ada Example",
+      cc_type: 2,
+      cc_exp_date: "11/2031",
+      payment_method: "credit card",
+      live: true,
+      created: fixedTimestamp,
+      last_updated: fixedTimestamp,
+    },
+    {
+      customer: "customer_other",
+      billing_address: "address_other_customer",
+      cc_number_ending: "0005",
+      public_id: "payment_other_customer",
+      label: "Other Amex",
+      token_id: "token_other",
+      cc_holder: "Grace Example",
+      cc_type: 3,
+      cc_exp_date: "10/2032",
+      payment_method: "credit card",
+      live: true,
+      created: fixedTimestamp,
+      last_updated: fixedTimestamp,
+    },
+  ],
   products: [
     {
       merchant: "merchant_demo",
@@ -87,6 +203,8 @@ export const createSeedData = (): CommerceState => ({
       customer: "customer_demo",
       merchant: "merchant_demo",
       product: "coffee_demo",
+      payment: "payment_demo",
+      shipping_address: "address_demo",
       public_id: "subscription_coffee",
       quantity: 2,
       price: "18.00",
@@ -105,6 +223,8 @@ export const createSeedData = (): CommerceState => ({
       customer: "customer_demo",
       merchant: "merchant_demo",
       product: "tea_demo",
+      payment: "payment_demo",
+      shipping_address: "address_demo",
       public_id: "subscription_tea",
       quantity: 1,
       price: "12.00",
@@ -122,6 +242,8 @@ export const createSeedData = (): CommerceState => ({
       customer: "customer_other",
       merchant: "merchant_demo",
       product: "coffee_demo",
+      payment: "payment_other_customer",
+      shipping_address: "address_other_customer",
       public_id: "subscription_other_customer",
       quantity: 1,
       frequency_days: 30,
@@ -139,6 +261,8 @@ export const createSeedData = (): CommerceState => ({
     {
       merchant: "merchant_demo",
       customer: "customer_demo",
+      payment: "payment_demo",
+      shipping_address: "address_demo",
       public_id: "order_upcoming",
       created: fixedTimestamp,
       updated: fixedTimestamp,
@@ -236,6 +360,43 @@ export class CommerceStore {
     return clone(customer);
   }
 
+  getAddress(id: string) {
+    const value = this.state.addresses.find(
+      (address) => address.public_id === id,
+    );
+    return value ? clone(value) : undefined;
+  }
+
+  listAddresses(
+    filters: {
+      customer?: string | undefined;
+      live?: boolean | undefined;
+    } = {},
+  ) {
+    return clone(
+      this.state.addresses.filter(
+        (address) =>
+          (!filters.customer || address.customer === filters.customer) &&
+          (filters.live === undefined || address.live === filters.live),
+      ),
+    );
+  }
+
+  getPayment(id: string) {
+    const value = this.state.payments.find(
+      (payment) => payment.public_id === id,
+    );
+    return value ? clone(value) : undefined;
+  }
+
+  listPayments(filters: { customer?: string | undefined } = {}) {
+    return clone(
+      this.state.payments.filter(
+        (payment) => !filters.customer || payment.customer === filters.customer,
+      ),
+    );
+  }
+
   getProduct(id: string) {
     const value = this.state.products.find(
       (product) => product.external_product_id === id,
@@ -301,6 +462,27 @@ export class CommerceStore {
     return clone(subscription);
   }
 
+  /**
+   * Sources: https://developer.ordergroove.com/reference/subscriptions-change-shipping-address
+   * and https://developer.ordergroove.com/reference/subscriptions-change-payment
+   * Requiring live, same-customer associations is a simulator convention.
+   */
+  changeSubscriptionShippingAddress(id: string, addressId: string) {
+    const subscription = this.requireSubscription(id);
+    this.requireLiveCustomerAddress(addressId, subscription.customer);
+    subscription.shipping_address = addressId;
+    subscription.updated = fixedTimestamp;
+    return clone(subscription);
+  }
+
+  changeSubscriptionPayment(id: string, paymentId: string) {
+    const subscription = this.requireSubscription(id);
+    this.requireLiveCustomerPayment(paymentId, subscription.customer);
+    subscription.payment = paymentId;
+    subscription.updated = fixedTimestamp;
+    return clone(subscription);
+  }
+
   getOrder(id: string) {
     const value = this.state.orders.find((order) => order.public_id === id);
     return value ? clone(value) : undefined;
@@ -327,6 +509,27 @@ export class CommerceStore {
         );
       }),
     );
+  }
+
+  /**
+   * Sources: https://developer.ordergroove.com/reference/orders-change-shipping-address
+   * and https://developer.ordergroove.com/reference/orders-change-payment
+   * Requiring live, same-customer associations is a simulator convention.
+   */
+  changeOrderShippingAddress(id: string, addressId: string) {
+    const order = this.requireOrder(id);
+    this.requireLiveCustomerAddress(addressId, order.customer);
+    order.shipping_address = addressId;
+    order.updated = fixedTimestamp;
+    return clone(order);
+  }
+
+  changeOrderPayment(id: string, paymentId: string) {
+    const order = this.requireOrder(id);
+    this.requireLiveCustomerPayment(paymentId, order.customer);
+    order.payment = paymentId;
+    order.updated = fixedTimestamp;
+    return clone(order);
   }
 
   getItem(id: string) {
@@ -411,6 +614,52 @@ export class CommerceStore {
     return clone(order);
   }
 
+  private requireSubscription(id: string) {
+    const subscription = this.state.subscriptions.find(
+      (candidate) => candidate.public_id === id,
+    );
+    if (!subscription) throw new DomainError(404, "Subscription not found.");
+    return subscription;
+  }
+
+  private requireOrder(id: string) {
+    const order = this.state.orders.find(
+      (candidate) => candidate.public_id === id,
+    );
+    if (!order) throw new DomainError(404, "Order not found.");
+    return order;
+  }
+
+  private requireLiveCustomerAddress(id: string, customerId: string) {
+    const address = this.state.addresses.find(
+      (candidate) => candidate.public_id === id,
+    );
+    if (!address) throw new DomainError(400, "Address not found.");
+    if (!address.live) throw new DomainError(400, "Address is inactive.");
+    if (address.customer !== customerId) {
+      throw new DomainError(
+        400,
+        "Address does not belong to the resource customer.",
+      );
+    }
+    return address;
+  }
+
+  private requireLiveCustomerPayment(id: string, customerId: string) {
+    const payment = this.state.payments.find(
+      (candidate) => candidate.public_id === id,
+    );
+    if (!payment) throw new DomainError(400, "Payment not found.");
+    if (!payment.live) throw new DomainError(400, "Payment is inactive.");
+    if (payment.customer !== customerId) {
+      throw new DomainError(
+        400,
+        "Payment does not belong to the resource customer.",
+      );
+    }
+    return payment;
+  }
+
   private assertIntegrity(state: CommerceState) {
     const customers = new Set(
       state.customers.map((value) => value.merchant_user_id),
@@ -418,15 +667,39 @@ export class CommerceStore {
     const products = new Set(
       state.products.map((value) => value.external_product_id),
     );
+    const addresses = new Map(
+      state.addresses.map((value) => [value.public_id, value.customer]),
+    );
+    const payments = new Map(
+      state.payments.map((value) => [value.public_id, value.customer]),
+    );
     const subscriptions = new Set(
       state.subscriptions.map((value) => value.public_id),
     );
     const orders = new Set(state.orders.map((value) => value.public_id));
 
+    for (const address of state.addresses) {
+      if (!customers.has(address.customer)) {
+        throw new Error(`Invalid address: ${address.public_id}`);
+      }
+    }
+    for (const payment of state.payments) {
+      if (!customers.has(payment.customer)) {
+        throw new Error(`Invalid payment: ${payment.public_id}`);
+      }
+    }
+
     for (const subscription of state.subscriptions) {
       if (
         !customers.has(subscription.customer) ||
-        !products.has(subscription.product)
+        !products.has(subscription.product) ||
+        (subscription.shipping_address !== undefined &&
+          subscription.shipping_address !== null &&
+          addresses.get(subscription.shipping_address) !==
+            subscription.customer) ||
+        (subscription.payment !== undefined &&
+          subscription.payment !== null &&
+          payments.get(subscription.payment) !== subscription.customer)
       ) {
         throw new Error(
           `Invalid subscription relationship: ${subscription.public_id}`,
@@ -434,7 +707,15 @@ export class CommerceStore {
       }
     }
     for (const order of state.orders) {
-      if (!customers.has(order.customer))
+      if (
+        !customers.has(order.customer) ||
+        (order.shipping_address !== undefined &&
+          order.shipping_address !== null &&
+          addresses.get(order.shipping_address) !== order.customer) ||
+        (order.payment !== undefined &&
+          order.payment !== null &&
+          payments.get(order.payment) !== order.customer)
+      )
         throw new Error(`Invalid order: ${order.public_id}`);
     }
     for (const item of state.items) {

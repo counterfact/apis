@@ -105,3 +105,147 @@ test("repeated and cross-customer skips reject without mutation", () => {
   );
   assert.deepEqual(store.snapshot(), afterFirst);
 });
+
+test("address and payment reads are clone-safe and filter by customer", () => {
+  const store = new CommerceStore(createSeedData());
+  const address = store.getAddress("address_demo");
+  const payment = store.getPayment("payment_demo");
+  assert.ok(address);
+  assert.ok(payment);
+
+  address.city = "mutated outside";
+  payment.label = "mutated outside";
+  assert.equal(store.getAddress("address_demo")?.city, "New York");
+  assert.equal(store.getPayment("payment_demo")?.label, "Primary Visa");
+
+  assert.deepEqual(
+    store
+      .listAddresses({ customer: "customer_demo", live: true })
+      .map((value) => value.public_id),
+    ["address_demo", "address_alternate"],
+  );
+  assert.deepEqual(
+    store
+      .listPayments({ customer: "customer_demo" })
+      .map((value) => value.public_id),
+    ["payment_demo", "payment_alternate"],
+  );
+});
+
+test("shipping and payment changes persist on subscriptions and orders", () => {
+  const store = new CommerceStore(createSeedData());
+
+  assert.equal(
+    store.changeSubscriptionShippingAddress(
+      "subscription_coffee",
+      "address_alternate",
+    ).shipping_address,
+    "address_alternate",
+  );
+  assert.equal(
+    store.changeSubscriptionPayment("subscription_coffee", "payment_alternate")
+      .payment,
+    "payment_alternate",
+  );
+  assert.equal(
+    store.changeOrderShippingAddress("order_upcoming", "address_alternate")
+      .shipping_address,
+    "address_alternate",
+  );
+  assert.equal(
+    store.changeOrderPayment("order_upcoming", "payment_alternate").payment,
+    "payment_alternate",
+  );
+
+  assert.equal(
+    store.getSubscription("subscription_coffee")?.shipping_address,
+    "address_alternate",
+  );
+  assert.equal(
+    store.getSubscription("subscription_coffee")?.payment,
+    "payment_alternate",
+  );
+  assert.equal(
+    store.getOrder("order_upcoming")?.shipping_address,
+    "address_alternate",
+  );
+  assert.equal(store.getOrder("order_upcoming")?.payment, "payment_alternate");
+});
+
+test("association changes reject invalid relationships atomically", () => {
+  const store = new CommerceStore(createSeedData());
+  const initial = store.snapshot();
+  const rejectsWithoutMutation = (
+    change: () => unknown,
+    expectedStatus: 400 | 404,
+  ) => {
+    assert.throws(
+      change,
+      (error: unknown) =>
+        error instanceof DomainError && error.status === expectedStatus,
+    );
+    assert.deepEqual(store.snapshot(), initial);
+  };
+
+  rejectsWithoutMutation(
+    () =>
+      store.changeSubscriptionShippingAddress(
+        "subscription_missing",
+        "address_demo",
+      ),
+    404,
+  );
+  rejectsWithoutMutation(
+    () => store.changeOrderPayment("order_missing", "payment_demo"),
+    404,
+  );
+  rejectsWithoutMutation(
+    () =>
+      store.changeSubscriptionShippingAddress(
+        "subscription_coffee",
+        "address_missing",
+      ),
+    400,
+  );
+  rejectsWithoutMutation(
+    () =>
+      store.changeSubscriptionShippingAddress(
+        "subscription_coffee",
+        "address_other_customer",
+      ),
+    400,
+  );
+  rejectsWithoutMutation(
+    () => store.changeOrderPayment("order_upcoming", "payment_other_customer"),
+    400,
+  );
+
+  const inactiveSeed = createSeedData();
+  const inactiveAddress = inactiveSeed.addresses.find(
+    (value) => value.public_id === "address_alternate",
+  );
+  const inactivePayment = inactiveSeed.payments.find(
+    (value) => value.public_id === "payment_alternate",
+  );
+  assert.ok(inactiveAddress);
+  assert.ok(inactivePayment);
+  inactiveAddress.live = false;
+  inactivePayment.live = false;
+  const inactiveStore = new CommerceStore(inactiveSeed);
+  const inactiveInitial = inactiveStore.snapshot();
+
+  assert.throws(
+    () =>
+      inactiveStore.changeSubscriptionShippingAddress(
+        "subscription_coffee",
+        "address_alternate",
+      ),
+    (error: unknown) => error instanceof DomainError && error.status === 400,
+  );
+  assert.throws(
+    () =>
+      inactiveStore.changeOrderPayment("order_upcoming", "payment_alternate"),
+    (error: unknown) => error instanceof DomainError && error.status === 400,
+  );
+  assert.deepEqual(inactiveStore.snapshot(), inactiveInitial);
+});

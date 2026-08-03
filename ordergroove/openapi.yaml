@@ -13,6 +13,10 @@ security:
   - ApplicationApiKey: []
   - StorefrontAuthorization: []
 tags:
+  - name: Addresses
+    description: Customer shipping and billing address records.
+  - name: Payments
+    description: Customer payment method records and their billing addresses.
   - name: Customers
     description: Customer accounts and merchant-facing identifiers.
   - name: Products
@@ -24,6 +28,102 @@ tags:
   - name: Items
     description: Product line items related to orders and subscriptions.
 paths:
+  /addresses/:
+    get:
+      tags: [Addresses]
+      operationId: addresses-list
+      summary: List addresses
+      description: |
+        Lists customer addresses. Application scope requires Bulk Operations
+        permission to return addresses for more than one customer. Source reviewed
+        2026-08-02: https://developer.ordergroove.com/reference/addresses-list
+      x-ordergroove-source: https://developer.ordergroove.com/reference/addresses-list
+      x-simulator-limitation: The official endpoint documents an array response; this simulator uses the API-v2 cursor envelope and an opaque simulator cursor.
+      parameters:
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Cursor"
+        - name: customer
+          in: query
+          schema: { type: string }
+          description: Customer ID; documented as application-scope only.
+        - name: live
+          in: query
+          schema: { type: boolean }
+        - $ref: "#/components/parameters/UpdatedStart"
+        - $ref: "#/components/parameters/UpdatedEnd"
+      responses:
+        "200":
+          description: Cursor page of addresses.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddressPage" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+  /addresses/{address_id}/:
+    get:
+      tags: [Addresses]
+      operationId: addresses-retrieve
+      summary: Retrieve an address
+      description: |
+        Retrieves an address for an individual customer. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/addresses-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/addresses-retrieve
+      parameters:
+        - $ref: "#/components/parameters/AddressId"
+      responses:
+        "200":
+          description: Address.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Address" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /payments/:
+    get:
+      tags: [Payments]
+      operationId: payments-list
+      summary: List payments
+      description: |
+        Lists customer payment methods. Application scope requires Bulk Operations
+        permission to return payments for more than one customer. Source reviewed
+        2026-08-02: https://developer.ordergroove.com/reference/payments-list
+      x-ordergroove-source: https://developer.ordergroove.com/reference/payments-list
+      x-simulator-limitation: The official endpoint documents a list without an API-v2 response schema; this simulator uses the API-v2 cursor envelope and an opaque simulator cursor.
+      parameters:
+        - $ref: "#/components/parameters/ApiVersion"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Cursor"
+        - name: customer
+          in: query
+          schema: { type: string }
+          description: Customer ID.
+      responses:
+        "200":
+          description: Cursor page of payments.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentPage" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+  /payments/{payment_id}/:
+    get:
+      tags: [Payments]
+      operationId: payments-retrieve
+      summary: Retrieve a payment
+      description: |
+        Retrieves a payment method for an individual customer. Source reviewed
+        2026-08-02: https://developer.ordergroove.com/reference/payments-retrieve
+      x-ordergroove-source: https://developer.ordergroove.com/reference/payments-retrieve
+      x-simulator-limitation: The official path description incorrectly calls payment_id an address ID; this contract treats it as the payment public ID.
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment method.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /customers/:
     get:
       tags: [Customers]
@@ -230,6 +330,70 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/AuthenticationFailed" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /subscriptions/{subscription_id}/change_shipping/:
+    patch:
+      tags: [Subscriptions]
+      operationId: subscriptions-change-shipping-address
+      summary: Change subscription shipping address
+      description: |
+        Changes the shipping address associated with a subscription. Source reviewed
+        2026-08-02:
+        https://developer.ordergroove.com/reference/subscriptions-change-shipping-address
+      x-ordergroove-source: https://developer.ordergroove.com/reference/subscriptions-change-shipping-address
+      x-simulator-limitation: The shipping_address field is required by this contract although the official page does not mark it required; inactive and cross-customer references are rejected and no order changes are implied.
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [shipping_address]
+              properties:
+                shipping_address: { type: string }
+      responses:
+        "200":
+          description: Updated subscription.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Subscription" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /subscriptions/{subscription_id}/change_payment/:
+    patch:
+      tags: [Subscriptions]
+      operationId: subscriptions-change-payment
+      summary: Change subscription payment
+      description: |
+        Changes the payment method associated with a subscription. Source reviewed
+        2026-08-02:
+        https://developer.ordergroove.com/reference/subscriptions-change-payment
+      x-ordergroove-source: https://developer.ordergroove.com/reference/subscriptions-change-payment
+      x-simulator-limitation: The payment field is required by this contract although the official page does not mark it required; inactive and cross-customer references are rejected and no order changes are implied.
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [payment]
+              properties:
+                payment: { type: string }
+      responses:
+        "200":
+          description: Updated subscription.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Subscription" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /orders/:
     get:
       tags: [Orders]
@@ -311,6 +475,70 @@ paths:
       responses:
         "200":
           description: Source order after matching items were moved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /orders/{order_id}/change_shipping/:
+    patch:
+      tags: [Orders]
+      operationId: orders-change-shipping-address
+      summary: Change order shipping address
+      description: |
+        Changes the shipping address associated with an individual order. Source
+        reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/orders-change-shipping-address
+      x-ordergroove-source: https://developer.ordergroove.com/reference/orders-change-shipping-address
+      x-simulator-limitation: The shipping_address field is required by this contract although the official page does not mark it required; inactive and cross-customer references are rejected and no subscription changes are implied.
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [shipping_address]
+              properties:
+                shipping_address: { type: string }
+      responses:
+        "200":
+          description: Updated order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/AuthenticationFailed" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /orders/{order_id}/change_payment/:
+    patch:
+      tags: [Orders]
+      operationId: orders-change-payment
+      summary: Change order payment
+      description: |
+        Changes the payment method and associated billing address for an individual
+        order. Source reviewed 2026-08-02:
+        https://developer.ordergroove.com/reference/orders-change-payment
+      x-ordergroove-source: https://developer.ordergroove.com/reference/orders-change-payment
+      x-simulator-limitation: The payment field is required; inactive and cross-customer references are rejected and no subscription changes are implied.
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [payment]
+              properties:
+                payment: { type: string }
+      responses:
+        "200":
+          description: Updated order.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Order" }
@@ -414,6 +642,16 @@ components:
       schema: { type: string }
     OrderId:
       name: order_id
+      in: path
+      required: true
+      schema: { type: string }
+    AddressId:
+      name: address_id
+      in: path
+      required: true
+      schema: { type: string }
+    PaymentId:
+      name: payment_id
       in: path
       required: true
       schema: { type: string }
@@ -533,6 +771,97 @@ components:
             last_updated: "2026-08-02 12:00:00"
             last_login: null
             locale: en-US
+    Address:
+      type: object
+      additionalProperties: true
+      required:
+        [
+          customer,
+          public_id,
+          first_name,
+          last_name,
+          address,
+          city,
+          state_province_code,
+          zip_postal_code,
+          country_code,
+          live,
+          created,
+          updated,
+        ]
+      properties:
+        customer: { type: string }
+        public_id: { type: string }
+        label: { type: [string, "null"] }
+        first_name: { type: string }
+        last_name: { type: string }
+        company_name: { type: [string, "null"] }
+        address: { type: string }
+        address2: { type: [string, "null"] }
+        city: { type: string }
+        state_province_code: { type: string }
+        zip_postal_code: { type: string }
+        phone: { type: string }
+        fax: { type: [string, "null"] }
+        country_code: { type: string }
+        live: { type: boolean }
+        created: { type: string }
+        updated: { type: string }
+        token_id: { type: [string, "null"] }
+        store_public_id: { type: [string, "null"] }
+      example:
+        customer: customer_demo
+        public_id: address_home
+        label: Home
+        first_name: Ada
+        last_name: Example
+        address: 1 Example Way
+        address2: ""
+        city: Exampleville
+        state_province_code: NY
+        zip_postal_code: "10001"
+        phone: "+15555550100"
+        country_code: US
+        live: true
+        created: "2026-08-02 12:00:00"
+        updated: "2026-08-02 12:00:00"
+    Payment:
+      type: object
+      additionalProperties: true
+      required:
+        [customer, public_id, cc_number_ending, live, created, last_updated]
+      properties:
+        customer: { type: string }
+        billing_address: { type: [string, "null"] }
+        cc_number_ending: { type: [string, "null"] }
+        public_id: { type: string }
+        label: { type: [string, "null"] }
+        token_id: { type: [string, "null"] }
+        cc_holder: { type: [string, "null"] }
+        cc_type: { type: integer }
+        cc_exp_date: { type: string, pattern: '^\d{2}/(?:\d{2}|\d{4})$' }
+        payment_method:
+          {
+            type: string,
+            enum: [credit card, paypal, applepay, shoppay, googlepay],
+          }
+        live: { type: boolean }
+        created: { type: string }
+        last_updated: { type: string }
+      example:
+        customer: customer_demo
+        billing_address: address_home
+        cc_number_ending: "1111"
+        public_id: payment_primary
+        label: Primary
+        token_id: simulator-token-primary
+        cc_holder: Ada Example
+        cc_type: 1
+        cc_exp_date: 11/2028
+        payment_method: credit card
+        live: true
+        created: "2026-08-02 12:00:00"
+        last_updated: "2026-08-02 12:00:00"
     Product:
       type: object
       additionalProperties: true
@@ -661,6 +990,22 @@ components:
         previous: { type: [string, "null"], format: uri }
         results:
           { type: array, items: { $ref: "#/components/schemas/Customer" } }
+    AddressPage:
+      type: object
+      required: [next, previous, results]
+      properties:
+        next: { type: [string, "null"], format: uri }
+        previous: { type: [string, "null"], format: uri }
+        results:
+          { type: array, items: { $ref: "#/components/schemas/Address" } }
+    PaymentPage:
+      type: object
+      required: [next, previous, results]
+      properties:
+        next: { type: [string, "null"], format: uri }
+        previous: { type: [string, "null"], format: uri }
+        results:
+          { type: array, items: { $ref: "#/components/schemas/Payment" } }
     SubscriptionPage:
       type: object
       required: [next, previous, results]
