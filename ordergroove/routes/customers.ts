@@ -1,5 +1,4 @@
 import type { customersList } from "../types/paths/customers.types.js";
-import { paginate } from "../domain/pagination.js";
 
 export const GET: customersList = async ($) => {
   let customers = $.context.state.customers;
@@ -12,7 +11,7 @@ export const GET: customersList = async ($) => {
   }
 
   return $.response[200].json(
-    paginate(customers, {
+    $.context.paginate(customers, {
       headers: $.headers,
       path: "/customers/",
       query: $.query,

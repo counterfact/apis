@@ -28,6 +28,12 @@ export interface State {
   items: Item[];
 }
 
+interface PaginationRequest {
+  headers: Record<string, unknown>;
+  path: string;
+  query: Record<string, unknown>;
+}
+
 export const emptyState = (): State => ({
   customers: [],
   addresses: [],
@@ -53,5 +59,45 @@ export class Context {
 
   isAuthorized(apiKey: string | undefined): boolean {
     return apiKey === "ordergroove-simulator-key";
+  }
+
+  paginate<Item>(items: Item[], request: PaginationRequest): {
+    next: string | null;
+    previous: string | null;
+    results: Item[];
+  } {
+    const size = this.pageSize(request.query.page_size);
+    const offset = Math.min(this.cursorOffset(request.query.cursor), items.length);
+    const host = String(request.headers.host ?? "localhost:3100");
+
+    const link = (linkOffset: number): string => {
+      const params = new URLSearchParams();
+      for (const [name, value] of Object.entries(request.query)) {
+        if (name !== "cursor" && value !== undefined) {
+          for (const entry of Array.isArray(value) ? value : [value]) {
+            params.append(name, String(entry));
+          }
+        }
+      }
+      params.set("cursor", `offset:${linkOffset}`);
+      return `http://${host}${request.path}?${params.toString()}`;
+    };
+
+    return {
+      next: offset + size < items.length ? link(offset + size) : null,
+      previous: offset > 0 ? link(Math.max(0, offset - size)) : null,
+      results: items.slice(offset, offset + size),
+    };
+  }
+
+  private cursorOffset(cursor: unknown): number {
+    if (typeof cursor !== "string") return 0;
+    const match = /^offset:(\d+)$/.exec(cursor);
+    return match ? Number(match[1]) : 0;
+  }
+
+  private pageSize(value: unknown): number {
+    const parsed = typeof value === "number" ? value : Number(value ?? 10);
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100 ? parsed : 10;
   }
 }

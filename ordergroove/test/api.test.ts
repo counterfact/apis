@@ -5,9 +5,22 @@ import { fileURLToPath } from "node:url";
 import { counterfact } from "counterfact";
 import { order } from "../domain/fixtures.js";
 import { Context } from "../routes/_.context.js";
-import { happyPath } from "../scenarios/index.js";
+import {
+  crossCustomerReferences,
+  happyPath,
+  inactivePayment,
+  multipleSubscriptions,
+} from "../scenarios/index.js";
+import type { Address } from "../types/components/schemas/Address.js";
+import type { AddressPage } from "../types/components/schemas/AddressPage.js";
 import type { Customer } from "../types/components/schemas/Customer.js";
+import type { Item } from "../types/components/schemas/Item.js";
+import type { ItemPage } from "../types/components/schemas/ItemPage.js";
 import type { OrderPage } from "../types/components/schemas/OrderPage.js";
+import type { Payment } from "../types/components/schemas/Payment.js";
+import type { PaymentPage } from "../types/components/schemas/PaymentPage.js";
+import type { Product } from "../types/components/schemas/Product.js";
+import type { Subscription } from "../types/components/schemas/Subscription.js";
 import type { SubscriptionPage } from "../types/components/schemas/SubscriptionPage.js";
 import type { Scenario$ } from "../types/_.context.js";
 
@@ -23,6 +36,14 @@ const request = (pathname: string, apiKeyOverride: string | null = apiKey) =>
   fetch(`http://127.0.0.1:${port}${pathname}`, {
     headers: apiKeyOverride === null ? {} : { "x-api-key": apiKeyOverride },
   });
+
+const scenarioArgument = (): Scenario$ =>
+  ({
+    context,
+    loadContext: () => context,
+    route: () => ({}),
+    routes: {},
+  }) as unknown as Scenario$;
 
 const getFreePort = async () =>
   new Promise<number>((resolve, reject) => {
@@ -121,7 +142,11 @@ test("supports the customer to subscription to order workflow", async () => {
 
 test("retrieve handlers return contract-shaped not found errors", async () => {
   for (const pathname of [
+    "/addresses/missing/",
     "/customers/missing/",
+    "/items/missing/",
+    "/payments/missing/",
+    "/products/missing/",
     "/subscriptions/missing/",
     "/orders/missing/",
   ]) {
@@ -131,6 +156,85 @@ test("retrieve handlers return contract-shaped not found errors", async () => {
       detail: "Unable to find requested asset.",
     });
   }
+});
+
+test("supports all remaining read endpoints and their direct filters", async () => {
+  const addressesResponse = await request(
+    "/addresses/?customer=customer_demo&live=true",
+  );
+  assert.equal(addressesResponse.status, 200);
+  const addresses = (await addressesResponse.json()) as AddressPage;
+  assert.equal(addresses.results[0].public_id, "address_home");
+
+  const addressResponse = await request("/addresses/address_home/");
+  assert.equal(addressResponse.status, 200);
+  const address = (await addressResponse.json()) as Address;
+  assert.equal(address.customer, "customer_demo");
+
+  const updatedAddressResponse = await request(
+    "/addresses/?updated_start=2026-08-03",
+  );
+  const updatedAddresses = (await updatedAddressResponse.json()) as AddressPage;
+  assert.deepEqual(updatedAddresses.results, []);
+
+  const paymentsResponse = await request("/payments/?customer=customer_demo");
+  assert.equal(paymentsResponse.status, 200);
+  const payments = (await paymentsResponse.json()) as PaymentPage;
+  assert.equal(payments.results[0].public_id, "payment_primary");
+
+  const paymentResponse = await request("/payments/payment_primary/");
+  assert.equal(paymentResponse.status, 200);
+  const payment = (await paymentResponse.json()) as Payment;
+  assert.equal(payment.billing_address, "address_home");
+
+  const productResponse = await request(
+    "/products/coffee_demo/?include_product_selection_rules=true",
+  );
+  assert.equal(productResponse.status, 200);
+  const product = (await productResponse.json()) as Product;
+  assert.equal(product.external_product_id, "coffee_demo");
+
+  const itemsResponse = await request(
+    "/items/?order=order_upcoming&subscription=subscription_demo&product=coffee_demo&one_time=false&status=1&place=2026-09-01",
+  );
+  assert.equal(itemsResponse.status, 200);
+  const items = (await itemsResponse.json()) as ItemPage;
+  assert.equal(items.results[0].public_id, "item_demo");
+
+  const itemResponse = await request("/items/item_demo/");
+  assert.equal(itemResponse.status, 200);
+  const item = (await itemResponse.json()) as Item;
+  assert.equal(item.subscription, "subscription_demo");
+
+  const afterPlaceResponse = await request("/items/?place_start=2026-10-01");
+  const afterPlaceItems = (await afterPlaceResponse.json()) as ItemPage;
+  assert.deepEqual(afterPlaceItems.results, []);
+});
+
+test("read scenarios expose explicit unusual state without lifecycle rules", async () => {
+  multipleSubscriptions(scenarioArgument());
+  const multipleItemsResponse = await request("/items/?status=1");
+  const multipleItems = (await multipleItemsResponse.json()) as ItemPage;
+  assert.deepEqual(
+    multipleItems.results.map((entry) => entry.public_id),
+    ["item_demo", "item_tea"],
+  );
+
+  inactivePayment(scenarioArgument());
+  const inactivePaymentResponse = await request("/payments/payment_primary/");
+  const inactivePaymentRecord =
+    (await inactivePaymentResponse.json()) as Payment;
+  assert.equal(inactivePaymentRecord.live, false);
+
+  crossCustomerReferences(scenarioArgument());
+  const crossReferencedSubscription = await request(
+    "/subscriptions/subscription_demo/",
+  );
+  const crossReferenced =
+    (await crossReferencedSubscription.json()) as Subscription;
+  assert.equal(crossReferenced.shipping_address, "address_other");
+
+  happyPath(scenarioArgument());
 });
 
 test("pagination is deterministic and links stay on the local origin", async () => {
@@ -153,11 +257,6 @@ test("pagination is deterministic and links stay on the local origin", async () 
   assert.equal(second.results[0].public_id, "order_second");
   assert.notEqual(second.previous, null);
 
-  happyPath({
-    context,
-    loadContext: () => context,
-    route: () => ({}),
-    routes: {},
-  } as unknown as Scenario$);
+  happyPath(scenarioArgument());
   assert.equal(context.state.orders.length, 1);
 });

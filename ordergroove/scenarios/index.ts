@@ -1,5 +1,11 @@
 import type { Scenario } from "../types/_.context.js";
-import { emptyAccountState, happyPathState } from "../domain/fixtures.js";
+import {
+  crossCustomerReferencesState,
+  emptyAccountState,
+  happyPathState,
+  inactivePaymentState,
+  multipleSubscriptionsState,
+} from "../domain/fixtures.js";
 
 /**
  * Scenario scripts are plain TypeScript functions that receive the live REPL
@@ -39,6 +45,18 @@ export const happyPath: Scenario = ($) => {
 
 export const emptyAccount: Scenario = ($) => {
   $.context.reset(emptyAccountState());
+};
+
+export const multipleSubscriptions: Scenario = ($) => {
+  $.context.reset(multipleSubscriptionsState());
+};
+
+export const inactivePayment: Scenario = ($) => {
+  $.context.reset(inactivePaymentState());
+};
+
+export const crossCustomerReferences: Scenario = ($) => {
+  $.context.reset(crossCustomerReferencesState());
 };
 
 /**

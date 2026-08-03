@@ -60,6 +60,9 @@ From the Counterfact REPL, named scenarios replace the complete state:
 ```text
 .scenario happyPath
 .scenario emptyAccount
+.scenario multipleSubscriptions
+.scenario inactivePayment
+.scenario crossCustomerReferences
 ```
 
 The public context can also be inspected, edited, or cleared directly:

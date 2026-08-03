@@ -4,7 +4,7 @@ This plan follows the handoff rule: faithful contract, simple state, explicit
 scenarios. Generated Counterfact types are disposable; handwritten behavior
 belongs in route handlers, context, fixture builders, scenarios, and tests.
 
-## Slice 1: runnable read workflow
+## Slice 1: runnable read workflow — complete
 
 Goal: a developer can start the simulator, inspect a deterministic customer,
 follow that customer to a subscription and upcoming order, switch scenarios,
@@ -36,7 +36,7 @@ Acceptance checks:
 - `happyPath`, `emptyAccount`, and repeated reset operations are deterministic.
 - Pagination links never reference the production Ordergroove origin.
 
-## Slice 2: complete read surface
+## Slice 2: complete read surface — complete
 
 - Implement address, payment, product, and item list/retrieve handlers.
 - Extend shared filtering and pagination only where required by the contract.

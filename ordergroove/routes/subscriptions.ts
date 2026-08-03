@@ -1,5 +1,4 @@
 import type { subscriptionsList } from "../types/paths/subscriptions.types.js";
-import { paginate } from "../domain/pagination.js";
 
 export const GET: subscriptionsList = async ($) => {
   let subscriptions = $.context.state.subscriptions;
@@ -25,7 +24,7 @@ export const GET: subscriptionsList = async ($) => {
   }
 
   return $.response[200].json(
-    paginate(subscriptions, {
+    $.context.paginate(subscriptions, {
       headers: $.headers,
       path: "/subscriptions/",
       query: $.query,

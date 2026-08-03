@@ -1,5 +1,4 @@
 import type { ordersList } from "../types/paths/orders.types.js";
-import { paginate } from "../domain/pagination.js";
 
 export const GET: ordersList = async ($) => {
   let orders = $.context.state.orders;
@@ -19,7 +18,7 @@ export const GET: ordersList = async ($) => {
   }
 
   return $.response[200].json(
-    paginate(orders, {
+    $.context.paginate(orders, {
       headers: $.headers,
       path: "/orders/",
       query: $.query,

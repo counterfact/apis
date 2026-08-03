@@ -150,3 +150,46 @@ export const emptyAccountState = () => ({
   orders: [],
   items: [],
 });
+
+/** @returns {State} */
+export const multipleSubscriptionsState = () => ({
+  customers: [customer()],
+  addresses: [address()],
+  payments: [payment()],
+  products: [product(), product({ external_product_id: "tea_demo", name: "Example Tea" })],
+  subscriptions: [
+    subscription(),
+    subscription({ public_id: "subscription_tea", product: "tea_demo" }),
+  ],
+  orders: [order()],
+  items: [
+    item(),
+    item({
+      public_id: "item_tea",
+      subscription: "subscription_tea",
+      product: "tea_demo",
+    }),
+  ],
+});
+
+/** @returns {State} */
+export const inactivePaymentState = () => ({
+  customers: [customer()],
+  addresses: [address()],
+  payments: [payment({ live: false })],
+  products: [product()],
+  subscriptions: [subscription()],
+  orders: [order()],
+  items: [item()],
+});
+
+/** @returns {State} */
+export const crossCustomerReferencesState = () => ({
+  customers: [customer(), customer({ merchant_user_id: "customer_other", email: "other@example.invalid" })],
+  addresses: [address(), address({ public_id: "address_other", customer: "customer_other" })],
+  payments: [payment(), payment({ public_id: "payment_other", customer: "customer_other", billing_address: "address_other" })],
+  products: [product()],
+  subscriptions: [subscription({ shipping_address: "address_other", payment: "payment_other" })],
+  orders: [order({ shipping_address: "address_other", payment: "payment_other" })],
+  items: [item()],
+});
