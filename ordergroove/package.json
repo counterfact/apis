@@ -1,0 +1,22 @@
+{
+  "name": "@counterfact/ordergroove",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "counterfact openapi.yaml . --generate --no-update-check",
+    "start": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.yaml . --no-update-check",
+    "serve": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.yaml . --serve --no-update-check",
+    "test": "cross-env CHOKIDAR_USEPOLLING=1 node --import tsx --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "counterfact": "2.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "cross-env": "^10.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
