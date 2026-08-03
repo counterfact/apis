@@ -12,7 +12,7 @@ Use Node.js 22 or newer.
 ```bash
 npm install
 npm run generate
-npm test
+npm run verify
 npm start
 ```
 
@@ -53,6 +53,30 @@ The order/subscription relationship is represented by the matching item in
 state. It is an explicit fixture relationship, not a simulated recurrence
 engine.
 
+## Make a change
+
+Create a customer using the required contract fields, or change a subscription
+without needing a production account. For example, this updates the seeded
+subscription and its matching unsent item:
+
+```bash
+curl -X PATCH -H 'content-type: application/json' \
+  -H 'x-api-key: ordergroove-simulator-key' \
+  -d '{"quantity": 2}' \
+  http://localhost:3100/subscriptions/subscription_demo/change_quantity/
+```
+
+Use the same pattern with `change_shipping/` and `change_payment/` on either a
+subscription or order. Address and payment changes require a live record for
+the same customer. `skip_subscription/` moves matching unsent items to one
+deterministically generated next order; see `ASSUMPTIONS.md` for its exact
+conventions.
+
+The complete read surface is available at `/addresses/`, `/payments/`,
+`/customers/`, `/products/{product_id}/`, `/subscriptions/`, `/orders/`, and
+`/items/`, with the corresponding documented retrieve routes. List responses
+always use the same local cursor envelope: `next`, `previous`, and `results`.
+
 ## Arrange and reset state
 
 From the Counterfact REPL, named scenarios replace the complete state:
@@ -63,6 +87,9 @@ From the Counterfact REPL, named scenarios replace the complete state:
 .scenario multipleSubscriptions
 .scenario inactivePayment
 .scenario crossCustomerReferences
+.scenario prepaidSubscription
+.scenario placedOrder
+.scenario monthEndSubscription
 ```
 
 The public context can also be inspected, edited, or cleared directly:
@@ -74,8 +101,12 @@ $.context.reset()
 ```
 
 Run `.scenario happyPath` again to restore the deterministic default world.
-Fixture builders in `domain/fixtures.ts` accept ordinary property overrides so
-new scenarios can compose unusual state without hidden invariants.
+Fixture builders in `domain/fixtures.js` accept ordinary property overrides so
+new scenarios can compose unusual state without hidden invariants. The scenario
+catalog is: `happyPath`, `emptyAccount`, `multipleSubscriptions`,
+`inactivePayment`, `crossCustomerReferences`, `prepaidSubscription`,
+`placedOrder`, and `monthEndSubscription`.
 
 See `IMPLEMENTATION_PLAN.md` for the remaining slices and `HANDOFF.md` for the
-design constraints.
+design constraints. `ASSUMPTIONS.md` records deterministic behavior where the
+published contract does not define production details.

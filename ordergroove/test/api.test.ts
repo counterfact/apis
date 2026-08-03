@@ -3,19 +3,23 @@ import net from "node:net";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { counterfact } from "counterfact";
-import { order } from "../domain/fixtures.js";
+import { address, customer, order, payment } from "../domain/fixtures.js";
 import { Context } from "../routes/_.context.js";
 import {
   crossCustomerReferences,
   happyPath,
   inactivePayment,
+  monthEndSubscription,
   multipleSubscriptions,
+  placedOrder,
+  prepaidSubscription,
 } from "../scenarios/index.js";
 import type { Address } from "../types/components/schemas/Address.js";
 import type { AddressPage } from "../types/components/schemas/AddressPage.js";
 import type { Customer } from "../types/components/schemas/Customer.js";
 import type { Item } from "../types/components/schemas/Item.js";
 import type { ItemPage } from "../types/components/schemas/ItemPage.js";
+import type { Order } from "../types/components/schemas/Order.js";
 import type { OrderPage } from "../types/components/schemas/OrderPage.js";
 import type { Payment } from "../types/components/schemas/Payment.js";
 import type { PaymentPage } from "../types/components/schemas/PaymentPage.js";
@@ -35,6 +39,26 @@ let context: Context;
 const request = (pathname: string, apiKeyOverride: string | null = apiKey) =>
   fetch(`http://127.0.0.1:${port}${pathname}`, {
     headers: apiKeyOverride === null ? {} : { "x-api-key": apiKeyOverride },
+  });
+
+const mutate = (pathname: string, body: unknown) =>
+  fetch(`http://127.0.0.1:${port}${pathname}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+const createCustomer = (body: unknown) =>
+  fetch(`http://127.0.0.1:${port}/customers/create/`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body: JSON.stringify(body),
   });
 
 const scenarioArgument = (): Scenario$ =>
@@ -237,6 +261,239 @@ test("read scenarios expose explicit unusual state without lifecycle rules", asy
   happyPath(scenarioArgument());
 });
 
+test("creates customers and applies simple direct relationship changes", async () => {
+  const createdCustomer = customer({
+    merchant_user_id: "customer_new",
+    email: "new@example.invalid",
+  });
+  const createResponse = await createCustomer(createdCustomer);
+  assert.equal(createResponse.status, 200);
+  assert.equal(
+    ((await createResponse.json()) as Customer).merchant_user_id,
+    "customer_new",
+  );
+  assert.ok(
+    context.state.customers.some(
+      (entry) => entry.merchant_user_id === "customer_new",
+    ),
+  );
+
+  const duplicateResponse = await createCustomer(createdCustomer);
+  assert.equal(duplicateResponse.status, 400);
+  assert.deepEqual(await duplicateResponse.json(), {
+    detail: "Customer already exists.",
+  });
+
+  context.state.addresses.push(address({ public_id: "address_work" }));
+  context.state.payments.push(
+    payment({ public_id: "payment_backup", billing_address: "address_work" }),
+  );
+
+  const quantityResponse = await mutate(
+    "/subscriptions/subscription_demo/change_quantity/",
+    { quantity: 3 },
+  );
+  assert.equal(quantityResponse.status, 200);
+  assert.equal(((await quantityResponse.json()) as Subscription).quantity, 3);
+  assert.equal(context.state.items[0].quantity, 3);
+
+  const subscriptionShippingResponse = await mutate(
+    "/subscriptions/subscription_demo/change_shipping/",
+    { shipping_address: "address_work" },
+  );
+  assert.equal(subscriptionShippingResponse.status, 200);
+  assert.equal(
+    ((await subscriptionShippingResponse.json()) as Subscription)
+      .shipping_address,
+    "address_work",
+  );
+
+  const subscriptionPaymentResponse = await mutate(
+    "/subscriptions/subscription_demo/change_payment/",
+    { payment: "payment_backup" },
+  );
+  assert.equal(subscriptionPaymentResponse.status, 200);
+  assert.equal(
+    ((await subscriptionPaymentResponse.json()) as Subscription).payment,
+    "payment_backup",
+  );
+
+  const orderShippingResponse = await mutate(
+    "/orders/order_upcoming/change_shipping/",
+    { shipping_address: "address_work" },
+  );
+  assert.equal(orderShippingResponse.status, 200);
+  assert.equal(
+    ((await orderShippingResponse.json()) as Order).shipping_address,
+    "address_work",
+  );
+
+  const orderPaymentResponse = await mutate(
+    "/orders/order_upcoming/change_payment/",
+    { payment: "payment_backup" },
+  );
+  assert.equal(orderPaymentResponse.status, 200);
+  assert.equal(
+    ((await orderPaymentResponse.json()) as Order).payment,
+    "payment_backup",
+  );
+
+  crossCustomerReferences(scenarioArgument());
+  const invalidReferenceResponse = await mutate(
+    "/subscriptions/subscription_demo/change_shipping/",
+    { shipping_address: "address_other" },
+  );
+  assert.equal(invalidReferenceResponse.status, 400);
+  assert.deepEqual(await invalidReferenceResponse.json(), {
+    detail: "Invalid shipping address.",
+  });
+
+  const unknownSubscriptionResponse = await mutate(
+    "/subscriptions/missing/change_payment/",
+    { payment: "payment_primary" },
+  );
+  assert.equal(unknownSubscriptionResponse.status, 404);
+
+  happyPath(scenarioArgument());
+});
+
+test("skips matching unsent items with deterministic next-order fixtures", async () => {
+  const skipResponse = await mutate(
+    "/orders/order_upcoming/skip_subscription/",
+    { subscription: "subscription_demo" },
+  );
+  assert.equal(skipResponse.status, 200);
+  assert.equal(
+    ((await skipResponse.json()) as Order).public_id,
+    "order_upcoming",
+  );
+  assert.deepEqual(
+    context.state.items.filter((entry) => entry.order === "order_upcoming"),
+    [],
+  );
+  assert.equal(
+    context.state.items[0].order,
+    "order_upcoming-skip-subscription_demo",
+  );
+  const generatedOrder = context.state.orders.find(
+    (entry) => entry.public_id === "order_upcoming-skip-subscription_demo",
+  );
+  assert.equal(generatedOrder?.place, "2026-10-01");
+
+  const repeatedSkip = await mutate(
+    "/orders/order_upcoming/skip_subscription/",
+    { subscription: "subscription_demo" },
+  );
+  assert.equal(repeatedSkip.status, 400);
+  assert.deepEqual(await repeatedSkip.json(), {
+    detail: "Subscription is not in this order.",
+  });
+
+  const missingOrder = await mutate("/orders/missing/skip_subscription/", {
+    subscription: "subscription_demo",
+  });
+  assert.equal(missingOrder.status, 404);
+
+  happyPath(scenarioArgument());
+  const missingSubscription = await mutate(
+    "/orders/order_upcoming/skip_subscription/",
+    { subscription: "missing" },
+  );
+  assert.equal(missingSubscription.status, 400);
+
+  prepaidSubscription(scenarioArgument());
+  const prepaidQuantity = await mutate(
+    "/subscriptions/subscription_demo/change_quantity/",
+    { quantity: 2 },
+  );
+  assert.equal(prepaidQuantity.status, 400);
+  assert.equal(context.state.subscriptions[0].quantity, 1);
+
+  placedOrder(scenarioArgument());
+  const placedSkip = await mutate("/orders/order_upcoming/skip_subscription/", {
+    subscription: "subscription_demo",
+  });
+  assert.equal(placedSkip.status, 400);
+  assert.equal(context.state.items[0].order, "order_upcoming");
+
+  monthEndSubscription(scenarioArgument());
+  const monthEndSkip = await mutate(
+    "/orders/order_upcoming/skip_subscription/",
+    { subscription: "subscription_demo" },
+  );
+  assert.equal(monthEndSkip.status, 200);
+  assert.equal(
+    context.state.orders.find(
+      (entry) => entry.public_id === "order_upcoming-skip-subscription_demo",
+    )?.place,
+    "2026-02-28",
+  );
+
+  happyPath(scenarioArgument());
+});
+
+test("every documented operation accepts a contract-valid request", async () => {
+  happyPath(scenarioArgument());
+  context.state.addresses.push(address({ public_id: "address_matrix" }));
+  context.state.payments.push(
+    payment({ public_id: "payment_matrix", billing_address: "address_matrix" }),
+  );
+
+  const operations: Array<() => Promise<Response>> = [
+    () => request("/addresses/"),
+    () => request("/addresses/address_home/"),
+    () => request("/payments/"),
+    () => request("/payments/payment_primary/"),
+    () => request("/customers/"),
+    () =>
+      createCustomer(
+        customer({
+          merchant_user_id: "customer_matrix",
+          email: "matrix@example.invalid",
+        }),
+      ),
+    () => request("/customers/customer_demo/"),
+    () => request("/products/coffee_demo/"),
+    () => request("/subscriptions/"),
+    () => request("/subscriptions/subscription_demo/"),
+    () =>
+      mutate("/subscriptions/subscription_demo/change_quantity/", {
+        quantity: 2,
+      }),
+    () =>
+      mutate("/subscriptions/subscription_demo/change_shipping/", {
+        shipping_address: "address_matrix",
+      }),
+    () =>
+      mutate("/subscriptions/subscription_demo/change_payment/", {
+        payment: "payment_matrix",
+      }),
+    () => request("/orders/"),
+    () => request("/orders/order_upcoming/"),
+    () =>
+      mutate("/orders/order_upcoming/change_shipping/", {
+        shipping_address: "address_matrix",
+      }),
+    () =>
+      mutate("/orders/order_upcoming/change_payment/", {
+        payment: "payment_matrix",
+      }),
+    () => request("/items/"),
+    () => request("/items/item_demo/"),
+    () =>
+      mutate("/orders/order_upcoming/skip_subscription/", {
+        subscription: "subscription_demo",
+      }),
+  ];
+
+  for (const operation of operations) {
+    const response = await operation();
+    assert.equal(response.status, 200, `expected ${response.url} to succeed`);
+  }
+
+  happyPath(scenarioArgument());
+});
+
 test("pagination is deterministic and links stay on the local origin", async () => {
   context.state.orders.push(
     order({ public_id: "order_second", place: "2026-10-01" }),
@@ -248,7 +505,10 @@ test("pagination is deterministic and links stay on the local origin", async () 
   const first = (await firstResponse.json()) as OrderPage;
   assert.equal(first.results[0].public_id, "order_upcoming");
   assert.ok(first.next);
-  assert.match(first.next, new RegExp(`^http://127\\.0\\.0\\.1:${port}/orders/`));
+  assert.match(
+    first.next,
+    new RegExp(`^http://127\\.0\\.0\\.1:${port}/orders/`),
+  );
   assert.equal(first.next.includes("restapi.ordergroove.com"), false);
 
   const nextUrl = new URL(first.next);

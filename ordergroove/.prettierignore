@@ -1,0 +1,6 @@
+.cache/
+counterfact-types/
+HANDOFF.md
+node_modules/
+package-lock.json
+types/

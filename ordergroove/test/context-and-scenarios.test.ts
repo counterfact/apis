@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { happyPathState } from "../domain/fixtures.js";
 import { Context } from "../routes/_.context.js";
-import { emptyAccount, happyPath } from "../scenarios/index.js";
+import {
+  crossCustomerReferences,
+  emptyAccount,
+  happyPath,
+  inactivePayment,
+  monthEndSubscription,
+  multipleSubscriptions,
+  placedOrder,
+  prepaidSubscription,
+} from "../scenarios/index.js";
 import type { Scenario$ } from "../types/_.context.js";
 
 const scenarioArgument = (context: Context): Scenario$ =>
@@ -41,6 +50,19 @@ test("named scenarios replace the complete world", () => {
 
   happyPath($);
   assert.equal(context.state.orders[0].public_id, "order_upcoming");
+
+  for (const scenario of [
+    multipleSubscriptions,
+    inactivePayment,
+    crossCustomerReferences,
+    prepaidSubscription,
+    placedOrder,
+    monthEndSubscription,
+  ]) {
+    scenario($);
+    assert.ok(context.state.customers.length > 0);
+    assert.ok(context.state.orders.length > 0);
+  }
 });
 
 test("only the documented fake credential is authorized", () => {

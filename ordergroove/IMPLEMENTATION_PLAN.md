@@ -44,7 +44,7 @@ Acceptance checks:
   `crossCustomerReferences` scenarios.
 - Test every OpenAPI read operation and its useful 403/404 cases.
 
-## Slice 3: customer and simple subscription/order changes
+## Slice 3: customer and simple subscription/order changes — complete
 
 - Implement customer creation.
 - Implement subscription quantity, shipping, and payment changes.
@@ -52,14 +52,14 @@ Acceptance checks:
 - Preserve direct-record mutation and return contract-shaped 400/404 errors.
 - Add state-persistence tests for each mutation.
 
-## Slice 4: skip workflow and edge scenarios
+## Slice 4: skip workflow and edge scenarios — complete
 
 - Implement skip-subscription with the minimum documented observable change.
 - Prefer scenario-supplied next orders over recurrence calculation.
 - Add `prepaidSubscription`, `placedOrder`, and `monthEndSubscription`.
 - Document every simulator assumption that is not dictated by the contract.
 
-## Slice 5: coverage and operator polish
+## Slice 5: coverage and operator polish — complete
 
 - Verify every OpenAPI operation is callable and contract-valid.
 - Add a complete application-developer workflow and scenario catalog.

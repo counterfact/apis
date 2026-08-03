@@ -4,7 +4,10 @@ import {
   emptyAccountState,
   happyPathState,
   inactivePaymentState,
+  monthEndSubscriptionState,
   multipleSubscriptionsState,
+  placedOrderState,
+  prepaidSubscriptionState,
 } from "../domain/fixtures.js";
 
 /**
@@ -57,6 +60,18 @@ export const inactivePayment: Scenario = ($) => {
 
 export const crossCustomerReferences: Scenario = ($) => {
   $.context.reset(crossCustomerReferencesState());
+};
+
+export const prepaidSubscription: Scenario = ($) => {
+  $.context.reset(prepaidSubscriptionState());
+};
+
+export const placedOrder: Scenario = ($) => {
+  $.context.reset(placedOrderState());
+};
+
+export const monthEndSubscription: Scenario = ($) => {
+  $.context.reset(monthEndSubscriptionState());
 };
 
 /**

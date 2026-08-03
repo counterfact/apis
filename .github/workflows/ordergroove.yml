@@ -25,6 +25,10 @@ jobs:
           cache-dependency-path: ordergroove/package-lock.json
       - run: npm ci
       - run: npm run validate:openapi
+      - run: npm run generate
+      - name: Check generated output
+        working-directory: .
+        run: git diff --exit-code -- ordergroove
       - run: npm test
       - run: npm run lint
       - run: npm run typecheck

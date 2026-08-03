@@ -156,7 +156,10 @@ export const multipleSubscriptionsState = () => ({
   customers: [customer()],
   addresses: [address()],
   payments: [payment()],
-  products: [product(), product({ external_product_id: "tea_demo", name: "Example Tea" })],
+  products: [
+    product(),
+    product({ external_product_id: "tea_demo", name: "Example Tea" }),
+  ],
   subscriptions: [
     subscription(),
     subscription({ public_id: "subscription_tea", product: "tea_demo" }),
@@ -185,11 +188,57 @@ export const inactivePaymentState = () => ({
 
 /** @returns {State} */
 export const crossCustomerReferencesState = () => ({
-  customers: [customer(), customer({ merchant_user_id: "customer_other", email: "other@example.invalid" })],
-  addresses: [address(), address({ public_id: "address_other", customer: "customer_other" })],
-  payments: [payment(), payment({ public_id: "payment_other", customer: "customer_other", billing_address: "address_other" })],
+  customers: [
+    customer(),
+    customer({
+      merchant_user_id: "customer_other",
+      email: "other@example.invalid",
+    }),
+  ],
+  addresses: [
+    address(),
+    address({ public_id: "address_other", customer: "customer_other" }),
+  ],
+  payments: [
+    payment(),
+    payment({
+      public_id: "payment_other",
+      customer: "customer_other",
+      billing_address: "address_other",
+    }),
+  ],
   products: [product()],
-  subscriptions: [subscription({ shipping_address: "address_other", payment: "payment_other" })],
-  orders: [order({ shipping_address: "address_other", payment: "payment_other" })],
+  subscriptions: [
+    subscription({
+      shipping_address: "address_other",
+      payment: "payment_other",
+    }),
+  ],
+  orders: [
+    order({ shipping_address: "address_other", payment: "payment_other" }),
+  ],
   items: [item()],
 });
+
+/** @returns {State} */
+export const prepaidSubscriptionState = () => {
+  const state = happyPathState();
+  state.subscriptions[0].prepaid_subscription_context = { cycles_remaining: 2 };
+  return state;
+};
+
+/** @returns {State} */
+export const placedOrderState = () => {
+  const state = happyPathState();
+  state.orders[0].status = 5;
+  return state;
+};
+
+/** @returns {State} */
+export const monthEndSubscriptionState = () => {
+  const state = happyPathState();
+  state.subscriptions[0].every = 1;
+  state.subscriptions[0].every_period = 3;
+  state.orders[0].place = "2026-01-31";
+  return state;
+};
