@@ -5,6 +5,12 @@ This package simulates the documented Ordergroove REST API subset in
 contract is the boundary, public in-memory arrays are the state, and scenarios
 are the control plane.
 
+## Implementation note
+
+The code in this simulator was generated with OpenAI Codex. Its behavior is
+checked locally against the OpenAPI contract, type checks, HTTP tests, and
+formatting/linting gates described below.
+
 ## Run it
 
 Use Node.js 22 or newer.
