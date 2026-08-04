@@ -3,7 +3,14 @@ import net from "node:net";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { counterfact } from "counterfact";
-import { address, customer, order, payment } from "../domain/fixtures.js";
+import {
+  address,
+  customer,
+  item,
+  order,
+  payment,
+  product,
+} from "../domain/fixtures.js";
 import { Context } from "../routes/_.context.js";
 import {
   crossCustomerReferences,
@@ -233,6 +240,59 @@ test("supports all remaining read endpoints and their direct filters", async () 
   const afterPlaceResponse = await request("/items/?place_start=2026-10-01");
   const afterPlaceItems = (await afterPlaceResponse.json()) as ItemPage;
   assert.deepEqual(afterPlaceItems.results, []);
+});
+
+test("applies documented item and order presentation controls", async () => {
+  context.reset({
+    customers: [customer()],
+    addresses: [address()],
+    payments: [payment()],
+    products: [product({ product_type: "plan" })],
+    subscriptions: [],
+    orders: [order()],
+    items: [
+      item({
+        offer: "offer_demo",
+        incentives: [{ public_id: "incentive_demo" }],
+      }),
+    ],
+  });
+
+  const itemsResponse = await request(
+    "/items/?offer=offer_demo&order_updated_start=2026-08-02&include_incentives=true",
+  );
+  const items = (await itemsResponse.json()) as ItemPage;
+  assert.deepEqual(items.results[0].incentives, [
+    { public_id: "incentive_demo" },
+  ]);
+
+  const omittedItemsResponse = await request(
+    "/items/?omit_price_calculation=true",
+  );
+  const omittedItems = (await omittedItemsResponse.json()) as ItemPage;
+  assert.equal("price" in omittedItems.results[0], false);
+  assert.equal("total_cost" in omittedItems.results[0], false);
+  assert.equal("extra_cost" in omittedItems.results[0], false);
+
+  const omittedItemResponse = await request(
+    "/items/item_demo/?omit_price_calculation=true",
+  );
+  const omittedItem = (await omittedItemResponse.json()) as Item;
+  assert.equal("price" in omittedItem, false);
+
+  const ordersResponse = await request(
+    "/orders/?created=2026-08-02&updated_start=2026-08-02&include_has_plan=true",
+  );
+  const orders = (await ordersResponse.json()) as OrderPage;
+  assert.equal(orders.results[0].has_plan, true);
+
+  const orderResponse = await request(
+    "/orders/order_upcoming/?include_has_plan=true",
+  );
+  const upcomingOrder = (await orderResponse.json()) as Order;
+  assert.equal(upcomingOrder.has_plan, true);
+
+  happyPath(scenarioArgument());
 });
 
 test("read scenarios expose explicit unusual state without lifecycle rules", async () => {

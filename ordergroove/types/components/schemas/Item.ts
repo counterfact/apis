@@ -10,5 +10,6 @@ export type Item = {
   extra_cost?: string | null;
   one_time: boolean;
   components?: Array<{ [key: string]: unknown }>;
+  incentives?: Array<{ [key: string]: unknown }>;
   [key: string]: unknown;
 };

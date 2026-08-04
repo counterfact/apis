@@ -24,6 +24,7 @@ export type Order = {
   rejected_message?: string | null;
   locked?: boolean | null;
   oos_free_shipping?: boolean | null;
+  has_plan?: boolean;
   extra_data?: { [key: string]: unknown } | string | null;
   [key: string]: unknown;
 };

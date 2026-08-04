@@ -1042,6 +1042,7 @@ components:
         rejected_message: { type: [string, "null"] }
         locked: { type: [boolean, "null"] }
         oos_free_shipping: { type: [boolean, "null"] }
+        has_plan: { type: boolean }
         extra_data:
           { type: [object, string, "null"], additionalProperties: true }
     Item:
@@ -1060,6 +1061,8 @@ components:
         extra_cost: { type: [string, "null"] }
         one_time: { type: boolean }
         components:
+          { type: array, items: { type: object, additionalProperties: true } }
+        incentives:
           { type: array, items: { type: object, additionalProperties: true } }
     CustomerPage:
       type: object
