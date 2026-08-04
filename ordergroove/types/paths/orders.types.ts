@@ -50,7 +50,7 @@ export type ordersList = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type ordersList_Query = {
-  place_end?: string;
+  include_has_plan?: boolean;
   /**
    * Customer ID; documented as application-scope only.
    */

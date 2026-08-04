@@ -19,7 +19,7 @@ import type { NotFound } from "../../#/components/responses/NotFound.js";
  */
 export type itemsRetrieve = (
   $: OmitValueWhenNever<{
-    query: never;
+    query: itemsRetrieve_Query;
     querystring: never;
     path: itemsRetrieve_Path;
     headers: itemsRetrieve_Headers;
@@ -48,6 +48,8 @@ export type itemsRetrieve = (
     version: never;
   }>,
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
+
+export type itemsRetrieve_Query = { omit_price_calculation?: boolean };
 
 export type itemsRetrieve_Path = { item_id: string };
 

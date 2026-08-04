@@ -53,10 +53,11 @@ export type itemsList = (
 ) => MaybePromise<COUNTERFACT_RESPONSE>;
 
 export type itemsList_Query = {
-  place_end?: string;
+  include_incentives?: boolean;
   order?: string;
   subscription?: string;
   product?: string;
+  offer?: string;
   one_time?: boolean;
   status?: OrderStatus;
 };

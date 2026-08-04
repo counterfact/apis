@@ -4,8 +4,12 @@ info:
   version: 0.1.0
   description: |
     A simulation contract inferred from Ordergroove-owned public documentation,
-    reviewed 2026-08-02. It is not an Ordergroove-authored specification and is
+    reviewed 2026-08-04. It is not an Ordergroove-authored specification and is
     not a drop-in replacement for production.
+x-ordergroove-provenance:
+  documentation-index: https://developer.ordergroove.com/llms.txt
+  source-format: "OpenAPI fragments are published in Markdown documents; append .md to an operation's x-ordergroove-source URL when available."
+  reviewed: 2026-08-04
 servers:
   - url: https://restapi.ordergroove.com
     description: Documented production origin; the simulator uses a local origin.
@@ -422,6 +426,13 @@ paths:
         - $ref: "#/components/parameters/Place"
         - $ref: "#/components/parameters/PlaceStart"
         - $ref: "#/components/parameters/PlaceEnd"
+        - $ref: "#/components/parameters/Created"
+        - $ref: "#/components/parameters/CreatedStart"
+        - $ref: "#/components/parameters/CreatedEnd"
+        - $ref: "#/components/parameters/Updated"
+        - $ref: "#/components/parameters/UpdatedStart"
+        - $ref: "#/components/parameters/UpdatedEnd"
+        - $ref: "#/components/parameters/IncludeHasPlan"
       responses:
         "200":
           description: Cursor page of orders.
@@ -440,7 +451,13 @@ paths:
       x-ordergroove-source: https://developer.ordergroove.com/reference/orders-retrieve
       x-simulator-limitation: Initial runtime accepts only the simulator application key.
       parameters:
-        - $ref: "#/components/parameters/OrderId"
+        - name: order_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: include_has_plan
+          in: query
+          schema: { type: boolean }
       responses:
         "200":
           description: Order.
@@ -568,6 +585,9 @@ paths:
         - name: product
           in: query
           schema: { type: string }
+        - name: offer
+          in: query
+          schema: { type: string }
         - name: one_time
           in: query
           schema: { type: boolean }
@@ -577,6 +597,10 @@ paths:
         - $ref: "#/components/parameters/Place"
         - $ref: "#/components/parameters/PlaceStart"
         - $ref: "#/components/parameters/PlaceEnd"
+        - $ref: "#/components/parameters/OmitPriceCalculation"
+        - $ref: "#/components/parameters/OrderUpdatedStart"
+        - $ref: "#/components/parameters/OrderUpdatedEnd"
+        - $ref: "#/components/parameters/IncludeIncentives"
       responses:
         "200":
           description: Cursor page of items.
@@ -600,6 +624,7 @@ paths:
           in: path
           required: true
           schema: { type: string }
+        - $ref: "#/components/parameters/OmitPriceCalculation"
       responses:
         "200":
           description: Item.
@@ -682,6 +707,31 @@ components:
       { name: place_start, in: query, schema: { type: string, format: date } }
     PlaceEnd:
       { name: place_end, in: query, schema: { type: string, format: date } }
+    OmitPriceCalculation:
+      {
+        name: omit_price_calculation,
+        in: query,
+        schema: { type: boolean },
+        description: Omit the documented price calculation from the response.,
+      }
+    OrderUpdatedStart:
+      {
+        name: order_updated_start,
+        in: query,
+        schema: { type: string },
+        description: Lower bound for the related order's update time.,
+      }
+    OrderUpdatedEnd:
+      {
+        name: order_updated_end,
+        in: query,
+        schema: { type: string },
+        description: Upper bound for the related order's update time.,
+      }
+    IncludeIncentives:
+      { name: include_incentives, in: query, schema: { type: boolean } }
+    IncludeHasPlan:
+      { name: include_has_plan, in: query, schema: { type: boolean } }
   responses:
     AuthenticationFailed:
       description: Authentication failed.
@@ -756,6 +806,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/CustomerCreate"
         - type: object
+          properties:
+            id: { type: [string, integer] }
           example:
             merchant: merchant_demo
             merchant_user_id: customer_demo
@@ -873,6 +925,23 @@ components:
         price: { type: string, pattern: '^\\d+\\.\\d{2}$' }
         autoship_enabled: { type: boolean }
         discontinued: { type: boolean }
+        groups:
+          { type: array, items: { type: object, additionalProperties: true } }
+        image_url: { type: [string, "null"], format: uri }
+        detail_url: { type: [string, "null"], format: uri }
+        sku: { type: [string, "null"] }
+        premier_enabled: { type: [boolean, "null"] }
+        created: { type: [string, "null"] }
+        last_update: { type: [string, "null"] }
+        live: { type: [boolean, "null"] }
+        offer_profile: { type: [string, "null"] }
+        extra_data:
+          { type: [object, string, "null"], additionalProperties: true }
+        incentive_group: { type: [string, "null"] }
+        product_type: { type: [string, "null"] }
+        autoship_by_default: { type: [boolean, "null"] }
+        every: { type: [integer, "null"] }
+        every_period: { type: [integer, "null"] }
       example:
         {
           merchant: merchant_demo,
@@ -929,10 +998,16 @@ components:
         cancelled: { type: [string, "null"] }
         cancel_reason: { type: [string, "null"] }
         cancel_reason_code: { type: [string, "null"] }
+        iteration: { type: [string, integer, "null"] }
+        sequence: { type: [string, integer, "null"] }
+        session_id: { type: [string, "null"] }
+        customer_rep: { type: [string, "null"] }
+        club: { type: [string, "null"] }
         merchant_order_id: { type: [string, "null"] }
         created: { type: string }
         updated: { type: string }
         live: { type: boolean }
+        offer_profile_public_id: { type: [string, "null"] }
         prepaid_subscription_context:
           { type: object, additionalProperties: true }
     OrderStatus:
@@ -963,6 +1038,10 @@ components:
         status: { $ref: "#/components/schemas/OrderStatus" }
         type: { type: integer }
         merchant_order_id: { type: [string, "null"] }
+        order_merchant_id: { type: [string, "null"] }
+        rejected_message: { type: [string, "null"] }
+        locked: { type: [boolean, "null"] }
+        oos_free_shipping: { type: [boolean, "null"] }
         extra_data:
           { type: [object, string, "null"], additionalProperties: true }
     Item:

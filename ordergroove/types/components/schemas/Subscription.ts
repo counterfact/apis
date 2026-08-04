@@ -26,10 +26,16 @@ export type Subscription = {
   cancelled?: string | null;
   cancel_reason?: string | null;
   cancel_reason_code?: string | null;
+  iteration?: string | number | null;
+  sequence?: string | number | null;
+  session_id?: string | null;
+  customer_rep?: string | null;
+  club?: string | null;
   merchant_order_id?: string | null;
   created: string;
   updated: string;
   live: boolean;
+  offer_profile_public_id?: string | null;
   prepaid_subscription_context?: { [key: string]: unknown };
   [key: string]: unknown;
 };
