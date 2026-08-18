@@ -6,12 +6,14 @@ import type { full_repository } from "../../types/components/schemas/full-reposi
 import type { gist_comment } from "../../types/components/schemas/gist-comment.js";
 import type { gist_simple } from "../../types/components/schemas/gist-simple.js";
 import type { commit } from "../../types/components/schemas/commit.js";
+import type { commit_search_result_item } from "../../types/components/schemas/commit-search-result-item.js";
 import type { combined_commit_status } from "../../types/components/schemas/combined-commit-status.js";
 import type { commit_comment } from "../../types/components/schemas/commit-comment.js";
 import type { issue } from "../../types/components/schemas/issue.js";
 import type { issue_comment } from "../../types/components/schemas/issue-comment.js";
 import type { job } from "../../types/components/schemas/job.js";
 import type { label } from "../../types/components/schemas/label.js";
+import type { label_search_result_item } from "../../types/components/schemas/label-search-result-item.js";
 import type { milestone } from "../../types/components/schemas/milestone.js";
 import type { minimal_repository } from "../../types/components/schemas/minimal-repository.js";
 import type { organization_full } from "../../types/components/schemas/organization-full.js";
@@ -2313,6 +2315,179 @@ export class Context {
       ...(this.getRepoState(owner, repo)?.jobs.get(runId) ?? []),
     ].sort((left, right) => left.id - right.id);
     return paginate(jobs, query);
+  }
+
+  listAllIssues(query?: {
+    filter?: string;
+    state?: string;
+    labels?: string;
+    sort?: string;
+    direction?: string;
+    since?: string;
+    page?: unknown;
+    per_page?: unknown;
+  }): issue[] {
+    let issues: issue[] = this.listRepositories().flatMap((repository) =>
+      this.listIssues(repository.owner.login, repository.name, {
+        state: "all",
+      }).map((item) => ({
+        ...item,
+        repository: repository as unknown as issue["repository"],
+      })),
+    );
+
+    if (query?.state && query.state !== "all") {
+      issues = issues.filter((item) => item.state === query.state);
+    }
+    if (query?.filter === "assigned") {
+      issues = issues.filter(
+        (item) =>
+          item.assignee?.login === DEFAULT_USER_LOGIN ||
+          (item.assignees ?? []).some(
+            ({ login }) => login === DEFAULT_USER_LOGIN,
+          ),
+      );
+    } else if (query?.filter === "created") {
+      issues = issues.filter((item) => item.user?.login === DEFAULT_USER_LOGIN);
+    } else if (query?.filter === "mentioned") {
+      issues = issues.filter((item) =>
+        (item.body ?? "").includes(`@${DEFAULT_USER_LOGIN}`),
+      );
+    }
+    if (query?.labels) {
+      const labels = query.labels
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      issues = issues.filter((item) => {
+        const names = item.labels.map((value) =>
+          (typeof value === "string"
+            ? value
+            : (value.name ?? "")
+          ).toLowerCase(),
+        );
+        return labels.every((labelName) => names.includes(labelName));
+      });
+    }
+    if (query?.since) {
+      const since = new Date(query.since).getTime();
+      if (Number.isFinite(since)) {
+        issues = issues.filter(
+          (item) => new Date(item.updated_at).getTime() >= since,
+        );
+      }
+    }
+
+    const direction = query?.direction === "asc" ? 1 : -1;
+    issues.sort((left, right) => {
+      if (query?.sort === "comments") {
+        return (left.comments - right.comments) * direction;
+      }
+      const field = query?.sort === "created" ? "created_at" : "updated_at";
+      return (
+        (new Date(left[field]).getTime() - new Date(right[field]).getTime()) *
+        direction
+      );
+    });
+    return paginate(issues, query);
+  }
+
+  searchCommits(query: {
+    q: string;
+    order?: string;
+    page?: unknown;
+    per_page?: unknown;
+  }) {
+    const parsed = parseSearchQuery(query.q);
+    const commits: commit_search_result_item[] =
+      this.listRepositories().flatMap((repository) =>
+        this.listCommits(repository.owner.login, repository.name).map(
+          (item) => ({
+            url: item.url,
+            sha: item.sha,
+            html_url: item.html_url,
+            comments_url: item.comments_url,
+            commit: {
+              author: {
+                name: item.commit.author?.name ?? "Unknown",
+                email: item.commit.author?.email ?? "unknown@example.com",
+                date: item.commit.author?.date ?? "1970-01-01T00:00:00Z",
+              },
+              committer: item.commit.committer,
+              comment_count: item.commit.comment_count,
+              message: item.commit.message,
+              tree: item.commit.tree,
+              url: item.commit.url,
+              verification: item.commit.verification,
+            },
+            author: "login" in item.author ? item.author : repository.owner,
+            committer: item.commit.committer,
+            parents: item.parents,
+            repository: repository as unknown as minimal_repository,
+            score: 1,
+            node_id: item.node_id,
+          }),
+        ),
+      );
+
+    const filtered = commits.filter(
+      (item) =>
+        matchTerms(item.commit.message.toLowerCase(), parsed.terms) &&
+        hasQualifier(
+          parsed.qualifiers,
+          "repo",
+          (value) => item.repository.full_name.toLowerCase() === value,
+        ),
+    );
+    const direction = query.order === "asc" ? 1 : -1;
+    filtered.sort(
+      (left, right) =>
+        (new Date(left.commit.author.date).getTime() -
+          new Date(right.commit.author.date).getTime()) *
+        direction,
+    );
+    return {
+      total_count: filtered.length,
+      incomplete_results: false,
+      items: paginate(filtered, query),
+    };
+  }
+
+  searchLabels(query: {
+    repository_id: number;
+    q: string;
+    page?: unknown;
+    per_page?: unknown;
+  }) {
+    const repository = this.listRepositories().find(
+      ({ id }) => id === Number(query.repository_id),
+    );
+    const matches: label_search_result_item[] = repository
+      ? this.listLabels(repository.owner.login, repository.name)
+          .filter((item) =>
+            `${item.name} ${item.description ?? ""}`
+              .toLowerCase()
+              .includes(query.q.toLowerCase()),
+          )
+          .map((item) => ({
+            ...item,
+            description: item.description ?? "",
+            score: 1,
+          }))
+      : [];
+    return {
+      total_count: matches.length,
+      incomplete_results: false,
+      items: paginate(matches, query),
+    };
+  }
+
+  searchTopics(query: { page?: unknown; per_page?: unknown }) {
+    return { total_count: 0, incomplete_results: false, items: [] };
+  }
+
+  searchCode(query: { page?: unknown; per_page?: unknown }) {
+    return { total_count: 0, incomplete_results: false, items: [] };
   }
 
   searchRepositories(query: {

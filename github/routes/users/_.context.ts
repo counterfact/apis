@@ -3,6 +3,7 @@ import type { organization_full } from "../../types/components/schemas/organizat
 import type { organization_simple } from "../../types/components/schemas/organization-simple.js";
 import type { public_user } from "../../types/components/schemas/public-user.js";
 import type { simple_user } from "../../types/components/schemas/simple-user.js";
+import type { user_search_result_item } from "../../types/components/schemas/user-search-result-item.js";
 
 const API_URL = "https://api.github.com";
 const APP_URL = "https://github.com";
@@ -272,6 +273,61 @@ export class Context {
     per_page?: unknown;
   }): Array<simple_user> {
     return this.listUsers(query).map((user) => toSimpleUser(user));
+  }
+
+  searchUsers(query: {
+    q: string;
+    order?: string;
+    page?: unknown;
+    per_page?: unknown;
+  }) {
+    const terms = query.q
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((term) => term && !term.includes(":"));
+    const userItems: user_search_result_item[] = this.listUsers().map(
+      (user) => ({ ...user, score: 1 }),
+    );
+    const organizationItems: user_search_result_item[] =
+      this.listOrganizations().map((organization) => ({
+        ...makeSimpleUser(
+          organization.login,
+          organization.id,
+          "Organization",
+          organization.name,
+        ),
+        score: 1,
+        public_repos: organization.public_repos,
+        public_gists: organization.public_gists,
+        followers: organization.followers,
+        following: organization.following,
+        name: organization.name,
+        email: organization.email,
+        location: organization.location,
+        blog: organization.blog,
+        company: organization.company,
+      }));
+    let items = [...userItems, ...organizationItems].filter((item) => {
+      const haystack = [
+        item.login,
+        item.name ?? "",
+        item.bio ?? "",
+        item.email ?? "",
+        item.company ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    });
+    const direction = query.order === "asc" ? 1 : -1;
+    items = items.sort(
+      (left, right) => left.login.localeCompare(right.login) * direction,
+    );
+    return {
+      total_count: items.length,
+      incomplete_results: false,
+      items: paginate(items, query),
+    };
   }
 
   saveOrganization(

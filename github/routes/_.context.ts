@@ -330,6 +330,10 @@ export class Context {
     return this.usersContext().listSimpleOrganizations(query);
   }
 
+  searchUsers(...args: Parameters<UsersContext["searchUsers"]>) {
+    return this.usersContext().searchUsers(...args);
+  }
+
   saveRepository(...args: Parameters<ReposContext["saveRepository"]>) {
     return this.reposContext().saveRepository(...args);
   }
@@ -352,6 +356,26 @@ export class Context {
 
   listRepositories(...args: Parameters<ReposContext["listRepositories"]>) {
     return this.reposContext().listRepositories(...args);
+  }
+
+  listAllIssues(...args: Parameters<ReposContext["listAllIssues"]>) {
+    return this.reposContext().listAllIssues(...args);
+  }
+
+  searchCommits(...args: Parameters<ReposContext["searchCommits"]>) {
+    return this.reposContext().searchCommits(...args);
+  }
+
+  searchLabels(...args: Parameters<ReposContext["searchLabels"]>) {
+    return this.reposContext().searchLabels(...args);
+  }
+
+  searchTopics(...args: Parameters<ReposContext["searchTopics"]>) {
+    return this.reposContext().searchTopics(...args);
+  }
+
+  searchCode(...args: Parameters<ReposContext["searchCode"]>) {
+    return this.reposContext().searchCode(...args);
   }
 
   listUserRepositories(
