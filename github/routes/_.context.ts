@@ -6,9 +6,12 @@ import type { organization_simple } from "../types/components/schemas/organizati
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
+import type { Context as CodesOfConductContext } from "./codes_of_conduct/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
+import type { Context as GitignoreContext } from "./gitignore/_.context.js";
 import type { Context as LicensesContext } from "./licenses/_.context.js";
 import type { Context as MarkdownContext } from "./markdown/_.context.js";
+import type { Context as MetaContext } from "./meta/_.context.js";
 import type { Context as NotificationsContext } from "./notifications/_.context.js";
 import type { Context as RateLimitContext } from "./rate_limit/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
@@ -39,6 +42,18 @@ export class Context {
 
   private markdownContext(): MarkdownContext {
     return this.loadContext("/markdown") as MarkdownContext;
+  }
+
+  private codesOfConductContext(): CodesOfConductContext {
+    return this.loadContext("/codes_of_conduct") as CodesOfConductContext;
+  }
+
+  private gitignoreContext(): GitignoreContext {
+    return this.loadContext("/gitignore") as GitignoreContext;
+  }
+
+  private metaContext(): MetaContext {
+    return this.loadContext("/meta") as MetaContext;
   }
 
   private notificationsContext(): NotificationsContext {
@@ -99,6 +114,50 @@ export class Context {
     ...args: Parameters<MarkdownContext["commonMarkerVersion"]>
   ) {
     return this.markdownContext().commonMarkerVersion(...args);
+  }
+
+  saveCodeOfConduct(
+    ...args: Parameters<CodesOfConductContext["saveCodeOfConduct"]>
+  ) {
+    return this.codesOfConductContext().saveCodeOfConduct(...args);
+  }
+
+  listCodesOfConduct(
+    ...args: Parameters<CodesOfConductContext["listCodesOfConduct"]>
+  ) {
+    return this.codesOfConductContext().listCodesOfConduct(...args);
+  }
+
+  getCodeOfConduct(
+    ...args: Parameters<CodesOfConductContext["getCodeOfConduct"]>
+  ) {
+    return this.codesOfConductContext().getCodeOfConduct(...args);
+  }
+
+  saveGitignoreTemplate(
+    ...args: Parameters<GitignoreContext["saveGitignoreTemplate"]>
+  ) {
+    return this.gitignoreContext().saveGitignoreTemplate(...args);
+  }
+
+  listGitignoreTemplates(
+    ...args: Parameters<GitignoreContext["listGitignoreTemplates"]>
+  ) {
+    return this.gitignoreContext().listGitignoreTemplates(...args);
+  }
+
+  getGitignoreTemplate(
+    ...args: Parameters<GitignoreContext["getGitignoreTemplate"]>
+  ) {
+    return this.gitignoreContext().getGitignoreTemplate(...args);
+  }
+
+  setApiOverview(...args: Parameters<MetaContext["setApiOverview"]>) {
+    return this.metaContext().setApiOverview(...args);
+  }
+
+  getApiOverview(...args: Parameters<MetaContext["getApiOverview"]>) {
+    return this.metaContext().getApiOverview(...args);
   }
 
   saveNotification(

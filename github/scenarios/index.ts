@@ -516,8 +516,77 @@ export const rateLimit: Scenario = ($) => {
   $.context.setRateLimit("code_search", { limit: 10 });
 };
 
+export const codesOfConduct: Scenario = ($) => {
+  const entries: [string, string][] = [
+    ["agpl-3.0", "GNU Affero General Public License v3.0"],
+    ["apache-2.0", "Apache License 2.0"],
+    ["bsd-2-clause", "BSD 2-Clause Simplified License"],
+    ["bsd-3-clause", "BSD 3-Clause New or Revised License"],
+    ["cc0-1.0", "Creative Commons Zero v1.0 Universal"],
+    ["contributor_covenant", "Contributor Covenant"],
+    ["gpl-2.0", "GNU General Public License v2.0"],
+    ["gpl-3.0", "GNU General Public License v3.0"],
+    ["lgpl-2.1", "GNU Lesser General Public License v2.1"],
+    ["mit", "MIT License"],
+    ["mpl-2.0", "Mozilla Public License 2.0"],
+    ["unlicense", "The Unlicense"],
+  ];
+
+  for (const [key, name] of entries) {
+    $.context.saveCodeOfConduct({
+      key,
+      name,
+      url: `https://api.github.com/codes_of_conduct/${key}`,
+      html_url: `https://github.com/github/choosealicense.com/blob/gh-pages/_licenses/${key}.txt`,
+      body: `# ${name}\n\nThis deterministic simulator fixture represents ${name}.`,
+    });
+  }
+};
+
+export const gitignoreTemplates: Scenario = ($) => {
+  const templates = [
+    {
+      name: "Go",
+      source: "# Binaries for programs and plugins\n*.exe\n*.test\n*.out\n",
+    },
+    {
+      name: "Java",
+      source: "# Compiled class files\n*.class\n# Package files\n*.jar\n",
+    },
+    { name: "Node", source: "# Dependencies\nnode_modules/\n# Logs\n*.log\n" },
+    {
+      name: "Python",
+      source: "# Byte-compiled files\n__pycache__/\n*.py[cod]\n.venv/\n",
+    },
+    { name: "Ruby", source: "# Bundler\n.bundle/\nvendor/bundle\n*.gem\n" },
+  ];
+  for (const template of templates) {
+    $.context.saveGitignoreTemplate(template);
+  }
+};
+
+export const apiMetadata: Scenario = ($) => {
+  $.context.setApiOverview({
+    verifiable_password_authentication: true,
+    ssh_key_fingerprints: {
+      SHA256_RSA: "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8",
+      SHA256_ED25519: "SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM",
+    },
+    api: ["192.30.252.0/22", "185.199.108.0/22"],
+    git: ["192.30.252.0/22"],
+    hooks: ["192.30.252.0/22"],
+    web: ["185.199.108.0/22"],
+    actions: ["20.201.28.0/25"],
+    packages: ["140.82.112.0/20"],
+    pages: ["185.199.108.0/22"],
+  });
+};
+
 export const seedGitHub: Scenario = ($) => {
   void emojis($);
+  void codesOfConduct($);
+  void gitignoreTemplates($);
+  void apiMetadata($);
   void identities($);
   void repositories($);
   void labels($);
