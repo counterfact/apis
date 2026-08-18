@@ -8,6 +8,7 @@ import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
 import type { Context as LicensesContext } from "./licenses/_.context.js";
+import type { Context as MarkdownContext } from "./markdown/_.context.js";
 import type { Context as RateLimitContext } from "./rate_limit/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
@@ -33,6 +34,10 @@ export class Context {
 
   private rateLimitContext(): RateLimitContext {
     return this.loadContext("/rate_limit") as RateLimitContext;
+  }
+
+  private markdownContext(): MarkdownContext {
+    return this.loadContext("/markdown") as MarkdownContext;
   }
 
   saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
@@ -75,6 +80,20 @@ export class Context {
 
   resetRateLimit(...args: Parameters<RateLimitContext["resetRateLimit"]>) {
     return this.rateLimitContext().resetRateLimit(...args);
+  }
+
+  renderMarkdown(...args: Parameters<MarkdownContext["renderMarkdown"]>) {
+    return this.markdownContext().renderMarkdown(...args);
+  }
+
+  renderRaw(...args: Parameters<MarkdownContext["renderRaw"]>) {
+    return this.markdownContext().renderRaw(...args);
+  }
+
+  commonMarkerVersion(
+    ...args: Parameters<MarkdownContext["commonMarkerVersion"]>
+  ) {
+    return this.markdownContext().commonMarkerVersion(...args);
   }
 
   private usersContext(): UsersContext {
