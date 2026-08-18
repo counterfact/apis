@@ -26,6 +26,7 @@ import type { status } from "../../types/components/schemas/status.js";
 import type { workflow } from "../../types/components/schemas/workflow.js";
 import type { workflow_run } from "../../types/components/schemas/workflow-run.js";
 import type { Context as GistsContext } from "../gists/_.context.js";
+import type { Context as NotificationsContext } from "../notifications/_.context.js";
 import {
   toSimpleUser,
   type Context as UsersContext,
@@ -268,6 +269,22 @@ export class Context {
 
   private usersContext(): UsersContext {
     return this.loadContext("/users") as UsersContext;
+  }
+
+  private notificationsContext(): NotificationsContext {
+    return this.loadContext("/notifications") as NotificationsContext;
+  }
+
+  listNotifications(
+    ...args: Parameters<NotificationsContext["listNotifications"]>
+  ) {
+    return this.notificationsContext().listNotifications(...args);
+  }
+
+  markAllNotificationsRead(
+    ...args: Parameters<NotificationsContext["markAllNotificationsRead"]>
+  ) {
+    return this.notificationsContext().markAllNotificationsRead(...args);
   }
 
   saveGist(

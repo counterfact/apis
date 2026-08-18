@@ -3,13 +3,20 @@ import type { activityMarkThreadAsRead } from "../../../types/paths/notification
 import type { activityMarkThreadAsDone } from "../../../types/paths/notifications/threads/{thread_id}.types.js";
 
 export const GET: activityGetThread = async ($) => {
-  return $.response[200].random();
+  const notification = $.context.getNotification(String($.path.thread_id));
+  return notification
+    ? $.response[200].json(notification)
+    : $.response[404].empty();
 };
 
 export const PATCH: activityMarkThreadAsRead = async ($) => {
-  return $.response[205].empty();
+  return $.context.markNotificationRead(String($.path.thread_id))
+    ? $.response[205].empty()
+    : $.response[404].empty();
 };
 
 export const DELETE: activityMarkThreadAsDone = async ($) => {
-  return $.response[204].empty();
+  return $.context.markNotificationDone(String($.path.thread_id))
+    ? $.response[204].empty()
+    : $.response[404].empty();
 };

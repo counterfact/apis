@@ -9,6 +9,7 @@ import type { Context as GistsContext } from "./gists/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
 import type { Context as LicensesContext } from "./licenses/_.context.js";
 import type { Context as MarkdownContext } from "./markdown/_.context.js";
+import type { Context as NotificationsContext } from "./notifications/_.context.js";
 import type { Context as RateLimitContext } from "./rate_limit/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
@@ -38,6 +39,10 @@ export class Context {
 
   private markdownContext(): MarkdownContext {
     return this.loadContext("/markdown") as MarkdownContext;
+  }
+
+  private notificationsContext(): NotificationsContext {
+    return this.loadContext("/notifications") as NotificationsContext;
   }
 
   saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
@@ -94,6 +99,60 @@ export class Context {
     ...args: Parameters<MarkdownContext["commonMarkerVersion"]>
   ) {
     return this.markdownContext().commonMarkerVersion(...args);
+  }
+
+  saveNotification(
+    ...args: Parameters<NotificationsContext["saveNotification"]>
+  ) {
+    return this.notificationsContext().saveNotification(...args);
+  }
+
+  getNotification(
+    ...args: Parameters<NotificationsContext["getNotification"]>
+  ) {
+    return this.notificationsContext().getNotification(...args);
+  }
+
+  markNotificationRead(
+    ...args: Parameters<NotificationsContext["markNotificationRead"]>
+  ) {
+    return this.notificationsContext().markNotificationRead(...args);
+  }
+
+  markNotificationDone(
+    ...args: Parameters<NotificationsContext["markNotificationDone"]>
+  ) {
+    return this.notificationsContext().markNotificationDone(...args);
+  }
+
+  markAllNotificationsRead(
+    ...args: Parameters<NotificationsContext["markAllNotificationsRead"]>
+  ) {
+    return this.notificationsContext().markAllNotificationsRead(...args);
+  }
+
+  listNotifications(
+    ...args: Parameters<NotificationsContext["listNotifications"]>
+  ) {
+    return this.notificationsContext().listNotifications(...args);
+  }
+
+  getThreadSubscription(
+    ...args: Parameters<NotificationsContext["getThreadSubscription"]>
+  ) {
+    return this.notificationsContext().getThreadSubscription(...args);
+  }
+
+  setThreadSubscription(
+    ...args: Parameters<NotificationsContext["setThreadSubscription"]>
+  ) {
+    return this.notificationsContext().setThreadSubscription(...args);
+  }
+
+  deleteThreadSubscription(
+    ...args: Parameters<NotificationsContext["deleteThreadSubscription"]>
+  ) {
+    return this.notificationsContext().deleteThreadSubscription(...args);
   }
 
   private usersContext(): UsersContext {

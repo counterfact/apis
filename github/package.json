@@ -4,7 +4,7 @@
   "description": "Counterfact simulator package for the GitHub API",
   "main": "index.js",
   "scripts": {
-    "test": "node --import tsx --test",
+    "test": "node --import tsx --test --test-concurrency=1",
     "start": "counterfact openapi.yaml .",
     "generate": "counterfact openapi.yaml . --generate",
     "serve": "counterfact openapi.yaml . --serve",

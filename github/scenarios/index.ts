@@ -450,6 +450,65 @@ export const releases: Scenario = ($) => {
   });
 };
 
+export const notifications: Scenario = ($) => {
+  const repository = $.context.getRepository("counterfact", "platform-api");
+  if (!repository) {
+    throw new Error(
+      "notifications requires counterfact/platform-api; run the repositories scenario first",
+    );
+  }
+
+  const fixtures = [
+    {
+      id: "101",
+      reason: "mention",
+      title: "New comment on issue #1",
+      type: "Issue" as const,
+      url: "https://api.github.com/repos/counterfact/platform-api/issues/1",
+      latestCommentUrl:
+        "https://api.github.com/repos/counterfact/platform-api/issues/comments/11",
+      updatedAt: "2026-08-18T13:00:00.000Z",
+    },
+    {
+      id: "102",
+      reason: "review_requested",
+      title: "Pull request #1 received a review",
+      type: "PullRequest" as const,
+      url: "https://api.github.com/repos/counterfact/platform-api/pulls/1",
+      latestCommentUrl:
+        "https://api.github.com/repos/counterfact/platform-api/pulls/1/reviews/21",
+      updatedAt: "2026-08-18T12:00:00.000Z",
+    },
+    {
+      id: "103",
+      reason: "subscribed",
+      title: "Workflow CI completed",
+      type: "CheckSuite" as const,
+      url: "https://api.github.com/repos/counterfact/platform-api/actions/runs/401",
+      latestCommentUrl:
+        "https://api.github.com/repos/counterfact/platform-api/actions/runs/401",
+      updatedAt: "2026-08-18T11:00:00.000Z",
+    },
+  ];
+
+  for (const fixture of fixtures) {
+    $.context.saveNotification({
+      id: fixture.id,
+      repository,
+      subject: {
+        title: fixture.title,
+        url: fixture.url,
+        latest_comment_url: fixture.latestCommentUrl,
+        type: fixture.type,
+      },
+      reason: fixture.reason,
+      updated_at: fixture.updatedAt,
+      last_read_at: fixture.updatedAt,
+    });
+  }
+  $.context.setThreadSubscription("101", { ignored: false });
+};
+
 export const rateLimit: Scenario = ($) => {
   $.context.setRateLimit("core", { limit: 5000 });
   $.context.setRateLimit("search", { limit: 30 });
@@ -468,6 +527,7 @@ export const seedGitHub: Scenario = ($) => {
   void actions($);
   void commitStatuses($);
   void releases($);
+  void notifications($);
   void licenses($);
   void gists($);
   void gistComments($);
