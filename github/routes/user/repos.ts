@@ -4,12 +4,11 @@ import type {
 } from "../../types/paths/user/repos.types.js";
 
 export const GET: reposListForAuthenticatedUser = async ($) => {
-  return $.response[200].json($.context.listUserRepositories($.query));
+  return $.response[200].json($.context.listUserRepos($.query));
 };
 
 export const POST: reposCreateForAuthenticatedUser = async ($) => {
-  const repository = $.context.saveRepository({
-    owner: "octocat",
+  const repository = $.context.saveAuthenticatedRepository({
     name: $.body.name,
     description: $.body.description,
     homepage: $.body.homepage,

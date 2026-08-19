@@ -1,5 +1,7 @@
 import type { orgsCancelInvitation } from "../../../../types/paths/orgs/{org}/invitations/{invitation_id}.types.js";
 
 export const DELETE: orgsCancelInvitation = async ($) => {
-  return $.response[204].empty();
+  return $.context.cancelOrgInvitation($.path.org, $.path.invitation_id)
+    ? $.response[204].empty()
+    : $.response[404].empty();
 };

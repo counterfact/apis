@@ -1,6 +1,8 @@
 import type { Context$ } from "../../types/_.context.js";
 import type { organization_full } from "../../types/components/schemas/organization-full.js";
+import type { organization_invitation } from "../../types/components/schemas/organization-invitation.js";
 import type { organization_simple } from "../../types/components/schemas/organization-simple.js";
+import type { org_membership } from "../../types/components/schemas/org-membership.js";
 import type { public_user } from "../../types/components/schemas/public-user.js";
 import type { simple_user } from "../../types/components/schemas/simple-user.js";
 import type { user_search_result_item } from "../../types/components/schemas/user-search-result-item.js";
@@ -164,6 +166,9 @@ const makeOrganization = (
     overrides.display_commenter_full_name_setting_enabled ?? false,
   readers_can_create_discussions:
     overrides.readers_can_create_discussions ?? true,
+  created_at: overrides.created_at ?? "2024-01-01T00:00:00Z",
+  updated_at: overrides.updated_at ?? "2024-01-01T00:00:00Z",
+  archived_at: overrides.archived_at ?? "",
 });
 
 const organizationToSimple = (
@@ -214,8 +219,16 @@ type RootContext = {
 export class Context {
   private usersByLogin = new Map<string, public_user>();
   private orgsByLogin = new Map<string, organization_full>();
+  private orgMembers = new Map<string, Map<string, org_membership>>();
+  private orgInvitations = new Map<
+    string,
+    Map<number, organization_invitation>
+  >();
+  private outsideCollaborators = new Map<string, Set<string>>();
+  private publicMembers = new Map<string, Set<string>>();
   private nextUserId = 100;
   private nextOrgId = 500;
+  private nextInvitationId = 1;
 
   constructor(private readonly $: Context$) {}
 
@@ -383,5 +396,249 @@ export class Context {
     return this.listOrganizations(query).map((organization) =>
       organizationToSimple(organization),
     );
+  }
+
+  private membershipsFor(org: string) {
+    const key = org.toLowerCase();
+    let memberships = this.orgMembers.get(key);
+    if (!memberships) {
+      memberships = new Map();
+      this.orgMembers.set(key, memberships);
+    }
+    return memberships;
+  }
+
+  setOrgMembership(
+    org: string,
+    username: string,
+    role: "admin" | "member" | "billing_manager" = "member",
+  ): org_membership {
+    const organization = this.getOrganization(org);
+    const user = this.getUser(username);
+    if (!organization || !user) {
+      throw new Error(`Unknown organization membership: ${org}/${username}`);
+    }
+    const membership: org_membership = {
+      url: `${API_URL}/orgs/${org}/memberships/${username}`,
+      state: "active",
+      role,
+      direct_membership: true,
+      organization_url: `${API_URL}/orgs/${org}`,
+      organization: organizationToSimple(organization),
+      user: toSimpleUser(user),
+      permissions: { can_create_repository: role === "admin" },
+    };
+    this.membershipsFor(org).set(username.toLowerCase(), membership);
+    return { ...membership };
+  }
+
+  getOrgMembership(org: string, username: string): org_membership | undefined {
+    const membership = this.orgMembers
+      .get(org.toLowerCase())
+      ?.get(username.toLowerCase());
+    return membership ? { ...membership } : undefined;
+  }
+
+  hasOrganizationMembership(org: string, username: string): boolean {
+    return Boolean(this.getOrgMembership(org, username));
+  }
+
+  isOrgMember(org: string, username: string): boolean {
+    return this.hasOrganizationMembership(org, username);
+  }
+
+  deleteOrgMembership(org: string, username: string): boolean {
+    const deleted =
+      this.orgMembers.get(org.toLowerCase())?.delete(username.toLowerCase()) ??
+      false;
+    this.publicMembers.get(org.toLowerCase())?.delete(username.toLowerCase());
+    return deleted;
+  }
+
+  removeOrgMember(org: string, username: string): boolean {
+    return this.deleteOrgMembership(org, username);
+  }
+
+  listOrgMembers(
+    org: string,
+    query?: { role?: unknown; page?: unknown; per_page?: unknown },
+  ): simple_user[] {
+    let memberships = [
+      ...(this.orgMembers.get(org.toLowerCase())?.values() ?? []),
+    ];
+    if (query?.role === "admin" || query?.role === "member") {
+      memberships = memberships.filter(
+        ({ role }) => role === String(query.role),
+      );
+    }
+    return paginate(
+      memberships
+        .map(({ user }) => user)
+        .sort((left, right) => left.login.localeCompare(right.login)),
+      query,
+    );
+  }
+
+  private invitationsFor(org: string) {
+    const key = org.toLowerCase();
+    let invitations = this.orgInvitations.get(key);
+    if (!invitations) {
+      invitations = new Map();
+      this.orgInvitations.set(key, invitations);
+    }
+    return invitations;
+  }
+
+  saveOrgInvitation(
+    org: string,
+    invitation: organization_invitation,
+  ): organization_invitation {
+    this.invitationsFor(org).set(invitation.id, { ...invitation });
+    this.nextInvitationId = Math.max(this.nextInvitationId, invitation.id + 1);
+    return { ...invitation };
+  }
+
+  createOrgInvitation(
+    org: string,
+    input: {
+      invitee_id?: number;
+      email?: string;
+      role?: string;
+      team_ids?: number[];
+    },
+  ): organization_invitation {
+    const invitee =
+      input.invitee_id == null
+        ? undefined
+        : this.listUsers().find(({ id }) => id === input.invitee_id);
+    const inviter = this.getUser("octocat") ?? this.listUsers()[0];
+    if (!inviter) throw new Error("An inviter user must be seeded first");
+    const id = this.nextInvitationId++;
+    const email = input.email ?? invitee?.email ?? "invitee@example.com";
+    return this.saveOrgInvitation(org, {
+      id,
+      login: invitee?.login ?? email.split("@")[0]!,
+      email,
+      role: input.role ?? "direct_member",
+      created_at: new Date().toISOString(),
+      inviter: toSimpleUser(inviter),
+      team_count: input.team_ids?.length ?? 0,
+      node_id: `OI_${id}`,
+      invitation_teams_url: `${API_URL}/orgs/${org}/invitations/${id}/teams`,
+      invitation_source: "member",
+    });
+  }
+
+  listOrgInvitations(
+    org: string,
+    query?: { role?: unknown; page?: unknown; per_page?: unknown },
+  ): organization_invitation[] {
+    let invitations = [
+      ...(this.orgInvitations.get(org.toLowerCase())?.values() ?? []),
+    ].filter(({ failed_at }) => !failed_at);
+    if (query?.role && query.role !== "all") {
+      invitations = invitations.filter(
+        ({ role }) => role === String(query.role),
+      );
+    }
+    return paginate(
+      invitations.sort((left, right) => left.id - right.id),
+      query,
+    ).map((invitation) => ({ ...invitation }));
+  }
+
+  listFailedOrgInvitations(
+    org: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): organization_invitation[] {
+    return paginate(
+      [...(this.orgInvitations.get(org.toLowerCase())?.values() ?? [])].filter(
+        ({ failed_at }) => Boolean(failed_at),
+      ),
+      query,
+    ).map((invitation) => ({ ...invitation }));
+  }
+
+  cancelOrgInvitation(org: string, invitationId: number): boolean {
+    return (
+      this.orgInvitations.get(org.toLowerCase())?.delete(invitationId) ?? false
+    );
+  }
+
+  listOrgInvitationTeams(
+    _org?: string,
+    _invitationId?: number,
+    _query?: { page?: unknown; per_page?: unknown },
+  ) {
+    return [];
+  }
+
+  private collaboratorsFor(org: string) {
+    const key = org.toLowerCase();
+    let collaborators = this.outsideCollaborators.get(key);
+    if (!collaborators) {
+      collaborators = new Set();
+      this.outsideCollaborators.set(key, collaborators);
+    }
+    return collaborators;
+  }
+
+  addOutsideCollaborator(org: string, username: string): void {
+    this.deleteOrgMembership(org, username);
+    this.collaboratorsFor(org).add(username.toLowerCase());
+  }
+
+  removeOutsideCollaborator(org: string, username: string): boolean {
+    return (
+      this.outsideCollaborators
+        .get(org.toLowerCase())
+        ?.delete(username.toLowerCase()) ?? false
+    );
+  }
+
+  listOutsideCollaborators(
+    org: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): simple_user[] {
+    const users = [...(this.outsideCollaborators.get(org.toLowerCase()) ?? [])]
+      .map((login) => this.getUser(login))
+      .filter((user): user is public_user => Boolean(user))
+      .map(toSimpleUser);
+    return paginate(users, query);
+  }
+
+  isPublicMember(org: string, username: string): boolean {
+    return (
+      this.publicMembers.get(org.toLowerCase())?.has(username.toLowerCase()) ??
+      false
+    );
+  }
+
+  publicizeMembership(org: string, username: string): void {
+    if (!this.isOrgMember(org, username)) {
+      throw new Error(`${username} is not a member of ${org}`);
+    }
+    const key = org.toLowerCase();
+    let members = this.publicMembers.get(key);
+    if (!members) {
+      members = new Set();
+      this.publicMembers.set(key, members);
+    }
+    members.add(username.toLowerCase());
+  }
+
+  concealMembership(org: string, username: string): void {
+    this.publicMembers.get(org.toLowerCase())?.delete(username.toLowerCase());
+  }
+
+  listPublicMembers(
+    org: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): simple_user[] {
+    const users = [...(this.publicMembers.get(org.toLowerCase()) ?? [])]
+      .map((login) => this.getUser(login))
+      .filter((user): user is public_user => Boolean(user))
+      .map(toSimpleUser);
+    return paginate(users, query);
   }
 }

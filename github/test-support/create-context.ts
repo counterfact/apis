@@ -10,6 +10,7 @@ import { Context as MetaContext } from "../routes/meta/_.context.ts";
 import { Context as NotificationsContext } from "../routes/notifications/_.context.ts";
 import { Context as RateLimitContext } from "../routes/rate_limit/_.context.ts";
 import { Context as ReposContext } from "../routes/repos/_.context.ts";
+import { Context as AuthenticatedUserContext } from "../routes/user/_.context.ts";
 import { Context as UsersContext } from "../routes/users/_.context.ts";
 
 export const createContextHarness = () => {
@@ -84,6 +85,12 @@ export const createContextHarness = () => {
         break;
       case "/users":
         created = new UsersContext({ loadContext, readJson: async () => ({}) });
+        break;
+      case "/user":
+        created = new AuthenticatedUserContext({
+          loadContext,
+          readJson: async () => ({}),
+        });
         break;
       case "/repos":
         created = new ReposContext({ loadContext, readJson: async () => ({}) });

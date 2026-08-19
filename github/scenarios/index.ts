@@ -582,6 +582,64 @@ export const apiMetadata: Scenario = ($) => {
   });
 };
 
+export const organizationMembers: Scenario = ($) => {
+  $.context.setOrgMembership("counterfact", "octocat", "admin");
+  $.context.setOrgMembership("counterfact", "mona", "member");
+  $.context.publicizeMembership("counterfact", "mona");
+  const [inviter] = $.context.listSimpleUsers();
+  $.context.saveOrgInvitation("counterfact", {
+    id: 201,
+    login: "hubot",
+    email: "hubot@example.com",
+    role: "direct_member",
+    created_at: "2024-01-02T00:00:00Z",
+    inviter,
+    team_count: 0,
+    node_id: "OI_201",
+    invitation_teams_url:
+      "https://api.github.com/orgs/counterfact/invitations/201/teams",
+    invitation_source: "member",
+  });
+};
+
+export const authenticatedUser: Scenario = ($) => {
+  $.context.setProfile({
+    login: "octocat",
+    id: 1,
+    name: "The Octocat",
+    email: "octocat@github.com",
+  });
+  $.context.saveEmail({
+    email: "octocat@github.com",
+    primary: true,
+    verified: true,
+    visibility: "public",
+  });
+  $.context.saveEmail({
+    email: "octocat@users.noreply.github.com",
+    primary: false,
+    verified: true,
+    visibility: "private",
+  });
+  $.context.saveSshKey({
+    id: 301,
+    title: "Octocat laptop",
+    key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICounterfact octocat",
+    url: "https://api.github.com/user/keys/301",
+    created_at: "2024-01-03T00:00:00Z",
+    verified: true,
+    read_only: false,
+  });
+  $.context.follow("mona");
+  $.context.saveFollower("hubot");
+  $.context.starRepo("counterfact", "platform-api");
+  $.context.subscribeRepo("counterfact", "actions-demo");
+  $.context.saveSocialAccount({
+    provider: "github",
+    url: "https://github.com/octocat",
+  });
+};
+
 export const seedGitHub: Scenario = ($) => {
   void emojis($);
   void codesOfConduct($);
@@ -589,6 +647,8 @@ export const seedGitHub: Scenario = ($) => {
   void apiMetadata($);
   void identities($);
   void repositories($);
+  void organizationMembers($);
+  void authenticatedUser($);
   void labels($);
   void issues($);
   void milestones($);

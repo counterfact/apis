@@ -3,5 +3,5 @@ import type { usersSetPrimaryEmailVisibilityForAuthenticatedUser } from "../../.
 export const PATCH: usersSetPrimaryEmailVisibilityForAuthenticatedUser = async (
   $,
 ) => {
-  return $.response[200].random();
+  return $.response[200].json($.context.setEmailVisibility($.body.visibility));
 };
