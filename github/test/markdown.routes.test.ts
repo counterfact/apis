@@ -42,3 +42,27 @@ test("POST /markdown renders HTML over Counterfact HTTP", async () => {
     await server.stop();
   }
 });
+
+test("POST /markdown/raw accepts documented plain-text content types", async () => {
+  const server = await startCounterfactServer();
+  try {
+    for (const contentType of ["text/plain", "text/x-markdown"]) {
+      const response = await server.fetch("/markdown/raw", {
+        method: "POST",
+        headers: { "content-type": contentType },
+        body: "Hello **raw** <script>alert(1)</script>",
+      });
+      assert.equal(response.status, 200);
+      assert.match(
+        response.headers.get("x-commonmarker-version") ?? "",
+        /^0\./,
+      );
+      assert.equal(
+        await response.text(),
+        "<p>Hello <strong>raw</strong> &lt;script&gt;alert(1)&lt;/script&gt;</p>",
+      );
+    }
+  } finally {
+    await server.stop();
+  }
+});

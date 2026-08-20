@@ -4,6 +4,21 @@ import type {
 } from "../../types/paths/user/repos.types.js";
 
 export const GET: reposListForAuthenticatedUser = async ($) => {
+  if ($.query.type && ($.query.visibility || $.query.affiliation)) {
+    return $.response[422].json({
+      message: "Validation Failed",
+      documentation_url:
+        "https://docs.github.com/rest/repos/repos#list-repositories-for-the-authenticated-user",
+      errors: [
+        {
+          resource: "Repository",
+          field: "type",
+          code: "invalid",
+          message: "type cannot be combined with visibility or affiliation",
+        },
+      ],
+    });
+  }
   return $.response[200].json($.context.listUserRepos($.query));
 };
 

@@ -1,25 +1,16 @@
-import net from "node:net";
+import { once } from "node:events";
+import type { Server } from "node:http";
 import { fileURLToPath } from "node:url";
-import { counterfact } from "counterfact";
+import { installPlainTextBodyParser } from "../counterfact-support/plain-text-body.js";
 import type { Context } from "../routes/_.context.ts";
+
+process.env.CHOKIDAR_USEPOLLING ??= "1";
+const { counterfact } = await import("counterfact");
 
 const basePath = fileURLToPath(new URL("../", import.meta.url));
 const openApiPath = fileURLToPath(new URL("../openapi.yaml", import.meta.url));
 
-const getFreePort = async () =>
-  new Promise<number>((resolve, reject) => {
-    const temporaryServer = net.createServer();
-    temporaryServer.listen(0, "127.0.0.1", () => {
-      const address = temporaryServer.address();
-      if (address && typeof address === "object") resolve(address.port);
-      else reject(new Error("failed to determine free port"));
-      temporaryServer.close();
-    });
-    temporaryServer.on("error", reject);
-  });
-
 export const startCounterfactServer = async () => {
-  const port = await getFreePort();
   const config = {
     adminApiToken: "",
     alwaysFakeOptionals: false,
@@ -27,7 +18,7 @@ export const startCounterfactServer = async () => {
     buildCache: false,
     generate: { prune: false, routes: false, types: false },
     openApiPath,
-    port,
+    port: 0,
     prefix: "",
     proxyPaths: new Map([["", false]]),
     proxyUrl: "",
@@ -39,7 +30,25 @@ export const startCounterfactServer = async () => {
     watch: { routes: false, types: false },
   };
   const app = await counterfact(config);
+  installPlainTextBodyParser(app.koaApp);
+  let httpServer: Server | undefined;
+  const listen = app.koaApp.listen.bind(app.koaApp);
+  app.koaApp.listen = (...args: unknown[]) => {
+    httpServer = listen(...args);
+    return httpServer;
+  };
   const server = await app.start(config);
+  if (!httpServer) {
+    await server.stop();
+    throw new Error("Counterfact did not create an HTTP server");
+  }
+  if (!httpServer.listening) await once(httpServer, "listening");
+  const address = httpServer.address();
+  if (!address || typeof address !== "object") {
+    await server.stop();
+    throw new Error("failed to determine Counterfact port");
+  }
+  const port = address.port;
   const context = app.contextRegistry.find("/") as Context;
 
   return {

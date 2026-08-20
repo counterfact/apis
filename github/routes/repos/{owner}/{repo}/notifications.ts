@@ -14,6 +14,6 @@ export const GET: activityListRepoNotificationsForAuthenticatedUser = async (
 };
 
 export const PUT: activityMarkRepoNotificationsAsRead = async ($) => {
-  $.context.markAllNotificationsRead($.path.owner, $.path.repo);
-  return $.response[202].empty();
+  $.context.markAllNotificationsRead($.path.owner, $.path.repo, $.body);
+  return $.response[205].empty();
 };

@@ -213,6 +213,7 @@ export const toSimpleUser = (user: public_user): simple_user => ({
 });
 
 type RootContext = {
+  authenticatedLogin(): string;
   listRepositories(): Array<{ owner: { login: string }; private: boolean }>;
 };
 
@@ -436,7 +437,16 @@ export class Context {
     const membership = this.orgMembers
       .get(org.toLowerCase())
       ?.get(username.toLowerCase());
-    return membership ? { ...membership } : undefined;
+    if (!membership) return undefined;
+    const organization = this.getOrganization(org);
+    const user = this.getUser(username);
+    if (!organization || !user) return undefined;
+    return {
+      ...membership,
+      organization: organizationToSimple(organization),
+      organization_url: `${API_URL}/orgs/${organization.login}`,
+      user: toSimpleUser(user),
+    };
   }
 
   hasOrganizationMembership(org: string, username: string): boolean {
@@ -464,8 +474,12 @@ export class Context {
     query?: { role?: unknown; page?: unknown; per_page?: unknown },
   ): simple_user[] {
     let memberships = [
-      ...(this.orgMembers.get(org.toLowerCase())?.values() ?? []),
-    ];
+      ...(this.orgMembers.get(org.toLowerCase())?.keys() ?? []),
+    ]
+      .map((username) => this.getOrgMembership(org, username))
+      .filter((membership): membership is org_membership =>
+        Boolean(membership),
+      );
     if (query?.role === "admin" || query?.role === "member") {
       memberships = memberships.filter(
         ({ role }) => role === String(query.role),
@@ -511,7 +525,9 @@ export class Context {
       input.invitee_id == null
         ? undefined
         : this.listUsers().find(({ id }) => id === input.invitee_id);
-    const inviter = this.getUser("octocat") ?? this.listUsers()[0];
+    const inviter =
+      this.getUser(this.rootContext().authenticatedLogin()) ??
+      this.listUsers()[0];
     if (!inviter) throw new Error("An inviter user must be seeded first");
     const id = this.nextInvitationId++;
     const email = input.email ?? invitee?.email ?? "invitee@example.com";
@@ -544,7 +560,13 @@ export class Context {
     return paginate(
       invitations.sort((left, right) => left.id - right.id),
       query,
-    ).map((invitation) => ({ ...invitation }));
+    ).map((invitation) => {
+      const inviter = this.getUser(invitation.inviter.login);
+      return {
+        ...invitation,
+        inviter: inviter ? toSimpleUser(inviter) : invitation.inviter,
+      };
+    });
   }
 
   listFailedOrgInvitations(

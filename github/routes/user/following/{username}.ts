@@ -5,7 +5,7 @@ import type { usersUnfollow } from "../../../types/paths/user/following/{usernam
 export const GET: usersCheckPersonIsFollowedByAuthenticated = async ($) => {
   return $.context.isFollowing($.path.username)
     ? $.response[204].empty()
-    : $.response[404].empty();
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };
 
 export const PUT: usersFollow = async ($) => {

@@ -8,7 +8,6 @@ export const GET: orgsCheckMembershipForUser = async ($) => {
 };
 
 export const DELETE: orgsRemoveMember = async ($) => {
-  return $.context.removeOrgMember($.path.org, $.path.username)
-    ? $.response[204].empty()
-    : $.response[404].empty();
+  $.context.removeOrgMember($.path.org, $.path.username);
+  return $.response[204].empty();
 };

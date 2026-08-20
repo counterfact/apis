@@ -3,11 +3,13 @@ import type { usersDeleteGpgKeyForAuthenticatedUser } from "../../../types/paths
 
 export const GET: usersGetGpgKeyForAuthenticatedUser = async ($) => {
   const key = $.context.getGpgKey($.path.gpg_key_id);
-  return key ? $.response[200].json(key) : $.response[404].empty();
+  return key
+    ? $.response[200].json(key)
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };
 
 export const DELETE: usersDeleteGpgKeyForAuthenticatedUser = async ($) => {
   return $.context.deleteGpgKey($.path.gpg_key_id)
     ? $.response[204].empty()
-    : $.response[404].empty();
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };

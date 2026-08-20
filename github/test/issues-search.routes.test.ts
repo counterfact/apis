@@ -13,11 +13,17 @@ test("global issues and remaining searches project seeded state over HTTP", asyn
   const server = await startCounterfactServer();
 
   try {
-    const issuesResponse = await server.fetch("/issues");
+    const defaultIssuesResponse = await server.fetch("/issues");
+    assert.equal(defaultIssuesResponse.status, 200);
+    assert.deepEqual(await defaultIssuesResponse.json(), []);
+
+    const issuesResponse = await server.fetch("/issues?filter=all&state=all");
     assert.equal(issuesResponse.status, 200);
     assert.equal(((await issuesResponse.json()) as issue[]).length, 2);
 
-    const closedResponse = await server.fetch("/issues?state=closed");
+    const closedResponse = await server.fetch(
+      "/issues?filter=all&state=closed",
+    );
     assert.equal(closedResponse.status, 200);
     assert.deepEqual(
       ((await closedResponse.json()) as issue[]).map(({ number }) => number),

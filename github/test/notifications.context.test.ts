@@ -50,12 +50,12 @@ test("explicit notification IDs advance generated IDs without overwriting", () =
 
 test("markNotificationRead uses one timestamp for the transition", () => {
   const context = createContext();
-  save(context, "1");
+  save(context, "1", { updatedAt: "2024-01-01T00:00:00.000Z" });
 
   assert.equal(context.markNotificationRead("1"), true);
   const notification = context.getNotification("1");
   assert.equal(notification?.unread, false);
-  assert.equal(notification?.last_read_at, notification?.updated_at);
+  assert.notEqual(notification?.last_read_at, notification?.updated_at);
   assert.equal(context.markNotificationRead("missing"), false);
 });
 
@@ -96,8 +96,54 @@ test("notification listing filters unread, participating, repo, and pages", () =
     context
       .listNotifications({ all: true, per_page: 1, page: 2 })
       .map(({ id }) => id),
+    ["2"],
+  );
+  assert.deepEqual(
+    context
+      .listNotifications({ all: true, since: "2026-08-18T12:30:00.000Z" })
+      .map(({ id }) => id),
     ["1"],
   );
+  assert.deepEqual(
+    context
+      .listNotifications({ all: true, before: "2026-08-18T11:30:00.000Z" })
+      .map(({ id }) => id),
+    ["3"],
+  );
+  assert.deepEqual(
+    context
+      .listNotifications({ all: true, since: "2026-08-18T12:00:00.000Z" })
+      .map(({ id }) => id),
+    ["1"],
+  );
+  assert.deepEqual(
+    context
+      .listNotifications({ all: true, before: "2026-08-18T12:00:00.000Z" })
+      .map(({ id }) => id),
+    ["3"],
+  );
+});
+
+test("batch read transitions honor the cutoff and share one timestamp", () => {
+  const context = createContext();
+  save(context, "1", { updatedAt: "2026-08-18T13:00:00.000Z" });
+  save(context, "2", { updatedAt: "2026-08-18T12:00:00.000Z" });
+  save(context, "3", { updatedAt: "2026-08-18T11:00:00.000Z" });
+
+  const cutoff = "2026-08-18T12:30:00.000Z";
+  context.markAllNotificationsRead(undefined, undefined, {
+    last_read_at: cutoff,
+  });
+
+  assert.equal(context.getNotification("1")?.unread, true);
+  assert.equal(context.getNotification("2")?.last_read_at, cutoff);
+  assert.equal(context.getNotification("3")?.last_read_at, cutoff);
+
+  const exactCutoff = "2026-08-18T13:00:00.000Z";
+  context.markAllNotificationsRead(undefined, undefined, {
+    last_read_at: exactCutoff,
+  });
+  assert.equal(context.getNotification("1")?.unread, true);
 });
 
 test("subscription and done operations update related state", () => {

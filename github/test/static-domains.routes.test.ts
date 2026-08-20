@@ -35,10 +35,12 @@ test("static GitHub domains return deterministic startup fixtures", async () => 
       ((await nodeResponse.json()) as gitignore_template).source,
       /node_modules/,
     );
-    assert.equal(
-      (await server.fetch("/gitignore/templates/Missing")).status,
-      404,
-    );
+    const missingTemplate = await server.fetch("/gitignore/templates/Missing");
+    assert.equal(missingTemplate.status, 404);
+    assert.deepEqual(await missingTemplate.json(), {
+      message: "Not Found",
+      status: "404",
+    });
 
     const metaResponse = await server.fetch("/meta");
     assert.equal(metaResponse.status, 200);

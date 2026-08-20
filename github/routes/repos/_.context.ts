@@ -38,6 +38,7 @@ type RepoKey = `${string}/${string}`;
 
 type RepoState = {
   repository: full_repository;
+  collaborators: Set<string>;
   readme?: content_file;
   branches: Map<string, branch_with_protection>;
   commits: Map<string, commit>;
@@ -271,6 +272,12 @@ export class Context {
 
   private usersContext(): UsersContext {
     return this.loadContext("/users") as UsersContext;
+  }
+
+  private authenticatedLogin(): string {
+    return (
+      this.loadContext("/user") as { authenticatedLogin(): string }
+    ).authenticatedLogin();
   }
 
   private notificationsContext(): NotificationsContext {
@@ -685,7 +692,7 @@ export class Context {
       pushed_at: repository.pushed_at ?? existing?.repository.pushed_at ?? now,
       created_at:
         existing?.repository.created_at ?? repository.created_at ?? now,
-      updated_at: now,
+      updated_at: repository.updated_at ?? now,
       permissions: repository.permissions ??
         existing?.repository.permissions ?? {
           admin: true,
@@ -775,6 +782,7 @@ export class Context {
 
     const state: RepoState = existing ?? {
       repository: fullRepository,
+      collaborators: new Set(),
       branches: new Map(),
       commits: new Map(),
       commitStatuses: new Map(),
@@ -797,6 +805,7 @@ export class Context {
     };
 
     state.repository = fullRepository;
+    state.collaborators ??= new Set();
     state.commits ??= new Map();
     state.commitStatuses ??= new Map();
     state.commitComments ??= new Map();
@@ -859,11 +868,23 @@ export class Context {
       owner,
       name: changes.name ?? repo,
       readme: changes.readme,
+      updated_at: changes.updated_at ?? isoNow(),
     });
   }
 
   deleteRepository(owner: string, repo: string): boolean {
     return this.reposByKey.delete(repoKey(owner, repo));
+  }
+
+  addRepositoryCollaborator(
+    owner: string,
+    repo: string,
+    username: string,
+  ): boolean {
+    const state = this.getRepoState(owner, repo);
+    if (!state) return false;
+    state.collaborators.add(username.toLowerCase());
+    return true;
   }
 
   listRepositories(): Array<full_repository> {
@@ -872,15 +893,66 @@ export class Context {
       .sort((left, right) => left.id - right.id);
   }
 
-  listUserRepositories(query?: {
-    visibility?: string;
-    type?: string;
-    sort?: string;
-    direction?: string;
-    page?: unknown;
-    per_page?: unknown;
-  }) {
-    let repositories = [...this.listRepositories()];
+  private repositoryAffiliation(
+    repository: full_repository,
+    authenticatedLogin: string,
+  ): "owner" | "collaborator" | "organization_member" | undefined {
+    if (repository.owner.login === authenticatedLogin) return "owner";
+    if (
+      this.getRepoState(
+        repository.owner.login,
+        repository.name,
+      )?.collaborators.has(authenticatedLogin.toLowerCase())
+    ) {
+      return "collaborator";
+    }
+    if (
+      repository.owner.type === "Organization" &&
+      this.usersContext().hasOrganizationMembership(
+        repository.owner.login,
+        authenticatedLogin,
+      )
+    ) {
+      return "organization_member";
+    }
+    return undefined;
+  }
+
+  private visibleRepositories(authenticatedLogin: string): full_repository[] {
+    return this.listRepositories().filter((repository) =>
+      Boolean(this.repositoryAffiliation(repository, authenticatedLogin)),
+    );
+  }
+
+  listUserRepositories(
+    query?: {
+      visibility?: string;
+      affiliation?: string;
+      type?: string;
+      sort?: string;
+      direction?: string;
+      since?: string;
+      before?: string;
+      page?: unknown;
+      per_page?: unknown;
+    },
+    authenticatedLogin?: string,
+  ) {
+    const login = authenticatedLogin ?? this.authenticatedLogin();
+    let repositories = this.visibleRepositories(login);
+
+    if (query?.affiliation) {
+      const affiliations = new Set(
+        query.affiliation
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean),
+      );
+      repositories = repositories.filter((repository) => {
+        const affiliation = this.repositoryAffiliation(repository, login);
+        return affiliation ? affiliations.has(affiliation) : false;
+      });
+    }
 
     if (query?.visibility === "public") {
       repositories = repositories.filter((repository) => !repository.private);
@@ -890,13 +962,47 @@ export class Context {
     }
     if (query?.type === "owner") {
       repositories = repositories.filter(
-        (repository) => repository.owner.type === "User",
+        (repository) => repository.owner.login === login,
       );
     }
+    if (query?.type === "member") {
+      repositories = repositories.filter(
+        (repository) =>
+          this.repositoryAffiliation(repository, login) ===
+          "organization_member",
+      );
+    }
+    if (query?.type === "public") {
+      repositories = repositories.filter((repository) => !repository.private);
+    }
+    if (query?.type === "private") {
+      repositories = repositories.filter((repository) => repository.private);
+    }
 
-    const sortField = query?.sort ?? "updated";
+    const updatedAt = (repository: full_repository) =>
+      new Date(repository.updated_at).getTime();
+    if (query?.since) {
+      const since = new Date(query.since).getTime();
+      if (Number.isFinite(since)) {
+        repositories = repositories.filter(
+          (repository) => updatedAt(repository) > since,
+        );
+      }
+    }
+    if (query?.before) {
+      const before = new Date(query.before).getTime();
+      if (Number.isFinite(before)) {
+        repositories = repositories.filter(
+          (repository) => updatedAt(repository) < before,
+        );
+      }
+    }
+
+    const sortField = query?.sort ?? "full_name";
+    const directionName =
+      query?.direction ?? (sortField === "full_name" ? "asc" : "desc");
     repositories.sort((left, right) => {
-      const direction = query?.direction === "asc" ? 1 : -1;
+      const direction = directionName === "asc" ? 1 : -1;
       if (sortField === "full_name") {
         return left.full_name.localeCompare(right.full_name) * direction;
       }
@@ -904,6 +1010,13 @@ export class Context {
         return (
           (new Date(left.created_at).getTime() -
             new Date(right.created_at).getTime()) *
+          direction
+        );
+      }
+      if (sortField === "pushed") {
+        return (
+          (new Date(left.pushed_at ?? left.updated_at).getTime() -
+            new Date(right.pushed_at ?? right.updated_at).getTime()) *
           direction
         );
       }
@@ -2324,10 +2437,31 @@ export class Context {
     sort?: string;
     direction?: string;
     since?: string;
+    collab?: boolean;
+    orgs?: boolean;
+    owned?: boolean;
+    pulls?: boolean;
     page?: unknown;
     per_page?: unknown;
   }): issue[] {
-    let issues: issue[] = this.listRepositories().flatMap((repository) =>
+    const filter = query?.filter ?? "assigned";
+    const state = query?.state ?? "open";
+    const sort = query?.sort ?? "created";
+    const directionName = query?.direction ?? "desc";
+    const authenticatedLogin = this.authenticatedLogin();
+    let repositories = this.visibleRepositories(authenticatedLogin);
+    repositories = repositories.filter((repository) => {
+      const affiliation = this.repositoryAffiliation(
+        repository,
+        authenticatedLogin,
+      );
+      if (affiliation === "owner") return query?.owned !== false;
+      if (affiliation === "collaborator") return query?.collab !== false;
+      if (affiliation === "organization_member") return query?.orgs !== false;
+      return false;
+    });
+
+    let issues: issue[] = repositories.flatMap((repository) =>
       this.listIssues(repository.owner.login, repository.name, {
         state: "all",
       }).map((item) => ({
@@ -2336,23 +2470,75 @@ export class Context {
       })),
     );
 
-    if (query?.state && query.state !== "all") {
-      issues = issues.filter((item) => item.state === query.state);
+    if (query?.pulls) {
+      issues.push(
+        ...repositories.flatMap((repository) =>
+          this.listPullRequests(repository.owner.login, repository.name, {
+            state: "all",
+          }).map(
+            (pull) =>
+              ({
+                url: pull.issue_url,
+                repository_url: pull.base.repo.url,
+                labels_url: `${pull.issue_url}/labels{/name}`,
+                comments_url: pull.comments_url,
+                events_url: `${pull.issue_url}/events`,
+                html_url: pull.html_url,
+                id: pull.id,
+                node_id: pull.node_id,
+                number: pull.number,
+                title: pull.title,
+                locked: pull.locked,
+                active_lock_reason: pull.active_lock_reason,
+                assignees: pull.assignees,
+                user: pull.user,
+                labels: pull.labels,
+                state: pull.state,
+                assignee: pull.assignee,
+                milestone: pull.milestone,
+                comments: pull.comments,
+                created_at: pull.created_at,
+                updated_at: pull.updated_at,
+                closed_at: pull.closed_at,
+                pull_request: {
+                  diff_url: pull.diff_url,
+                  html_url: pull.html_url,
+                  patch_url: pull.patch_url,
+                  url: pull.url,
+                  merged_at: pull.merged_at || undefined,
+                },
+                body: pull.body,
+                author_association: pull.author_association,
+                draft: pull.draft,
+                repository: pull.base.repo,
+              }) as issue,
+          ),
+        ),
+      );
     }
-    if (query?.filter === "assigned") {
+
+    if (state !== "all") {
+      issues = issues.filter((item) => item.state === state);
+    }
+    if (filter === "assigned") {
       issues = issues.filter(
         (item) =>
-          item.assignee?.login === DEFAULT_USER_LOGIN ||
+          item.assignee?.login === authenticatedLogin ||
           (item.assignees ?? []).some(
-            ({ login }) => login === DEFAULT_USER_LOGIN,
+            ({ login }) => login === authenticatedLogin,
           ),
       );
-    } else if (query?.filter === "created") {
-      issues = issues.filter((item) => item.user?.login === DEFAULT_USER_LOGIN);
-    } else if (query?.filter === "mentioned") {
+    } else if (filter === "created") {
+      issues = issues.filter((item) => item.user?.login === authenticatedLogin);
+    } else if (filter === "mentioned") {
       issues = issues.filter((item) =>
-        (item.body ?? "").includes(`@${DEFAULT_USER_LOGIN}`),
+        (item.body ?? "").includes(`@${authenticatedLogin}`),
       );
+    } else if (filter === "subscribed") {
+      const subscribedSubjectUrls = new Set(
+        this.notificationsContext().listSubscribedSubjectUrls(),
+      );
+      issues = issues.filter((item) => subscribedSubjectUrls.has(item.url));
     }
     if (query?.labels) {
       const labels = query.labels
@@ -2373,17 +2559,17 @@ export class Context {
       const since = new Date(query.since).getTime();
       if (Number.isFinite(since)) {
         issues = issues.filter(
-          (item) => new Date(item.updated_at).getTime() >= since,
+          (item) => new Date(item.updated_at).getTime() > since,
         );
       }
     }
 
-    const direction = query?.direction === "asc" ? 1 : -1;
+    const direction = directionName === "asc" ? 1 : -1;
     issues.sort((left, right) => {
-      if (query?.sort === "comments") {
+      if (sort === "comments") {
         return (left.comments - right.comments) * direction;
       }
-      const field = query?.sort === "created" ? "created_at" : "updated_at";
+      const field = sort === "created" ? "created_at" : "updated_at";
       return (
         (new Date(left[field]).getTime() - new Date(right[field]).getTime()) *
         direction

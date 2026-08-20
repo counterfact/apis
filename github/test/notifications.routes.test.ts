@@ -15,14 +15,35 @@ test("notification HTTP workflow preserves global and repo-scoped state", async 
       initial.map(({ id }) => id),
       ["101", "102", "103"],
     );
+    assert.deepEqual(
+      (
+        (await (
+          await server.fetch(
+            "/notifications?all=true&since=2026-08-18T12:30:00.000Z",
+          )
+        ).json()) as thread[]
+      ).map(({ id }) => id),
+      ["101"],
+    );
 
     const threadResponse = await server.fetch("/notifications/threads/101");
     assert.equal(threadResponse.status, 200);
     assert.equal(((await threadResponse.json()) as thread).id, "101");
-    assert.equal(
-      (await server.fetch("/notifications/threads/missing")).status,
-      404,
+    const missingThread = await server.fetch("/notifications/threads/999999");
+    assert.equal(missingThread.status, 404);
+    assert.deepEqual(await missingThread.json(), {
+      message: "Not Found",
+      status: "404",
+    });
+
+    const missingSubscription = await server.fetch(
+      "/notifications/threads/999999/subscription",
     );
+    assert.equal(missingSubscription.status, 404);
+    assert.deepEqual(await missingSubscription.json(), {
+      message: "Not Found",
+      status: "404",
+    });
 
     const subscriptionResponse = await server.fetch(
       "/notifications/threads/101/subscription",
@@ -75,7 +96,7 @@ test("notification HTTP workflow preserves global and repo-scoped state", async 
       "/repos/counterfact/platform-api/notifications",
       { method: "PUT" },
     );
-    assert.equal(markedRepo.status, 202);
+    assert.equal(markedRepo.status, 205);
     assert.deepEqual(
       (await (await server.fetch("/notifications")).json()) as thread[],
       [],

@@ -359,6 +359,12 @@ export class Context {
     return this.reposContext().deleteRepository(...args);
   }
 
+  addRepositoryCollaborator(
+    ...args: Parameters<ReposContext["addRepositoryCollaborator"]>
+  ) {
+    return this.reposContext().addRepositoryCollaborator(...args);
+  }
+
   listRepositories(...args: Parameters<ReposContext["listRepositories"]>) {
     return this.reposContext().listRepositories(...args);
   }
@@ -701,6 +707,12 @@ export class Context {
 
   setProfile(...args: Parameters<AuthenticatedUserContext["setProfile"]>) {
     return this.authenticatedUserContext().setProfile(...args);
+  }
+
+  authenticatedLogin(
+    ...args: Parameters<AuthenticatedUserContext["authenticatedLogin"]>
+  ) {
+    return this.authenticatedUserContext().authenticatedLogin(...args);
   }
 
   getProfile(...args: Parameters<AuthenticatedUserContext["getProfile"]>) {

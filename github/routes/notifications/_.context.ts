@@ -36,6 +36,19 @@ export class Context {
 
   constructor(private readonly $: Context$) {}
 
+  private project(notification: thread): thread {
+    const repositories = this.$.loadContext("/repos") as {
+      getRepository?: (owner: string, repo: string) => unknown;
+    };
+    const repository = repositories.getRepository?.(
+      notification.repository.owner.login,
+      notification.repository.name,
+    );
+    return repository
+      ? { ...notification, repository: repository as minimal_repository }
+      : { ...notification };
+  }
+
   saveNotification(
     input: Partial<thread> & {
       subject: thread["subject"];
@@ -72,18 +85,17 @@ export class Context {
   }
 
   getNotification(id: string): thread | undefined {
-    return this.notifications.get(id);
+    const notification = this.notifications.get(id);
+    return notification ? this.project(notification) : undefined;
   }
 
-  markNotificationRead(id: string): boolean {
+  markNotificationRead(id: string, transitionAt: string = isoNow()): boolean {
     const notification = this.notifications.get(id);
     if (!notification) return false;
-    const now = isoNow();
     this.notifications.set(id, {
       ...notification,
       unread: false,
-      last_read_at: now,
-      updated_at: now,
+      last_read_at: transitionAt,
     });
     return true;
   }
@@ -94,11 +106,27 @@ export class Context {
     return deleted;
   }
 
-  markAllNotificationsRead(owner?: string, repo?: string): void {
+  markAllNotificationsRead(
+    owner?: string,
+    repo?: string,
+    input: { last_read_at?: string; read?: boolean } = {},
+  ): void {
+    const transitionAt = input.last_read_at ?? isoNow();
+    const cutoff = input.last_read_at
+      ? new Date(input.last_read_at).getTime()
+      : Number.POSITIVE_INFINITY;
     for (const notification of this.notifications.values()) {
       if (owner && notification.repository.owner.login !== owner) continue;
       if (repo && notification.repository.name !== repo) continue;
-      this.markNotificationRead(notification.id);
+      if (new Date(notification.updated_at).getTime() >= cutoff) continue;
+      if (input.read ?? true) {
+        this.markNotificationRead(notification.id, transitionAt);
+      } else {
+        this.notifications.set(notification.id, {
+          ...notification,
+          unread: true,
+        });
+      }
     }
   }
 
@@ -109,11 +137,26 @@ export class Context {
     page?: unknown;
     owner?: string;
     repo?: string;
+    since?: string;
+    before?: string;
   }): thread[] {
     const includeRead = asBoolean(query?.all, false);
     const participating = asBoolean(query?.participating, false);
+    const since = query?.since ? new Date(query.since).getTime() : undefined;
+    const before = query?.before ? new Date(query.before).getTime() : undefined;
     const filtered = [...this.notifications.values()]
+      .map((notification) => this.project(notification))
       .filter((notification) => includeRead || notification.unread)
+      .filter(
+        (notification) =>
+          since === undefined ||
+          new Date(notification.updated_at).getTime() > since,
+      )
+      .filter(
+        (notification) =>
+          before === undefined ||
+          new Date(notification.updated_at).getTime() < before,
+      )
       .filter(
         (notification) =>
           !query?.owner || notification.repository.owner.login === query.owner,
@@ -132,6 +175,13 @@ export class Context {
 
   getThreadSubscription(threadId: string): thread_subscription | undefined {
     return this.subscriptions.get(threadId);
+  }
+
+  listSubscribedSubjectUrls(): string[] {
+    return [...this.subscriptions.entries()]
+      .filter(([, subscription]) => subscription.subscribed)
+      .map(([threadId]) => this.notifications.get(threadId)?.subject.url)
+      .filter((url): url is string => Boolean(url));
   }
 
   setThreadSubscription(

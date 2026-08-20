@@ -5,7 +5,7 @@ import type { activityUnstarRepoForAuthenticatedUser } from "../../../../types/p
 export const GET: activityCheckRepoIsStarredByAuthenticatedUser = async ($) => {
   return $.context.isStarred($.path.owner, $.path.repo)
     ? $.response[204].empty()
-    : $.response[404].empty();
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };
 
 export const PUT: activityStarRepoForAuthenticatedUser = async ($) => {

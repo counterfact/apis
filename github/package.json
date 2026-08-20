@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "node --import tsx --test --test-concurrency=1",
-    "start": "counterfact openapi.yaml .",
+    "start": "node --import tsx ./serve.ts --repl",
     "generate": "counterfact openapi.yaml . --generate",
-    "serve": "counterfact openapi.yaml . --serve",
+    "serve": "node --import tsx ./serve.ts",
     "lint": "eslint . && prettier --check ."
   },
   "keywords": [],

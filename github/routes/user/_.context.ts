@@ -104,11 +104,18 @@ export class Context {
 
   setProfile(patch: Partial<private_user> & { login?: string }) {
     this.profile = { ...this.profile, ...patch };
+    const canonical = this.root().getUser(this.profile.login);
+    if (canonical) {
+      this.root().saveUser({ ...patch, login: this.profile.login });
+    }
     return this.getProfile();
   }
 
   getProfile(): private_user {
-    return { ...this.profile };
+    const canonical = this.root().getUser(this.profile.login);
+    return canonical
+      ? ({ ...this.profile, ...canonical } as private_user)
+      : { ...this.profile };
   }
 
   updateProfile(patch: Partial<private_user>): private_user {
@@ -117,6 +124,7 @@ export class Context {
       ...patch,
       updated_at: new Date().toISOString(),
     };
+    this.root().saveUser({ ...patch, login: this.profile.login });
     return this.getProfile();
   }
 
@@ -162,7 +170,9 @@ export class Context {
 
   setEmailVisibility(visibility: string): email[] {
     for (const [address, value] of this.emails) {
-      this.emails.set(address, { ...value, visibility });
+      if (value.primary) {
+        this.emails.set(address, { ...value, visibility });
+      }
     }
     return this.listEmails();
   }
@@ -371,14 +381,18 @@ export class Context {
   }
 
   listUserRepos(query?: {
+    visibility?: string;
+    affiliation?: string;
     type?: string;
     sort?: string;
     direction?: string;
+    since?: string;
+    before?: string;
     page?: unknown;
     per_page?: unknown;
   }): repository[] {
     return this.root()
-      .listUserRepositories(query)
+      .listUserRepositories(query, this.profile.login)
       .map((item) => item as unknown as repository);
   }
 

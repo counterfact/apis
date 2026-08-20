@@ -6,7 +6,7 @@ export const GET: orgsGetMembershipForUser = async ($) => {
   const membership = $.context.getOrgMembership($.path.org, $.path.username);
   return membership
     ? $.response[200].json(membership)
-    : $.response[404].empty();
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };
 
 export const PUT: orgsSetMembershipForUser = async ($) => {
@@ -22,5 +22,5 @@ export const PUT: orgsSetMembershipForUser = async ($) => {
 export const DELETE: orgsRemoveMembershipForUser = async ($) => {
   return $.context.deleteOrgMembership($.path.org, $.path.username)
     ? $.response[204].empty()
-    : $.response[404].empty();
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };

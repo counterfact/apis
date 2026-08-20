@@ -3,7 +3,9 @@ import type { usersDeleteSshSigningKeyForAuthenticatedUser } from "../../../type
 
 export const GET: usersGetSshSigningKeyForAuthenticatedUser = async ($) => {
   const key = $.context.getSshSigningKey($.path.ssh_signing_key_id);
-  return key ? $.response[200].json(key) : $.response[404].empty();
+  return key
+    ? $.response[200].json(key)
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };
 
 export const DELETE: usersDeleteSshSigningKeyForAuthenticatedUser = async (
@@ -11,5 +13,5 @@ export const DELETE: usersDeleteSshSigningKeyForAuthenticatedUser = async (
 ) => {
   return $.context.deleteSshSigningKey($.path.ssh_signing_key_id)
     ? $.response[204].empty()
-    : $.response[404].empty();
+    : $.response[404].json({ message: "Not Found", status: "404" });
 };

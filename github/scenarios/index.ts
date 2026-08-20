@@ -491,9 +491,15 @@ export const notifications: Scenario = ($) => {
     },
   ];
 
+  let firstFixtureId: string | undefined;
   for (const fixture of fixtures) {
-    $.context.saveNotification({
-      id: fixture.id,
+    const existingFixture = $.context
+      .listNotifications({ all: true, per_page: 100 })
+      .find(({ subject }) => subject.url === fixture.url);
+    const saved = $.context.saveNotification({
+      id:
+        existingFixture?.id ??
+        ($.context.getNotification(fixture.id) ? undefined : fixture.id),
       repository,
       subject: {
         title: fixture.title,
@@ -505,8 +511,11 @@ export const notifications: Scenario = ($) => {
       updated_at: fixture.updatedAt,
       last_read_at: fixture.updatedAt,
     });
+    firstFixtureId ??= saved.id;
   }
-  $.context.setThreadSubscription("101", { ignored: false });
+  if (firstFixtureId) {
+    $.context.setThreadSubscription(firstFixtureId, { ignored: false });
+  }
 };
 
 export const rateLimit: Scenario = ($) => {
@@ -586,20 +595,30 @@ export const organizationMembers: Scenario = ($) => {
   $.context.setOrgMembership("counterfact", "octocat", "admin");
   $.context.setOrgMembership("counterfact", "mona", "member");
   $.context.publicizeMembership("counterfact", "mona");
-  const [inviter] = $.context.listSimpleUsers();
-  $.context.saveOrgInvitation("counterfact", {
-    id: 201,
-    login: "hubot",
-    email: "hubot@example.com",
-    role: "direct_member",
-    created_at: "2024-01-02T00:00:00Z",
-    inviter,
-    team_count: 0,
-    node_id: "OI_201",
-    invitation_teams_url:
-      "https://api.github.com/orgs/counterfact/invitations/201/teams",
-    invitation_source: "member",
-  });
+  const invitations = $.context.listOrgInvitations("counterfact");
+  if (!invitations.some(({ login }) => login === "hubot")) {
+    if (invitations.some(({ id }) => id === 201)) {
+      $.context.createOrgInvitation("counterfact", {
+        invitee_id: $.context.getUser("hubot")?.id,
+        role: "direct_member",
+      });
+    } else {
+      const [inviter] = $.context.listSimpleUsers();
+      $.context.saveOrgInvitation("counterfact", {
+        id: 201,
+        login: "hubot",
+        email: "hubot@example.com",
+        role: "direct_member",
+        created_at: "2024-01-02T00:00:00Z",
+        inviter,
+        team_count: 0,
+        node_id: "OI_201",
+        invitation_teams_url:
+          "https://api.github.com/orgs/counterfact/invitations/201/teams",
+        invitation_source: "member",
+      });
+    }
+  }
 };
 
 export const authenticatedUser: Scenario = ($) => {
@@ -621,15 +640,26 @@ export const authenticatedUser: Scenario = ($) => {
     verified: true,
     visibility: "private",
   });
-  $.context.saveSshKey({
-    id: 301,
-    title: "Octocat laptop",
-    key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICounterfact octocat",
-    url: "https://api.github.com/user/keys/301",
-    created_at: "2024-01-03T00:00:00Z",
-    verified: true,
-    read_only: false,
-  });
+  if (
+    !$.context.listSshKeys().some(({ title }) => title === "Octocat laptop")
+  ) {
+    if ($.context.getSshKey(301)) {
+      $.context.addSshKey({
+        title: "Octocat laptop",
+        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICounterfact octocat",
+      });
+    } else {
+      $.context.saveSshKey({
+        id: 301,
+        title: "Octocat laptop",
+        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICounterfact octocat",
+        url: "https://api.github.com/user/keys/301",
+        created_at: "2024-01-03T00:00:00Z",
+        verified: true,
+        read_only: false,
+      });
+    }
+  }
   $.context.follow("mona");
   $.context.saveFollower("hubot");
   $.context.starRepo("counterfact", "platform-api");

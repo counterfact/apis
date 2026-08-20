@@ -6,6 +6,6 @@ export const GET: activityListNotificationsForAuthenticatedUser = async ($) => {
 };
 
 export const PUT: activityMarkNotificationsAsRead = async ($) => {
-  $.context.markAllNotificationsRead();
-  return $.response[202].empty();
+  $.context.markAllNotificationsRead(undefined, undefined, $.body);
+  return $.response[205].empty();
 };

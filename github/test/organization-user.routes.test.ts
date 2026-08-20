@@ -48,6 +48,29 @@ test("organization and authenticated-user workflows are stateful over HTTP", asy
       "octocat",
     );
 
+    const repositories = await server.fetch(
+      "/user/repos?sort=full_name&direction=asc",
+    );
+    assert.equal(repositories.status, 200);
+    assert.deepEqual(
+      ((await repositories.json()) as Array<{ full_name: string }>).map(
+        ({ full_name }) => full_name,
+      ),
+      [
+        "counterfact/actions-demo",
+        "counterfact/platform-api",
+        "octocat/hello-world",
+      ],
+    );
+    const invalidRepositories = await server.fetch(
+      "/user/repos?type=owner&visibility=public",
+    );
+    assert.equal(invalidRepositories.status, 422);
+    assert.equal(
+      ((await invalidRepositories.json()) as { message: string }).message,
+      "Validation Failed",
+    );
+
     const updated = await server.fetch(
       "/user",
       json({ bio: "Updated through HTTP" }, "PATCH"),
