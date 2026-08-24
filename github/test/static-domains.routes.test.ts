@@ -12,12 +12,20 @@ test("static GitHub domains return deterministic startup fixtures", async () => 
     const codesResponse = await server.fetch("/codes_of_conduct");
     assert.equal(codesResponse.status, 200);
     const codes = (await codesResponse.json()) as code_of_conduct[];
-    assert.equal(codes.length, 12);
-    assert.ok(codes.some(({ key }) => key === "contributor_covenant"));
+    assert.deepEqual(
+      codes.map(({ key }) => key),
+      ["citizen_code_of_conduct", "contributor_covenant"],
+    );
 
-    const mitResponse = await server.fetch("/codes_of_conduct/mit");
-    assert.equal(mitResponse.status, 200);
-    assert.equal(((await mitResponse.json()) as code_of_conduct).key, "mit");
+    const covenantResponse = await server.fetch(
+      "/codes_of_conduct/contributor_covenant",
+    );
+    assert.equal(covenantResponse.status, 200);
+    const covenant = (await covenantResponse.json()) as code_of_conduct;
+    assert.equal(covenant.key, "contributor_covenant");
+    assert.match(covenant.body ?? "", /Contributor Covenant Code of Conduct/);
+
+    assert.equal((await server.fetch("/codes_of_conduct/mit")).status, 404);
     assert.equal((await server.fetch("/codes_of_conduct/missing")).status, 404);
 
     const namesResponse = await server.fetch("/gitignore/templates");

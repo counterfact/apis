@@ -1,28 +1,57 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { codesOfConduct } from "../scenarios/index.ts";
 import { createContext } from "../test-support/create-context.ts";
+import type { Scenario$ } from "../types/_.context.ts";
 
 test("Codes of Conduct context stores, sorts, and finds fixtures", () => {
   const context = createContext();
   context.saveCodeOfConduct({
-    key: "mit",
-    name: "MIT License",
-    url: "https://api.github.com/codes_of_conduct/mit",
-    html_url: "https://github.com/github/choosealicense.com",
+    key: "contributor_covenant",
+    name: "Contributor Covenant",
+    url: "https://api.github.com/codes_of_conduct/contributor_covenant",
+    html_url: "https://www.contributor-covenant.org/",
   });
   context.saveCodeOfConduct({
-    key: "apache-2.0",
-    name: "Apache License 2.0",
-    url: "https://api.github.com/codes_of_conduct/apache-2.0",
-    html_url: "https://github.com/github/choosealicense.com",
+    key: "citizen_code_of_conduct",
+    name: "Citizen Code of Conduct",
+    url: "https://api.github.com/codes_of_conduct/citizen_code_of_conduct",
+    html_url: "http://citizencodeofconduct.org/",
   });
 
   assert.deepEqual(
     context.listCodesOfConduct().map(({ key }) => key),
-    ["apache-2.0", "mit"],
+    ["citizen_code_of_conduct", "contributor_covenant"],
   );
-  assert.equal(context.getCodeOfConduct("mit")?.name, "MIT License");
+  assert.equal(
+    context.getCodeOfConduct("contributor_covenant")?.name,
+    "Contributor Covenant",
+  );
   assert.equal(context.getCodeOfConduct("missing"), undefined);
+});
+
+test("Codes of Conduct scenario is additive and idempotent", () => {
+  const context = createContext();
+  context.saveCodeOfConduct({
+    key: "community_compact",
+    name: "Community Compact",
+    url: "https://api.example.test/codes_of_conduct/community_compact",
+    html_url: "https://example.test/community-compact",
+  });
+  const $ = {
+    context,
+    loadContext: () => context,
+    route: () => ({}),
+    routes: {},
+  } as unknown as Scenario$;
+
+  codesOfConduct($);
+  codesOfConduct($);
+
+  assert.deepEqual(
+    context.listCodesOfConduct().map(({ key }) => key),
+    ["citizen_code_of_conduct", "community_compact", "contributor_covenant"],
+  );
 });
 
 test("Gitignore context stores sorted template names and sources", () => {

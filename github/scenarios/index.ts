@@ -526,28 +526,29 @@ export const rateLimit: Scenario = ($) => {
 };
 
 export const codesOfConduct: Scenario = ($) => {
-  const entries: [string, string][] = [
-    ["agpl-3.0", "GNU Affero General Public License v3.0"],
-    ["apache-2.0", "Apache License 2.0"],
-    ["bsd-2-clause", "BSD 2-Clause Simplified License"],
-    ["bsd-3-clause", "BSD 3-Clause New or Revised License"],
-    ["cc0-1.0", "Creative Commons Zero v1.0 Universal"],
-    ["contributor_covenant", "Contributor Covenant"],
-    ["gpl-2.0", "GNU General Public License v2.0"],
-    ["gpl-3.0", "GNU General Public License v3.0"],
-    ["lgpl-2.1", "GNU Lesser General Public License v2.1"],
-    ["mit", "MIT License"],
-    ["mpl-2.0", "Mozilla Public License 2.0"],
-    ["unlicense", "The Unlicense"],
+  const entries = [
+    {
+      key: "citizen_code_of_conduct",
+      name: "Citizen Code of Conduct",
+      html_url: "http://citizencodeofconduct.org/",
+      body: "# Citizen Code of Conduct\n\nThis deterministic simulator fixture represents the Citizen Code of Conduct.",
+    },
+    {
+      key: "contributor_covenant",
+      name: "Contributor Covenant",
+      html_url:
+        "https://www.contributor-covenant.org/version/2/0/code_of_conduct/",
+      body: "# Contributor Covenant Code of Conduct\n\n## Our Pledge\n\nWe pledge to make participation in this community welcoming and harassment-free.",
+    },
   ];
 
-  for (const [key, name] of entries) {
+  for (const { key, name, html_url, body } of entries) {
     $.context.saveCodeOfConduct({
       key,
       name,
       url: `https://api.github.com/codes_of_conduct/${key}`,
-      html_url: `https://github.com/github/choosealicense.com/blob/gh-pages/_licenses/${key}.txt`,
-      body: `# ${name}\n\nThis deterministic simulator fixture represents ${name}.`,
+      html_url,
+      body,
     });
   }
 };
