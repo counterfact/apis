@@ -928,6 +928,16 @@ export class Context {
     );
   }
 
+  private searchVisibleRepositories(
+    authenticatedLogin: string,
+  ): full_repository[] {
+    return this.listRepositories().filter(
+      (repository) =>
+        !repository.private ||
+        Boolean(this.repositoryAffiliation(repository, authenticatedLogin)),
+    );
+  }
+
   listUserRepositories(
     query?: {
       visibility?: string;
@@ -2602,7 +2612,7 @@ export class Context {
     per_page?: unknown;
   }) {
     const parsed = parseSearchQuery(query.q);
-    const commits: commit_search_result_item[] = this.visibleRepositories(
+    const commits: commit_search_result_item[] = this.searchVisibleRepositories(
       this.authenticatedLogin(),
     ).flatMap((repository) =>
       this.listCommits(repository.owner.login, repository.name).map((item) => ({
@@ -2680,9 +2690,9 @@ export class Context {
     page?: unknown;
     per_page?: unknown;
   }) {
-    const repository = this.visibleRepositories(this.authenticatedLogin()).find(
-      ({ id }) => id === Number(query.repository_id),
-    );
+    const repository = this.searchVisibleRepositories(
+      this.authenticatedLogin(),
+    ).find(({ id }) => id === Number(query.repository_id));
     const state = repository
       ? this.getRepoState(repository.owner.login, repository.name)
       : undefined;

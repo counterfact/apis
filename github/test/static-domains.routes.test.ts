@@ -23,7 +23,12 @@ test("static GitHub domains return deterministic startup fixtures", async () => 
     assert.equal(covenantResponse.status, 200);
     const covenant = (await covenantResponse.json()) as code_of_conduct;
     assert.equal(covenant.key, "contributor_covenant");
-    assert.match(covenant.body ?? "", /Contributor Covenant Code of Conduct/);
+    assert.equal(
+      covenant.html_url,
+      "http://contributor-covenant.org/version/1/4/",
+    );
+    assert.match(covenant.body ?? "", /## Our Standards/);
+    assert.match(covenant.body ?? "", /## Attribution/);
 
     assert.equal((await server.fetch("/codes_of_conduct/mit")).status, 404);
     assert.equal((await server.fetch("/codes_of_conduct/missing")).status, 404);

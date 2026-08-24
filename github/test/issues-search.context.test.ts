@@ -177,6 +177,34 @@ test("searches scope repository state and apply deterministic sort and qualifier
   const context = seededContext();
 
   context.saveRepository({
+    id: 900,
+    owner: "outsider",
+    name: "public-search-data",
+  });
+  const publicCommit = context.getCommit(
+    "outsider",
+    "public-search-data",
+    "main",
+  )!;
+  publicCommit.commit.message = "public search needle";
+  context.saveLabel("outsider", "public-search-data", {
+    name: "public-search-label",
+    color: "ffffff",
+  });
+  assert.deepEqual(
+    context
+      .searchCommits({ q: "public search needle" })
+      .items.map(({ repository }) => repository.name),
+    ["public-search-data"],
+  );
+  assert.deepEqual(
+    context
+      .searchLabels({ repository_id: 900, q: "public-search" })
+      .items.map(({ name }) => name),
+    ["public-search-label"],
+  );
+
+  context.saveRepository({
     id: 901,
     owner: "outsider",
     name: "private-search-data",

@@ -71,6 +71,38 @@ test("search routes preserve visibility and forward generated sort and qualifier
 
   try {
     server.context.saveRepository({
+      id: 900,
+      owner: "outsider",
+      name: "public-search-data",
+    });
+    const publicCommit = server.context.getCommit(
+      "outsider",
+      "public-search-data",
+      "main",
+    )!;
+    publicCommit.commit.message = "public route needle";
+    server.context.saveLabel("outsider", "public-search-data", {
+      name: "public-route-label",
+      color: "ffffff",
+    });
+    const publicCommitSearch = await server.fetch(
+      "/search/commits?q=public%20route%20needle",
+    );
+    assert.equal(publicCommitSearch.status, 200);
+    assert.equal(
+      ((await publicCommitSearch.json()) as SearchEnvelope).total_count,
+      1,
+    );
+    const publicLabelSearch = await server.fetch(
+      "/search/labels?repository_id=900&q=public-route",
+    );
+    assert.equal(publicLabelSearch.status, 200);
+    assert.equal(
+      ((await publicLabelSearch.json()) as SearchEnvelope).total_count,
+      1,
+    );
+
+    server.context.saveRepository({
       id: 901,
       owner: "outsider",
       name: "private-search-data",
