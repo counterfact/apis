@@ -1,6 +1,7 @@
 import type { orgsGetMembershipForUser } from "../../../../types/paths/orgs/{org}/memberships/{username}.types.js";
 import type { orgsSetMembershipForUser } from "../../../../types/paths/orgs/{org}/memberships/{username}.types.js";
 import type { orgsRemoveMembershipForUser } from "../../../../types/paths/orgs/{org}/memberships/{username}.types.js";
+import { notFound } from "../../../not-found.js";
 
 export const GET: orgsGetMembershipForUser = async ($) => {
   const membership = $.context.getOrgMembership($.path.org, $.path.username);
@@ -10,6 +11,12 @@ export const GET: orgsGetMembershipForUser = async ($) => {
 };
 
 export const PUT: orgsSetMembershipForUser = async ($) => {
+  if (
+    !$.context.getOrganization($.path.org) ||
+    !$.context.getUser($.path.username)
+  ) {
+    return notFound($.response);
+  }
   return $.response[200].json(
     $.context.setOrgMembership(
       $.path.org,

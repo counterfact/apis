@@ -57,6 +57,29 @@ test("organization memberships, invitations, and visibility share user state", (
     context.listOutsideCollaborators("counterfact").map(({ login }) => login),
     ["hubot"],
   );
+  context.setOrgMembership("counterfact", "hubot", "member");
+  assert.equal(context.isOrgMember("counterfact", "hubot"), true);
+  assert.deepEqual(context.listOutsideCollaborators("counterfact"), []);
+
+  const existingInvitation = context.listOrgInvitations("counterfact")[0];
+  assert.ok(existingInvitation);
+  context.saveOrgInvitation("counterfact", {
+    ...existingInvitation,
+    id: 202,
+    login: "scim-bot",
+    email: "scim-bot@example.com",
+    invitation_source: "scim",
+  });
+  assert.deepEqual(
+    context
+      .listOrgInvitations("counterfact", {
+        invitation_source: "scim",
+        page: 1,
+        per_page: 1,
+      })
+      .map(({ id }) => id),
+    [202],
+  );
 });
 
 test("authenticated-user mutations reuse identity and repository state", () => {

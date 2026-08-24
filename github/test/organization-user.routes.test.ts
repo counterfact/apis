@@ -103,3 +103,206 @@ test("organization and authenticated-user workflows are stateful over HTTP", asy
     await server.stop();
   }
 });
+
+test("organization endpoints enforce resource and authenticated-user boundaries", async () => {
+  const server = await startCounterfactServer();
+  try {
+    const assertNotFound = async (response: Response) => {
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        message: "Not Found",
+        status: "404",
+      });
+    };
+
+    await assertNotFound(await server.fetch("/orgs/missing/invitations"));
+    await assertNotFound(
+      await server.fetch(
+        "/orgs/missing/invitations",
+        json({ email: "new@example.com" }),
+      ),
+    );
+    await assertNotFound(
+      await server.fetch("/orgs/missing/failed_invitations"),
+    );
+
+    const existingInvitation =
+      server.context.listOrgInvitations("counterfact")[0];
+    assert.ok(existingInvitation);
+    server.context.saveOrgInvitation("counterfact", {
+      ...existingInvitation,
+      id: 202,
+      login: "scim-bot",
+      email: "scim-bot@example.com",
+      invitation_source: "scim",
+    });
+    const scimInvitations = await server.fetch(
+      "/orgs/counterfact/invitations?invitation_source=scim&page=1&per_page=1",
+    );
+    assert.equal(scimInvitations.status, 200);
+    assert.deepEqual(
+      ((await scimInvitations.json()) as Array<{ id: number }>).map(
+        ({ id }) => id,
+      ),
+      [202],
+    );
+
+    const invitationTeams = await server.fetch(
+      `/orgs/counterfact/invitations/${existingInvitation.id}/teams`,
+    );
+    assert.equal(invitationTeams.status, 200);
+    assert.deepEqual(await invitationTeams.json(), []);
+    await assertNotFound(
+      await server.fetch("/orgs/counterfact/invitations/999/teams"),
+    );
+    await assertNotFound(
+      await server.fetch(
+        `/orgs/missing/invitations/${existingInvitation.id}/teams`,
+      ),
+    );
+
+    await assertNotFound(
+      await server.fetch(
+        "/orgs/missing/memberships/hubot",
+        json({ role: "member" }, "PUT"),
+      ),
+    );
+    await assertNotFound(
+      await server.fetch(
+        "/orgs/counterfact/memberships/missing-user",
+        json({ role: "member" }, "PUT"),
+      ),
+    );
+
+    const setAnotherUsersPublicMembership = await server.fetch(
+      "/orgs/counterfact/public_members/mona",
+      { method: "PUT" },
+    );
+    assert.equal(setAnotherUsersPublicMembership.status, 403);
+    assert.deepEqual(await setAnotherUsersPublicMembership.json(), {
+      message: "Forbidden",
+      status: "403",
+    });
+    assert.equal(
+      (await server.fetch("/orgs/counterfact/public_members/mona")).status,
+      204,
+    );
+    const removeAnotherUsersPublicMembership = await server.fetch(
+      "/orgs/counterfact/public_members/mona",
+      { method: "DELETE" },
+    );
+    assert.equal(removeAnotherUsersPublicMembership.status, 403);
+    assert.deepEqual(await removeAnotherUsersPublicMembership.json(), {
+      message: "Forbidden",
+      status: "403",
+    });
+    assert.equal(
+      (await server.fetch("/orgs/counterfact/public_members/mona")).status,
+      204,
+    );
+    assert.equal(
+      (
+        await server.fetch("/orgs/counterfact/public_members/octocat", {
+          method: "PUT",
+        })
+      ).status,
+      204,
+    );
+    assert.equal(
+      (await server.fetch("/orgs/counterfact/public_members/octocat")).status,
+      204,
+    );
+    assert.equal(
+      (
+        await server.fetch("/orgs/counterfact/public_members/octocat", {
+          method: "DELETE",
+        })
+      ).status,
+      204,
+    );
+    assert.equal(
+      (await server.fetch("/orgs/counterfact/public_members/octocat")).status,
+      404,
+    );
+
+    await assertNotFound(
+      await server.fetch("/orgs/missing/outside_collaborators/mona", {
+        method: "PUT",
+      }),
+    );
+    await assertNotFound(
+      await server.fetch(
+        "/orgs/counterfact/outside_collaborators/missing-user",
+        {
+          method: "PUT",
+        },
+      ),
+    );
+    await assertNotFound(
+      await server.fetch("/orgs/counterfact/outside_collaborators/hubot", {
+        method: "PUT",
+      }),
+    );
+    assert.equal(
+      (
+        await server.fetch("/orgs/counterfact/outside_collaborators/mona", {
+          method: "PUT",
+        })
+      ).status,
+      204,
+    );
+    assert.equal(
+      (await server.fetch("/orgs/counterfact/memberships/mona")).status,
+      404,
+    );
+    assert.equal(
+      (
+        await server.fetch(
+          "/orgs/counterfact/memberships/mona",
+          json({ role: "member" }, "PUT"),
+        )
+      ).status,
+      200,
+    );
+    const outsideCollaborators = await server.fetch(
+      "/orgs/counterfact/outside_collaborators",
+    );
+    assert.equal(outsideCollaborators.status, 200);
+    assert.equal(
+      ((await outsideCollaborators.json()) as Array<{ login: string }>).some(
+        ({ login }) => login === "mona",
+      ),
+      false,
+    );
+
+    const memberCannotBeRemovedAsOutsideCollaborator = await server.fetch(
+      "/orgs/counterfact/outside_collaborators/mona",
+      { method: "DELETE" },
+    );
+    assert.equal(memberCannotBeRemovedAsOutsideCollaborator.status, 422);
+    assert.deepEqual(await memberCannotBeRemovedAsOutsideCollaborator.json(), {
+      message:
+        "You cannot specify an organization member to remove as an outside collaborator.",
+      documentation_url:
+        "https://docs.github.com/rest/orgs/outside-collaborators#remove-outside-collaborator-from-an-organization",
+    });
+    assert.equal(
+      (
+        await server.fetch("/orgs/counterfact/outside_collaborators/mona", {
+          method: "PUT",
+        })
+      ).status,
+      204,
+    );
+    assert.equal(
+      (
+        await server.fetch("/orgs/counterfact/outside_collaborators/mona", {
+          method: "DELETE",
+        })
+      ).status,
+      204,
+    );
+  } finally {
+    await server.stop();
+  }
+});

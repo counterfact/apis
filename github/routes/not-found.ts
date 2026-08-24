@@ -6,9 +6,15 @@ type RuntimeResponseFactory = Record<
   { json(body: basic_error): COUNTERFACT_RESPONSE }
 >;
 
-/** Runtime 404 support for operations whose bundled generated type omits it. */
+/** Runtime error support for operations whose bundled generated type omits a status. */
 export const notFound = (response: unknown): COUNTERFACT_RESPONSE =>
   (response as RuntimeResponseFactory)[404].json({
     message: "Not Found",
     status: "404",
+  });
+
+export const forbidden = (response: unknown): COUNTERFACT_RESPONSE =>
+  (response as RuntimeResponseFactory)[403].json({
+    message: "Forbidden",
+    status: "403",
   });

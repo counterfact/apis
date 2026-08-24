@@ -430,6 +430,9 @@ export class Context {
       permissions: { can_create_repository: role === "admin" },
     };
     this.membershipsFor(org).set(username.toLowerCase(), membership);
+    this.outsideCollaborators
+      .get(org.toLowerCase())
+      ?.delete(username.toLowerCase());
     return { ...membership };
   }
 
@@ -547,7 +550,12 @@ export class Context {
 
   listOrgInvitations(
     org: string,
-    query?: { role?: unknown; page?: unknown; per_page?: unknown },
+    query?: {
+      role?: unknown;
+      invitation_source?: unknown;
+      page?: unknown;
+      per_page?: unknown;
+    },
   ): organization_invitation[] {
     let invitations = [
       ...(this.orgInvitations.get(org.toLowerCase())?.values() ?? []),
@@ -555,6 +563,12 @@ export class Context {
     if (query?.role && query.role !== "all") {
       invitations = invitations.filter(
         ({ role }) => role === String(query.role),
+      );
+    }
+    if (query?.invitation_source && query.invitation_source !== "all") {
+      invitations = invitations.filter(
+        ({ invitation_source }) =>
+          invitation_source === String(query.invitation_source),
       );
     }
     return paginate(
