@@ -4,12 +4,42 @@ import type {
 } from "../../types/paths/user/repos.types.js";
 
 export const GET: reposListForAuthenticatedUser = async ($) => {
-  return $.response[200].json($.context.listUserRepositories($.query));
+  if ($.query.type && ($.query.visibility || $.query.affiliation)) {
+    return $.response[422].json({
+      message: "Validation Failed",
+      documentation_url:
+        "https://docs.github.com/rest/repos/repos#list-repositories-for-the-authenticated-user",
+      errors: [
+        {
+          resource: "Repository",
+          field: "type",
+          code: "invalid",
+          message: "type cannot be combined with visibility or affiliation",
+        },
+      ],
+    });
+  }
+  return $.response[200].json($.context.listUserRepos($.query));
 };
 
 export const POST: reposCreateForAuthenticatedUser = async ($) => {
-  const repository = $.context.saveRepository({
-    owner: "octocat",
+  if ($.context.getRepository($.context.authenticatedLogin(), $.body.name)) {
+    return $.response[422].json({
+      message: "Validation Failed",
+      documentation_url:
+        "https://docs.github.com/rest/repos/repos#create-a-repository-for-the-authenticated-user",
+      errors: [
+        {
+          resource: "Repository",
+          field: "name",
+          code: "custom",
+          message: "name already exists on this account",
+        },
+      ],
+    });
+  }
+
+  const repository = $.context.saveAuthenticatedRepository({
     name: $.body.name,
     description: $.body.description,
     homepage: $.body.homepage,

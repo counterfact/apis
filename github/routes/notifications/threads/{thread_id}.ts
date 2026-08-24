@@ -1,15 +1,23 @@
 import type { activityGetThread } from "../../../types/paths/notifications/threads/{thread_id}.types.js";
 import type { activityMarkThreadAsRead } from "../../../types/paths/notifications/threads/{thread_id}.types.js";
 import type { activityMarkThreadAsDone } from "../../../types/paths/notifications/threads/{thread_id}.types.js";
+import { notFound } from "../../not-found.js";
 
 export const GET: activityGetThread = async ($) => {
-  return $.response[200].random();
+  const notification = $.context.getNotification(String($.path.thread_id));
+  return notification
+    ? $.response[200].json(notification)
+    : notFound($.response);
 };
 
 export const PATCH: activityMarkThreadAsRead = async ($) => {
-  return $.response[205].empty();
+  return $.context.markNotificationRead(String($.path.thread_id))
+    ? $.response[205].empty()
+    : notFound($.response);
 };
 
 export const DELETE: activityMarkThreadAsDone = async ($) => {
-  return $.response[204].empty();
+  return $.context.markNotificationDone(String($.path.thread_id))
+    ? $.response[204].empty()
+    : notFound($.response);
 };
