@@ -28,6 +28,58 @@ const paginate = <T>(
   return items.slice(start, start + perPage);
 };
 
+const parseSearchQuery = (query: string) => {
+  const qualifiers = new Map<string, Array<string>>();
+  const terms: Array<string> = [];
+  let hasUnsupportedQualifier = false;
+  const supportedQualifiers = new Set([
+    "login",
+    "type",
+    "followers",
+    "repos",
+    "repositories",
+    "location",
+  ]);
+
+  for (const token of query.match(/(?:[^\s"]+:"[^"]*"|"[^"]*"|\S+)/g) ?? []) {
+    const qualifier = token.match(/^([a-z_]+):(.*)$/i);
+    if (!qualifier) {
+      terms.push(token.replace(/^"|"$/g, "").toLowerCase());
+      continue;
+    }
+
+    const [, rawKey, rawValue] = qualifier;
+    const key = rawKey.toLowerCase();
+    const value = rawValue.replace(/^"|"$/g, "").toLowerCase();
+    if (!supportedQualifiers.has(key) || !value) {
+      hasUnsupportedQualifier = true;
+      continue;
+    }
+    const values = qualifiers.get(key) ?? [];
+    values.push(value);
+    qualifiers.set(key, values);
+  }
+
+  return { qualifiers, hasUnsupportedQualifier, terms };
+};
+
+const matchesNumericQualifier = (value: number, qualifier: string) => {
+  const match = qualifier.match(/^(<=|>=|<|>|=)?(\d+)$/);
+  if (!match) return false;
+  const [, operator = "=", rawExpected] = match;
+  const expected = Number(rawExpected);
+  if (operator === ">") return value > expected;
+  if (operator === ">=") return value >= expected;
+  if (operator === "<") return value < expected;
+  if (operator === "<=") return value <= expected;
+  return value === expected;
+};
+
+const timestamp = (value: string | undefined) => {
+  const parsed = new Date(value ?? 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const makeSimpleUser = (
   login: string,
   id: number,
@@ -291,14 +343,12 @@ export class Context {
 
   searchUsers(query: {
     q: string;
+    sort?: string;
     order?: string;
     page?: unknown;
     per_page?: unknown;
   }) {
-    const terms = query.q
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((term) => term && !term.includes(":"));
+    const parsed = parseSearchQuery(query.q);
     const userItems: user_search_result_item[] = this.listUsers().map(
       (user) => ({ ...user, score: 1 }),
     );
@@ -320,23 +370,56 @@ export class Context {
         location: organization.location,
         blog: organization.blog,
         company: organization.company,
+        created_at: organization.created_at,
+        updated_at: organization.updated_at,
       }));
-    let items = [...userItems, ...organizationItems].filter((item) => {
-      const haystack = [
-        item.login,
-        item.name ?? "",
-        item.bio ?? "",
-        item.email ?? "",
-        item.company ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return terms.every((term) => haystack.includes(term));
-    });
+    let items = parsed.hasUnsupportedQualifier
+      ? []
+      : [...userItems, ...organizationItems].filter((item) => {
+          const haystack = [
+            item.login,
+            item.name ?? "",
+            item.bio ?? "",
+            item.email ?? "",
+            item.company ?? "",
+          ]
+            .join(" ")
+            .toLowerCase();
+          const all = (key: string, predicate: (value: string) => boolean) =>
+            (parsed.qualifiers.get(key) ?? []).every(predicate);
+          const repositoryCount = item.public_repos ?? 0;
+          return (
+            parsed.terms.every((term) => haystack.includes(term)) &&
+            all("login", (value) => item.login.toLowerCase() === value) &&
+            all("type", (value) => item.type.toLowerCase() === value) &&
+            all(
+              "location",
+              (value) => (item.location ?? "").toLowerCase() === value,
+            ) &&
+            all("followers", (value) =>
+              matchesNumericQualifier(item.followers ?? 0, value),
+            ) &&
+            all("repos", (value) =>
+              matchesNumericQualifier(repositoryCount, value),
+            ) &&
+            all("repositories", (value) =>
+              matchesNumericQualifier(repositoryCount, value),
+            )
+          );
+        });
     const direction = query.order === "asc" ? 1 : -1;
-    items = items.sort(
-      (left, right) => left.login.localeCompare(right.login) * direction,
-    );
+    items = items.sort((left, right) => {
+      let difference = 0;
+      if (query.sort === "followers") {
+        difference = (left.followers ?? 0) - (right.followers ?? 0);
+      } else if (query.sort === "repositories") {
+        difference = (left.public_repos ?? 0) - (right.public_repos ?? 0);
+      } else if (query.sort === "joined") {
+        difference = timestamp(left.created_at) - timestamp(right.created_at);
+      }
+      if (difference !== 0) return difference * direction;
+      return left.login.localeCompare(right.login);
+    });
     return {
       total_count: items.length,
       incomplete_results: false,

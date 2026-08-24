@@ -45,6 +45,7 @@ type RepoState = {
   commitStatuses: Map<string, Array<status>>;
   commitComments: Map<string, Array<commit_comment>>;
   labels: Map<string, label>;
+  labelSearchOrder: Map<number, { created: number; updated: number }>;
   issues: Map<number, issue>;
   issueComments: Map<number, Map<number, issue_comment>>;
   milestones: Map<number, milestone>;
@@ -260,6 +261,7 @@ export class Context {
   private nextJobId = 8000;
   private nextStatusId = 9000;
   private nextLabelId = 10000;
+  private nextLabelSearchOrder = 1;
   private readonly loadContext: (path: string) => unknown;
 
   constructor($: Context$) {
@@ -788,6 +790,7 @@ export class Context {
       commitStatuses: new Map(),
       commitComments: new Map(),
       labels: new Map(),
+      labelSearchOrder: new Map(),
       issues: new Map(),
       issueComments: new Map(),
       milestones: new Map(),
@@ -810,6 +813,7 @@ export class Context {
     state.commitStatuses ??= new Map();
     state.commitComments ??= new Map();
     state.labels ??= new Map();
+    state.labelSearchOrder ??= new Map();
     state.milestones ??= new Map();
     state.nextCommitCommentId ??= 1;
 
@@ -1337,6 +1341,11 @@ export class Context {
     };
 
     state.labels.set(name, nextLabel);
+    const existingOrder = state.labelSearchOrder.get(id);
+    state.labelSearchOrder.set(id, {
+      created: existingOrder?.created ?? this.nextLabelSearchOrder++,
+      updated: this.nextLabelSearchOrder++,
+    });
     this.syncIssueLabels(state, name, nextLabel);
     this.nextLabelId = Math.max(this.nextLabelId, id + 1);
     return nextLabel;
@@ -1373,6 +1382,11 @@ export class Context {
       state.labels.delete(name);
     }
     state.labels.set(nextName, nextLabel);
+    const existingOrder = state.labelSearchOrder.get(existing.id);
+    state.labelSearchOrder.set(existing.id, {
+      created: existingOrder?.created ?? this.nextLabelSearchOrder++,
+      updated: this.nextLabelSearchOrder++,
+    });
     this.syncIssueLabels(state, name, nextLabel);
     return nextLabel;
   }
@@ -1382,7 +1396,9 @@ export class Context {
     if (!state || !state.labels.has(name)) {
       return false;
     }
+    const label = state.labels.get(name)!;
     state.labels.delete(name);
+    state.labelSearchOrder.delete(label.id);
     this.syncIssueLabels(state, name);
     return true;
   }
@@ -2580,41 +2596,41 @@ export class Context {
 
   searchCommits(query: {
     q: string;
+    sort?: string;
     order?: string;
     page?: unknown;
     per_page?: unknown;
   }) {
     const parsed = parseSearchQuery(query.q);
-    const commits: commit_search_result_item[] =
-      this.listRepositories().flatMap((repository) =>
-        this.listCommits(repository.owner.login, repository.name).map(
-          (item) => ({
-            url: item.url,
-            sha: item.sha,
-            html_url: item.html_url,
-            comments_url: item.comments_url,
-            commit: {
-              author: {
-                name: item.commit.author?.name ?? "Unknown",
-                email: item.commit.author?.email ?? "unknown@example.com",
-                date: item.commit.author?.date ?? "1970-01-01T00:00:00Z",
-              },
-              committer: item.commit.committer,
-              comment_count: item.commit.comment_count,
-              message: item.commit.message,
-              tree: item.commit.tree,
-              url: item.commit.url,
-              verification: item.commit.verification,
-            },
-            author: "login" in item.author ? item.author : repository.owner,
-            committer: item.commit.committer,
-            parents: item.parents,
-            repository: repository as unknown as minimal_repository,
-            score: 1,
-            node_id: item.node_id,
-          }),
-        ),
-      );
+    const commits: commit_search_result_item[] = this.visibleRepositories(
+      this.authenticatedLogin(),
+    ).flatMap((repository) =>
+      this.listCommits(repository.owner.login, repository.name).map((item) => ({
+        url: item.url,
+        sha: item.sha,
+        html_url: item.html_url,
+        comments_url: item.comments_url,
+        commit: {
+          author: {
+            name: item.commit.author?.name ?? "Unknown",
+            email: item.commit.author?.email ?? "unknown@example.com",
+            date: item.commit.author?.date ?? "1970-01-01T00:00:00Z",
+          },
+          committer: item.commit.committer,
+          comment_count: item.commit.comment_count,
+          message: item.commit.message,
+          tree: item.commit.tree,
+          url: item.commit.url,
+          verification: item.commit.verification,
+        },
+        author: "login" in item.author ? item.author : repository.owner,
+        committer: item.commit.committer,
+        parents: item.parents,
+        repository: repository as unknown as minimal_repository,
+        score: 1,
+        node_id: item.node_id,
+      })),
+    );
 
     const filtered = commits.filter(
       (item) =>
@@ -2626,12 +2642,29 @@ export class Context {
         ),
     );
     const direction = query.order === "asc" ? 1 : -1;
-    filtered.sort(
-      (left, right) =>
-        (new Date(left.commit.author.date).getTime() -
-          new Date(right.commit.author.date).getTime()) *
-        direction,
-    );
+    const timestampFor = (item: commit_search_result_item) => {
+      const selected =
+        query.sort === "committer-date"
+          ? item.commit.committer?.date
+          : item.commit.author?.date;
+      const fallback =
+        query.sort === "committer-date"
+          ? item.commit.author?.date
+          : item.commit.committer?.date;
+      const timestamp = new Date(selected ?? fallback ?? 0).getTime();
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    };
+    filtered.sort((left, right) => {
+      if (query.sort === "author-date" || query.sort === "committer-date") {
+        const timestampDifference =
+          (timestampFor(left) - timestampFor(right)) * direction;
+        if (timestampDifference !== 0) return timestampDifference;
+      }
+      const repositoryDifference = left.repository.full_name.localeCompare(
+        right.repository.full_name,
+      );
+      return repositoryDifference || left.sha.localeCompare(right.sha);
+    });
     return {
       total_count: filtered.length,
       incomplete_results: false,
@@ -2642,14 +2675,20 @@ export class Context {
   searchLabels(query: {
     repository_id: number;
     q: string;
+    sort?: string;
+    order?: string;
     page?: unknown;
     per_page?: unknown;
   }) {
-    const repository = this.listRepositories().find(
+    const repository = this.visibleRepositories(this.authenticatedLogin()).find(
       ({ id }) => id === Number(query.repository_id),
     );
-    const matches: label_search_result_item[] = repository
-      ? this.listLabels(repository.owner.login, repository.name)
+    const state = repository
+      ? this.getRepoState(repository.owner.login, repository.name)
+      : undefined;
+    const direction = query.order === "asc" ? 1 : -1;
+    const matches: label_search_result_item[] = state
+      ? [...state.labels.values()]
           .filter((item) =>
             `${item.name} ${item.description ?? ""}`
               .toLowerCase()
@@ -2660,6 +2699,27 @@ export class Context {
             description: item.description ?? "",
             score: 1,
           }))
+          .sort((left, right) => {
+            if (query.sort === "created" || query.sort === "updated") {
+              const leftOrder = state.labelSearchOrder.get(left.id)?.[
+                query.sort
+              ];
+              const rightOrder = state.labelSearchOrder.get(right.id)?.[
+                query.sort
+              ];
+              const orderDifference =
+                ((leftOrder ?? left.id) - (rightOrder ?? right.id)) * direction;
+              if (orderDifference !== 0) return orderDifference;
+            }
+            const exactnessDifference =
+              Number(right.name.toLowerCase() === query.q.toLowerCase()) -
+              Number(left.name.toLowerCase() === query.q.toLowerCase());
+            return (
+              exactnessDifference ||
+              left.name.localeCompare(right.name) ||
+              left.id - right.id
+            );
+          })
       : [];
     return {
       total_count: matches.length,

@@ -172,3 +172,182 @@ test("remaining search methods return deterministic contract envelopes", () => {
     items: [],
   });
 });
+
+test("searches scope repository state and apply deterministic sort and qualifier subsets", () => {
+  const context = seededContext();
+
+  context.saveRepository({
+    id: 901,
+    owner: "outsider",
+    name: "private-search-data",
+    private: true,
+  });
+  const privateCommit = context.getCommit(
+    "outsider",
+    "private-search-data",
+    "main",
+  )!;
+  privateCommit.commit.message = "private search needle";
+  context.saveLabel("outsider", "private-search-data", {
+    name: "private-search-label",
+    color: "000000",
+  });
+
+  assert.equal(
+    context.searchCommits({ q: "private search needle" }).total_count,
+    0,
+  );
+  assert.deepEqual(
+    context.searchLabels({ repository_id: 901, q: "private-search" }).items,
+    [],
+  );
+
+  context.saveRepository({ id: 902, owner: "octocat", name: "author-first" });
+  context.saveRepository({
+    id: 903,
+    owner: "octocat",
+    name: "committer-first",
+  });
+  const authorFirst = context.getCommit("octocat", "author-first", "main")!;
+  const committerFirst = context.getCommit(
+    "octocat",
+    "committer-first",
+    "main",
+  )!;
+  authorFirst.commit.message = "distinct commit ordering";
+  authorFirst.commit.author!.date = "2024-01-01T00:00:00Z";
+  authorFirst.commit.committer!.date = "2024-02-01T00:00:00Z";
+  committerFirst.commit.message = "distinct commit ordering";
+  committerFirst.commit.author!.date = "2024-02-01T00:00:00Z";
+  committerFirst.commit.committer!.date = "2024-01-01T00:00:00Z";
+
+  assert.deepEqual(
+    context
+      .searchCommits({
+        q: "distinct commit ordering",
+        sort: "author-date",
+        order: "asc",
+      })
+      .items.map(({ repository }) => repository.name),
+    ["author-first", "committer-first"],
+  );
+  assert.deepEqual(
+    context
+      .searchCommits({
+        q: "distinct commit ordering",
+        sort: "committer-date",
+        order: "asc",
+      })
+      .items.map(({ repository }) => repository.name),
+    ["committer-first", "author-first"],
+  );
+
+  context.saveLabel("counterfact", "platform-api", {
+    name: "label-order-first",
+    color: "111111",
+  });
+  context.saveLabel("counterfact", "platform-api", {
+    name: "label-order-second",
+    color: "222222",
+  });
+  context.updateLabel("counterfact", "platform-api", "label-order-first", {
+    name: "label-order-first-renamed",
+  });
+
+  const labelSearch = {
+    repository_id: 102,
+    q: "label-order",
+    order: "asc",
+  } as const;
+  assert.deepEqual(
+    context
+      .searchLabels({ ...labelSearch, sort: "created" })
+      .items.map(({ name }) => name),
+    ["label-order-first-renamed", "label-order-second"],
+  );
+  assert.deepEqual(
+    context
+      .searchLabels({ ...labelSearch, sort: "updated" })
+      .items.map(({ name }) => name),
+    ["label-order-second", "label-order-first-renamed"],
+  );
+  assert.deepEqual(
+    context
+      .searchLabels({ ...labelSearch, sort: "created", per_page: 1, page: 1 })
+      .items.map(({ name }) => name),
+    ["label-order-first-renamed"],
+  );
+  assert.deepEqual(
+    context
+      .searchLabels({ ...labelSearch, sort: "created", per_page: 1, page: 2 })
+      .items.map(({ name }) => name),
+    ["label-order-second"],
+  );
+
+  context.saveUser({
+    login: "sort-a",
+    name: "Sort A",
+    location: "Testville",
+    followers: 5,
+    created_at: "2023-01-01T00:00:00Z",
+  });
+  context.saveUser({
+    login: "sort-b",
+    name: "Sort B",
+    location: "Testville",
+    followers: 20,
+    created_at: "2020-01-01T00:00:00Z",
+  });
+  context.saveRepository({ id: 904, owner: "sort-a", name: "one" });
+  context.saveRepository({ id: 905, owner: "sort-a", name: "two" });
+  context.saveRepository({ id: 906, owner: "sort-b", name: "one" });
+
+  assert.deepEqual(
+    context.searchUsers({ q: "login:octocat" }).items.map(({ login }) => login),
+    ["octocat"],
+  );
+  assert.equal(
+    context.searchUsers({ q: "login:does-not-exist" }).total_count,
+    0,
+  );
+  assert.equal(
+    context.searchUsers({ q: "language:typescript" }).total_count,
+    0,
+  );
+  assert.deepEqual(
+    context
+      .searchUsers({
+        q: "type:user location:Testville",
+        sort: "followers",
+        order: "asc",
+      })
+      .items.map(({ login }) => login),
+    ["sort-a", "sort-b"],
+  );
+  assert.deepEqual(
+    context
+      .searchUsers({
+        q: "type:user location:Testville",
+        sort: "repositories",
+        order: "asc",
+      })
+      .items.map(({ login }) => login),
+    ["sort-b", "sort-a"],
+  );
+  assert.deepEqual(
+    context
+      .searchUsers({
+        q: "type:user location:Testville",
+        sort: "joined",
+        order: "asc",
+      })
+      .items.map(({ login }) => login),
+    ["sort-b", "sort-a"],
+  );
+  assert.deepEqual(
+    context
+      .searchUsers({ q: "followers:>=20 repositories:=1" })
+      .items.map(({ login }) => login),
+    ["sort-b"],
+  );
+});

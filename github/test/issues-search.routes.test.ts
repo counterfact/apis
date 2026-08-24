@@ -66,6 +66,141 @@ test("global issues and remaining searches project seeded state over HTTP", asyn
   }
 });
 
+test("search routes preserve visibility and forward generated sort and qualifier queries", async () => {
+  const server = await startCounterfactServer();
+
+  try {
+    server.context.saveRepository({
+      id: 901,
+      owner: "outsider",
+      name: "private-search-data",
+      private: true,
+    });
+    const privateCommit = server.context.getCommit(
+      "outsider",
+      "private-search-data",
+      "main",
+    )!;
+    privateCommit.commit.message = "private route needle";
+    server.context.saveLabel("outsider", "private-search-data", {
+      name: "private-route-label",
+      color: "000000",
+    });
+
+    const hiddenCommit = await server.fetch(
+      "/search/commits?q=private%20route%20needle",
+    );
+    assert.equal(hiddenCommit.status, 200);
+    assert.equal(
+      ((await hiddenCommit.json()) as SearchEnvelope).total_count,
+      0,
+    );
+    const hiddenLabel = await server.fetch(
+      "/search/labels?repository_id=901&q=private-route",
+    );
+    assert.equal(hiddenLabel.status, 200);
+    assert.equal(((await hiddenLabel.json()) as SearchEnvelope).total_count, 0);
+
+    server.context.saveRepository({
+      id: 902,
+      owner: "octocat",
+      name: "http-author-first",
+    });
+    server.context.saveRepository({
+      id: 903,
+      owner: "octocat",
+      name: "http-committer-first",
+    });
+    const authorFirst = server.context.getCommit(
+      "octocat",
+      "http-author-first",
+      "main",
+    )!;
+    const committerFirst = server.context.getCommit(
+      "octocat",
+      "http-committer-first",
+      "main",
+    )!;
+    authorFirst.commit.message = "http timestamp ordering";
+    authorFirst.commit.author!.date = "2024-01-01T00:00:00Z";
+    authorFirst.commit.committer!.date = "2024-02-01T00:00:00Z";
+    committerFirst.commit.message = "http timestamp ordering";
+    committerFirst.commit.author!.date = "2024-02-01T00:00:00Z";
+    committerFirst.commit.committer!.date = "2024-01-01T00:00:00Z";
+
+    const authorOrder = (await (
+      await server.fetch(
+        "/search/commits?q=http%20timestamp%20ordering&sort=author-date&order=asc",
+      )
+    ).json()) as SearchEnvelope & {
+      items: Array<{ repository: { name: string } }>;
+    };
+    assert.deepEqual(
+      authorOrder.items.map(({ repository }) => repository.name),
+      ["http-author-first", "http-committer-first"],
+    );
+    const committerOrder = (await (
+      await server.fetch(
+        "/search/commits?q=http%20timestamp%20ordering&sort=committer-date&order=asc",
+      )
+    ).json()) as SearchEnvelope & {
+      items: Array<{ repository: { name: string } }>;
+    };
+    assert.deepEqual(
+      committerOrder.items.map(({ repository }) => repository.name),
+      ["http-committer-first", "http-author-first"],
+    );
+
+    server.context.saveLabel("counterfact", "platform-api", {
+      name: "http-label-first",
+      color: "111111",
+    });
+    server.context.saveLabel("counterfact", "platform-api", {
+      name: "http-label-second",
+      color: "222222",
+    });
+    server.context.updateLabel(
+      "counterfact",
+      "platform-api",
+      "http-label-first",
+      {
+        description: "updated after creation",
+      },
+    );
+    const createdLabels = (await (
+      await server.fetch(
+        "/search/labels?repository_id=102&q=http-label&sort=created&order=asc&per_page=1&page=1",
+      )
+    ).json()) as SearchEnvelope & { items: Array<{ name: string }> };
+    assert.deepEqual(
+      createdLabels.items.map(({ name }) => name),
+      ["http-label-first"],
+    );
+    const updatedLabels = (await (
+      await server.fetch(
+        "/search/labels?repository_id=102&q=http-label&sort=updated&order=asc",
+      )
+    ).json()) as SearchEnvelope & { items: Array<{ name: string }> };
+    assert.deepEqual(
+      updatedLabels.items.map(({ name }) => name),
+      ["http-label-second", "http-label-first"],
+    );
+
+    const loginMatch = await server.fetch(
+      "/search/users?q=login%3Aoctocat&sort=followers&order=asc",
+    );
+    assert.equal(loginMatch.status, 200);
+    assert.equal(((await loginMatch.json()) as SearchEnvelope).total_count, 1);
+    const loginMiss = await server.fetch(
+      "/search/users?q=login%3Adoes-not-exist&sort=joined&order=desc",
+    );
+    assert.equal(loginMiss.status, 200);
+    assert.equal(((await loginMiss.json()) as SearchEnvelope).total_count, 0);
+  } finally {
+    await server.stop();
+  }
+});
+
 test("authenticated issues honor the requested participation filter", async () => {
   const server = await startCounterfactServer();
 
