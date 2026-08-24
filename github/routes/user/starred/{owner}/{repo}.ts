@@ -9,11 +9,20 @@ export const GET: activityCheckRepoIsStarredByAuthenticatedUser = async ($) => {
 };
 
 export const PUT: activityStarRepoForAuthenticatedUser = async ($) => {
+  if (!$.context.getRepository($.path.owner, $.path.repo)) {
+    return $.response[404].json({ message: "Not Found", status: "404" });
+  }
   $.context.starRepo($.path.owner, $.path.repo);
   return $.response[204].empty();
 };
 
 export const DELETE: activityUnstarRepoForAuthenticatedUser = async ($) => {
+  if (
+    !$.context.getRepository($.path.owner, $.path.repo) ||
+    !$.context.isStarred($.path.owner, $.path.repo)
+  ) {
+    return $.response[404].json({ message: "Not Found", status: "404" });
+  }
   $.context.unstarRepo($.path.owner, $.path.repo);
   return $.response[204].empty();
 };

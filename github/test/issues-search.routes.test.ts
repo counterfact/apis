@@ -65,3 +65,42 @@ test("global issues and remaining searches project seeded state over HTTP", asyn
     await server.stop();
   }
 });
+
+test("authenticated issues honor the requested participation filter", async () => {
+  const server = await startCounterfactServer();
+
+  try {
+    server.context.saveIssue("octocat", "hello-world", {
+      number: 99,
+      title: "Visible but not assigned to the authenticated user",
+    });
+
+    const assigned = await server.fetch(
+      "/user/issues?filter=assigned&state=all",
+    );
+    assert.equal(assigned.status, 200);
+    assert.equal(
+      ((await assigned.json()) as issue[]).some(
+        ({ title }) =>
+          title === "Visible but not assigned to the authenticated user",
+      ),
+      false,
+    );
+
+    for (const filter of ["all", "repos"]) {
+      const response = await server.fetch(
+        `/user/issues?filter=${filter}&state=all`,
+      );
+      assert.equal(response.status, 200);
+      assert.equal(
+        ((await response.json()) as issue[]).some(
+          ({ title }) =>
+            title === "Visible but not assigned to the authenticated user",
+        ),
+        true,
+      );
+    }
+  } finally {
+    await server.stop();
+  }
+});

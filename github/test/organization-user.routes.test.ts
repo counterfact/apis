@@ -104,6 +104,123 @@ test("organization and authenticated-user workflows are stateful over HTTP", asy
   }
 });
 
+test("authenticated-user relationship and repository mutations validate resources", async () => {
+  const server = await startCounterfactServer();
+  try {
+    const assertNotFound = async (response: Response) => {
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        message: "Not Found",
+        status: "404",
+      });
+    };
+
+    for (const method of ["GET", "PUT", "DELETE"] as const) {
+      await assertNotFound(
+        await server.fetch("/user/following/missing-user", { method }),
+      );
+    }
+    assert.equal(server.context.isFollowing("missing-user"), false);
+
+    assert.equal(
+      (await server.fetch("/user/following/mona", { method: "DELETE" })).status,
+      204,
+    );
+    assert.equal((await server.fetch("/user/following/mona")).status, 404);
+    assert.equal(
+      (await server.fetch("/user/following/mona", { method: "PUT" })).status,
+      204,
+    );
+    assert.equal((await server.fetch("/user/following/mona")).status, 204);
+
+    await assertNotFound(
+      await server.fetch("/user/starred/missing-user/missing-repository", {
+        method: "PUT",
+      }),
+    );
+    await assertNotFound(
+      await server.fetch("/user/starred/missing-user/missing-repository", {
+        method: "DELETE",
+      }),
+    );
+    assert.equal(
+      server.context.isStarred("missing-user", "missing-repository"),
+      false,
+    );
+
+    await assertNotFound(
+      await server.fetch("/user/starred/octocat/hello-world", {
+        method: "DELETE",
+      }),
+    );
+    assert.equal(
+      (
+        await server.fetch("/user/starred/octocat/hello-world", {
+          method: "PUT",
+        })
+      ).status,
+      204,
+    );
+    assert.equal(
+      (await server.fetch("/user/starred/octocat/hello-world")).status,
+      204,
+    );
+    assert.equal(
+      (
+        await server.fetch("/user/starred/octocat/hello-world", {
+          method: "DELETE",
+        })
+      ).status,
+      204,
+    );
+    assert.equal(
+      (await server.fetch("/user/starred/octocat/hello-world")).status,
+      404,
+    );
+
+    const created = await server.fetch(
+      "/user/repos",
+      json({
+        name: "route-duplicate",
+        description: "The original repository",
+        private: false,
+      }),
+    );
+    assert.equal(created.status, 201);
+    const duplicate = await server.fetch(
+      "/user/repos",
+      json({
+        name: "route-duplicate",
+        description: "A mutated duplicate",
+        private: true,
+      }),
+    );
+    assert.equal(duplicate.status, 422);
+    assert.deepEqual(await duplicate.json(), {
+      message: "Validation Failed",
+      documentation_url:
+        "https://docs.github.com/rest/repos/repos#create-a-repository-for-the-authenticated-user",
+      errors: [
+        {
+          resource: "Repository",
+          field: "name",
+          code: "custom",
+          message: "name already exists on this account",
+        },
+      ],
+    });
+    const preserved = server.context.getRepository(
+      "octocat",
+      "route-duplicate",
+    );
+    assert.ok(preserved);
+    assert.equal(preserved.description, "The original repository");
+    assert.equal(preserved.private, false);
+  } finally {
+    await server.stop();
+  }
+});
+
 test("organization endpoints enforce resource and authenticated-user boundaries", async () => {
   const server = await startCounterfactServer();
   try {

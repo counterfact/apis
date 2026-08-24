@@ -23,6 +23,22 @@ export const GET: reposListForAuthenticatedUser = async ($) => {
 };
 
 export const POST: reposCreateForAuthenticatedUser = async ($) => {
+  if ($.context.getRepository($.context.authenticatedLogin(), $.body.name)) {
+    return $.response[422].json({
+      message: "Validation Failed",
+      documentation_url:
+        "https://docs.github.com/rest/repos/repos#create-a-repository-for-the-authenticated-user",
+      errors: [
+        {
+          resource: "Repository",
+          field: "name",
+          code: "custom",
+          message: "name already exists on this account",
+        },
+      ],
+    });
+  }
+
   const repository = $.context.saveAuthenticatedRepository({
     name: $.body.name,
     description: $.body.description,

@@ -102,6 +102,18 @@ export class Context {
     return this.profile.login;
   }
 
+  getUser(...args: Parameters<RootContext["getUser"]>) {
+    return this.root().getUser(...args);
+  }
+
+  getRepository(...args: Parameters<RootContext["getRepository"]>) {
+    return this.root().getRepository(...args);
+  }
+
+  listAllIssues(...args: Parameters<RootContext["listAllIssues"]>) {
+    return this.root().listAllIssues(...args);
+  }
+
   setProfile(patch: Partial<private_user> & { login?: string }) {
     this.profile = { ...this.profile, ...patch };
     const canonical = this.root().getUser(this.profile.login);
