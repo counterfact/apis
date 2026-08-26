@@ -1,0 +1,8 @@
+{
+  "sourceUrl": "https://github.com/launchdarkly/ld-openapi/releases/download/16.1.1/openapi.json",
+  "sourceKind": "release-asset",
+  "releaseTag": "16.1.1",
+  "retrievedAt": "2026-08-26T00:00:00.000Z",
+  "openapiVersion": "3.0.3",
+  "sha256": "fe58256eeef23f732d1ced02aacfcb943c9f7d38d90bb9fcf047266c1a4fb4bd"
+}

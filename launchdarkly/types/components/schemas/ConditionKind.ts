@@ -1,0 +1,1 @@
+export type ConditionKind = string;
