@@ -1,0 +1,6 @@
+.cache/
+counterfact-types/
+node_modules/
+openapi.json
+package-lock.json
+types/

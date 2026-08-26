@@ -1,0 +1,32 @@
+{
+  "name": "@counterfact/launchdarkly",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Counterfact simulator package for the LaunchDarkly REST API",
+  "type": "module",
+  "scripts": {
+    "generate": "counterfact openapi.json . --generate --no-update-check",
+    "start": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.json . --no-update-check",
+    "serve": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.json . --serve --no-update-check",
+    "refresh:openapi": "node scripts/refresh-openapi.mjs",
+    "validate:openapi": "node scripts/validate-openapi.mjs && redocly lint openapi.json",
+    "test": "cross-env CHOKIDAR_USEPOLLING=1 node --import tsx --test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "verify": "npm run validate:openapi && npm run generate && git diff --exit-code && npm run typecheck && npm test && npm run lint"
+  },
+  "dependencies": {
+    "counterfact": "2.16.0"
+  },
+  "devDependencies": {
+    "@redocly/cli": "1.34.5",
+    "@types/node": "^24.0.0",
+    "cross-env": "^10.0.0",
+    "eslint": "9.39.4",
+    "prettier": "3.8.3",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "8.60.0"
+  }
+}
