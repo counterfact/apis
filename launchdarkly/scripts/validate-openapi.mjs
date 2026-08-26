@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(packageDirectory, "openapi.json");
 const provenancePath = resolve(packageDirectory, "openapi.provenance.json");
-const sourceUrl = "https://app.launchdarkly.com/api/v2/openapi.json";
+const liveSourceUrl = "https://app.launchdarkly.com/api/v2/openapi.json";
+const releaseAssetUrl =
+  "https://github.com/launchdarkly/ld-openapi/releases/download/16.1.1/openapi.json";
 
 const [body, provenanceText] = await Promise.all([
   readFile(specificationPath),
@@ -19,8 +21,23 @@ const sha256 = createHash("sha256").update(body).digest("hex");
 if (document.openapi !== "3.0.3") {
   throw new Error(`Expected OpenAPI 3.0.3 but found ${String(document.openapi)}.`);
 }
-if (provenance.sourceUrl !== sourceUrl) {
+if (
+  provenance.sourceUrl !== liveSourceUrl &&
+  provenance.sourceUrl !== releaseAssetUrl
+) {
   throw new Error(`Unexpected source URL: ${String(provenance.sourceUrl)}.`);
+}
+if (
+  provenance.sourceUrl === releaseAssetUrl &&
+  (provenance.sourceKind !== "release-asset" || provenance.releaseTag !== "16.1.1")
+) {
+  throw new Error("The release-asset provenance is missing its expected tag.");
+}
+if (
+  provenance.sourceUrl === liveSourceUrl &&
+  provenance.sourceKind !== "live-api"
+) {
+  throw new Error("The live API provenance is missing its source kind.");
 }
 if (provenance.openapiVersion !== document.openapi) {
   throw new Error("The provenance OpenAPI version does not match the snapshot.");

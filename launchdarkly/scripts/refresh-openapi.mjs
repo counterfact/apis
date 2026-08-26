@@ -6,18 +6,19 @@ import { fileURLToPath } from "node:url";
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(packageDirectory, "openapi.json");
 const provenancePath = resolve(packageDirectory, "openapi.provenance.json");
-const sourceUrl = "https://app.launchdarkly.com/api/v2/openapi.json";
+const liveSourceUrl = "https://app.launchdarkly.com/api/v2/openapi.json";
+const releaseAssetUrl =
+  "https://github.com/launchdarkly/ld-openapi/releases/download/16.1.1/openapi.json";
 const accessToken = process.env.LD_API_KEY;
 
-if (!accessToken) {
-  console.error(
-    "LD_API_KEY is required to download LaunchDarkly's official OpenAPI snapshot. No files were changed.",
+const sourceUrl = accessToken ? liveSourceUrl : releaseAssetUrl;
+const sourceKind = accessToken ? "live-api" : "release-asset";
+
+{
+  const response = await fetch(
+    sourceUrl,
+    accessToken ? { headers: { Authorization: accessToken } } : undefined,
   );
-  process.exitCode = 1;
-} else {
-  const response = await fetch(sourceUrl, {
-    headers: { Authorization: accessToken },
-  });
 
   if (!response.ok) {
     throw new Error(
@@ -45,6 +46,8 @@ if (!accessToken) {
   const sha256 = createHash("sha256").update(body).digest("hex");
   const provenance = {
     sourceUrl,
+    sourceKind,
+    ...(sourceKind === "release-asset" ? { releaseTag: "16.1.1" } : {}),
     retrievedAt,
     openapiVersion: document.openapi,
     sha256,

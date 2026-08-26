@@ -7,25 +7,30 @@ application; LaunchDarkly SDKs serve that purpose.
 ## Contract status
 
 LaunchDarkly publishes the complete API contract at
-`https://app.launchdarkly.com/api/v2/openapi.json`. The endpoint requires a
-LaunchDarkly API access token. This repository deliberately does **not** commit
-an invented subset, a synthetic replacement, an empty specification, or token
-material.
-
-As a result, `openapi.json`, `openapi.provenance.json`, and Counterfact's
-generated scaffolding are intentionally absent until an authorized maintainer
-downloads the official snapshot. The package cannot start or generate routes
-until that one-time bootstrap has happened.
+`https://app.launchdarkly.com/api/v2/openapi.json`. The live endpoint requires
+a LaunchDarkly API access token. LaunchDarkly also publishes immutable,
+token-free OpenAPI release assets from its official
+[`ld-openapi`](https://github.com/launchdarkly/ld-openapi) repository. This
+package vendors the complete `16.1.1` release asset, not an invented subset or
+synthetic replacement. Its provenance records the exact asset URL, release tag,
+retrieval time, version, and SHA-256.
 
 ## Bootstrap or refresh the official snapshot
 
-Use an access token available only in your shell; do not place it in a command
-history, source file, or provenance record:
+Refresh the pinned official release asset without a credential:
+
+```sh
+npm run refresh:openapi
+npm run validate:openapi
+npm run generate
+```
+
+To deliberately refresh from the current live endpoint instead, provide an
+access token only in the invoking shell; never put it in a source file or
+provenance record:
 
 ```sh
 LD_API_KEY='your LaunchDarkly API access token' npm run refresh:openapi
-npm run validate:openapi
-npm run generate
 ```
 
 `refresh:openapi` requests exactly the official endpoint, checks that it is
