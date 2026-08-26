@@ -9,12 +9,13 @@
     "start": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.json . --no-update-check",
     "serve": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.json . --serve --no-update-check",
     "refresh:openapi": "node scripts/refresh-openapi.mjs",
+    "verify:spec": "node --import tsx --test test/spec-integrity.test.ts",
     "validate:openapi": "node scripts/validate-openapi.mjs && redocly lint openapi.json",
     "test": "cross-env CHOKIDAR_USEPOLLING=1 node --import tsx --test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "verify": "npm run validate:openapi && npm run generate && git diff --exit-code && npm run typecheck && npm test && npm run lint"
+    "verify": "npm run verify:spec && npm run validate:openapi && npm run generate && git diff --exit-code && npm run typecheck && npm test && npm run lint"
   },
   "dependencies": {
     "counterfact": "2.16.0"

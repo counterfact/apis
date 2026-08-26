@@ -1,55 +1,112 @@
 # LaunchDarkly REST API simulator
 
-This private package will simulate LaunchDarkly's **management REST API** for
-local client development and tests. It does not evaluate feature flags for an
-application; LaunchDarkly SDKs serve that purpose.
+`@counterfact/launchdarkly` is a private, local simulator of the
+[LaunchDarkly management REST API](https://app.launchdarkly.com/api/v2/openapi.json).
+Use it to develop and test software that administers LaunchDarkly projects,
+environments, feature flags, and segments.
 
-## Contract status
+It is deliberately **not** an implementation of LaunchDarkly feature-flag
+evaluation. Application SDKs, streaming, SDK keys, mobile keys, and
+client-side IDs are outside this simulator's scope.
 
-LaunchDarkly publishes the complete API contract at
-`https://app.launchdarkly.com/api/v2/openapi.json`. The live endpoint requires
-a LaunchDarkly API access token. LaunchDarkly also publishes immutable,
-token-free OpenAPI release assets from its official
-[`ld-openapi`](https://github.com/launchdarkly/ld-openapi) repository. This
-package vendors the complete `16.1.1` release asset, not an invented subset or
-synthetic replacement. Its provenance records the exact asset URL, release tag,
-retrieval time, version, and SHA-256.
+## Quick start
 
-## Bootstrap or refresh the official snapshot
+```sh
+npm ci
+npm run serve
+```
 
-Refresh the pinned official release asset without a credential:
+The stateful API uses the fixed local credential below. It is a simulator
+convenience, not a real LaunchDarkly access token or authorization system.
+
+```http
+Authorization: ld-simulator-token
+```
+
+For example, after starting the simulator, create and inspect a project:
+
+```sh
+curl -X POST http://localhost:3000/api/v2/projects \
+  -H 'Authorization: ld-simulator-token' \
+  -H 'Content-Type: application/json' \
+  -d '{"key":"sample-project","name":"Sample project"}'
+
+curl http://localhost:3000/api/v2/projects/sample-project \
+  -H 'Authorization: ld-simulator-token'
+```
+
+Create an environment and feature flag in the same way, then use the flag's
+documented semantic-patch endpoint to enable it in an environment. The local
+state remains available until you reset it or restart the simulator.
+
+## Coverage and fidelity
+
+The package vendors the complete official LaunchDarkly REST API OpenAPI
+snapshot and generates Counterfact transport and type scaffolding for every
+operation in that contract. That broad route surface is useful for client
+wiring, but it is not a promise that every generated endpoint behaves as the
+LaunchDarkly service.
+
+The hand-authored, stateful core covers the normal feature lifecycle:
+
+- projects and environments;
+- feature flags, their environment configuration, status, archive/restore,
+  and supported JSON Patch, JSON Merge Patch, and semantic-patch updates; and
+- standard segments used by feature-flag targeting.
+
+The simulator does not model real access tokens or roles, evaluation engines,
+SDK or streaming endpoints, scheduled changes, approvals, production clocks,
+analytics, exports, integrations, or rate-limit accounting. Its semantic-patch
+support is a documented compatibility overlay; LaunchDarkly may have added
+instructions after this pinned 2024 contract snapshot.
+
+## Scenarios
+
+Scenarios are composable state transformations. Run `reset` first to install
+the deterministic baseline. The additive scenarios require that baseline and
+do not silently replace unrelated state.
+
+| Scenario                   | Effect                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| `reset`                    | Restores the complete deterministic project, environment, flag, and segment baseline. |
+| `productionFlagOff`        | Turns a known production flag off.                                                    |
+| `canaryRollout`            | Adds a canary rollout to a known flag without replacing unrelated targeting.          |
+| `earlyAccessSegment`       | Adds an early-access segment and links it to a known flag.                            |
+| `removeEarlyAccessSegment` | Removes only the segment introduced by `earlyAccessSegment`.                          |
+| `archivedFlag`             | Archives one known flag.                                                              |
+
+See the local Counterfact scenario control plane for applying scenarios.
+
+## Official contract provenance and refresh
+
+[`openapi.json`](./openapi.json) is the byte-preserved `16.1.1` release asset
+published by LaunchDarkly's official
+[`ld-openapi`](https://github.com/launchdarkly/ld-openapi) repository.
+[`openapi.provenance.json`](./openapi.provenance.json) records its exact
+release URL, release tag, retrieval date, OpenAPI version, and SHA-256 digest.
+`npm run verify:spec` checks those properties before generation and in tests.
+
+To intentionally adopt a newer official contract, refresh it, inspect the
+diff, regenerate, and update the compatibility behavior deliberately:
 
 ```sh
 npm run refresh:openapi
-npm run validate:openapi
+npm run verify:spec
 npm run generate
+npm test
 ```
 
-To deliberately refresh from the current live endpoint instead, provide an
-access token only in the invoking shell; never put it in a source file or
-provenance record:
+The refresh command can use the pinned public release asset. If you explicitly
+provide `LD_API_KEY`, it may instead retrieve LaunchDarkly's current official
+endpoint. No ordinary runtime command—start, serve, test, generation, or
+verification—contacts LaunchDarkly. The simulator always operates from the
+vendored snapshot.
+
+## Development checks
 
 ```sh
-LD_API_KEY='your LaunchDarkly API access token' npm run refresh:openapi
+npm run verify:spec      # snapshot hash, provenance, version, and path count
+npm run validate:openapi # OpenAPI parsing plus Redocly lint
+npm run generate         # regenerate Counterfact artifacts
+npm run verify           # all package checks, including generation drift
 ```
-
-`refresh:openapi` requests exactly the official endpoint, checks that it is
-valid JSON using OpenAPI 3.0.3, and writes both the byte-for-byte response and
-its provenance only after those checks pass. The provenance record contains the
-source URL, retrieval time, OpenAPI version, and SHA-256 hash. It never stores
-the access token.
-
-The refresh command is explicit: simulator startup, serving, tests, and code
-generation do not contact LaunchDarkly.
-
-## Local commands after bootstrap
-
-```sh
-npm run generate  # Generate Counterfact route/type scaffolding from openapi.json
-npm run start     # Start Counterfact in its interactive mode
-npm run serve     # Serve the local simulator over HTTP
-```
-
-Handwritten stateful behavior will live beside the generated artifacts. The
-specification remains the complete advertised contract; generated routes are
-not a promise that every endpoint behaves as a stateful LaunchDarkly backend.
