@@ -14,7 +14,7 @@ import type { UnauthorizedErrorRep } from "../../../../../../../components/schem
 import type { ForbiddenErrorRep } from "../../../../../../../components/schemas/ForbiddenErrorRep.js";
 import type { NotFoundErrorRep } from "../../../../../../../components/schemas/NotFoundErrorRep.js";
 import type { RateLimitedErrorRep } from "../../../../../../../components/schemas/RateLimitedErrorRep.js";
-import type { putBranch } from "../../../../../../../components/schemas/putBranch.js";
+import type { putBranch as PutBranchBody } from "../../../../../../../components/schemas/putBranch.js";
 import type { StatusConflictErrorRep } from "../../../../../../../components/schemas/StatusConflictErrorRep.js";
 
 /**
@@ -110,7 +110,7 @@ export type putBranch = (
     path: putBranch_Path;
     headers: putBranch_Headers;
     cookie: never;
-    body: putBranch;
+    body: PutBranchBody;
     context: Context;
     response: ResponseBuilderFactory<{
       200: {

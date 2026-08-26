@@ -19,7 +19,9 @@ const provenance = JSON.parse(provenanceText);
 const sha256 = createHash("sha256").update(body).digest("hex");
 
 if (document.openapi !== "3.0.3") {
-  throw new Error(`Expected OpenAPI 3.0.3 but found ${String(document.openapi)}.`);
+  throw new Error(
+    `Expected OpenAPI 3.0.3 but found ${String(document.openapi)}.`,
+  );
 }
 if (
   provenance.sourceUrl !== liveSourceUrl &&
@@ -29,7 +31,8 @@ if (
 }
 if (
   provenance.sourceUrl === releaseAssetUrl &&
-  (provenance.sourceKind !== "release-asset" || provenance.releaseTag !== "16.1.1")
+  (provenance.sourceKind !== "release-asset" ||
+    provenance.releaseTag !== "16.1.1")
 ) {
   throw new Error("The release-asset provenance is missing its expected tag.");
 }
@@ -40,12 +43,17 @@ if (
   throw new Error("The live API provenance is missing its source kind.");
 }
 if (provenance.openapiVersion !== document.openapi) {
-  throw new Error("The provenance OpenAPI version does not match the snapshot.");
+  throw new Error(
+    "The provenance OpenAPI version does not match the snapshot.",
+  );
 }
 if (provenance.sha256 !== sha256) {
   throw new Error("The snapshot SHA-256 does not match its provenance record.");
 }
-if (typeof provenance.retrievedAt !== "string" || Number.isNaN(Date.parse(provenance.retrievedAt))) {
+if (
+  typeof provenance.retrievedAt !== "string" ||
+  Number.isNaN(Date.parse(provenance.retrievedAt))
+) {
   throw new Error("The provenance retrieval timestamp is missing or invalid.");
 }
 

@@ -1,7 +1,5 @@
 import type { InsightsMetricScoreIndicator } from "./InsightsMetricScoreIndicator.js";
 import type { InsightsMetricIndicatorRange } from "./InsightsMetricIndicatorRange.js";
-import type { InsightsMetricScore } from "./InsightsMetricScore.js";
-
 export type InsightsMetricScore = {
   /**
    * The score for the metric

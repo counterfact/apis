@@ -31,9 +31,12 @@ const sourceKind = accessToken ? "live-api" : "release-asset";
   try {
     document = JSON.parse(body.toString("utf8"));
   } catch (error) {
-    throw new Error("LaunchDarkly returned invalid JSON; no files were changed.", {
-      cause: error,
-    });
+    throw new Error(
+      "LaunchDarkly returned invalid JSON; no files were changed.",
+      {
+        cause: error,
+      },
+    );
   }
 
   if (document.openapi !== "3.0.3") {

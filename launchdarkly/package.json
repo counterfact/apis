@@ -5,7 +5,7 @@
   "description": "Counterfact simulator package for the LaunchDarkly REST API",
   "type": "module",
   "scripts": {
-    "generate": "counterfact openapi.json . --generate --no-update-check",
+    "generate": "counterfact openapi.json . --generate --no-update-check && node scripts/repair-generated-types.mjs",
     "start": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.json . --no-update-check",
     "serve": "cross-env CHOKIDAR_USEPOLLING=1 counterfact openapi.json . --serve --no-update-check",
     "refresh:openapi": "node scripts/refresh-openapi.mjs",
