@@ -120,17 +120,27 @@ const invalid = (message: string, extra = {}): never => {
 };
 
 const notFound = (resource: string, key: string): never => {
-  throw new DomainError(404, "not_found", `${resource} '${key}' was not found`, {
-    resource,
-    key,
-  });
+  throw new DomainError(
+    404,
+    "not_found",
+    `${resource} '${key}' was not found`,
+    {
+      resource,
+      key,
+    },
+  );
 };
 
 const conflict = (resource: string, key: string): never => {
-  throw new DomainError(409, "conflict", `${resource} '${key}' already exists`, {
-    resource,
-    key,
-  });
+  throw new DomainError(
+    409,
+    "conflict",
+    `${resource} '${key}' already exists`,
+    {
+      resource,
+      key,
+    },
+  );
 };
 
 function requireString(value: unknown, field: string): string {
@@ -172,7 +182,8 @@ function arrayIndex(part: string, length: number, allowEnd: boolean): number {
   if (!/^(0|[1-9]\d*)$/.test(part)) invalid(`Invalid array index '${part}'`);
   const index = Number(part);
   const maximum = allowEnd ? length : length - 1;
-  if (index < 0 || index > maximum) invalid(`Array index '${part}' is out of range`);
+  if (index < 0 || index > maximum)
+    invalid(`Array index '${part}' is out of range`);
   return index;
 }
 
@@ -180,7 +191,8 @@ function locateParent(
   document: unknown,
   parts: Array<string>,
 ): { parent: Record<string, unknown> | Array<unknown>; key: string } {
-  if (parts.length === 0) invalid("The document root cannot be patched directly");
+  if (parts.length === 0)
+    invalid("The document root cannot be patched directly");
   assertSafePointer(parts);
   let current: unknown = document;
   for (const part of parts.slice(0, -1)) {
@@ -221,13 +233,22 @@ function applyJsonPatch<T>(document: T, operations: Array<PatchOperation>): T {
     const { parent, key } = locateParent(candidate, decodePointer(path));
     if (Array.isArray(parent)) {
       if (op === "add") {
-        parent.splice(arrayIndex(key, parent.length, true), 0, clone(operation.value));
+        parent.splice(
+          arrayIndex(key, parent.length, true),
+          0,
+          clone(operation.value),
+        );
       } else if (op === "remove") {
         parent.splice(arrayIndex(key, parent.length, false), 1);
       } else if (op === "replace") {
         parent[arrayIndex(key, parent.length, false)] = clone(operation.value);
       } else if (op === "test") {
-        if (!equalJson(parent[arrayIndex(key, parent.length, false)], operation.value)) {
+        if (
+          !equalJson(
+            parent[arrayIndex(key, parent.length, false)],
+            operation.value,
+          )
+        ) {
           invalid(`JSON patch test failed at '${path}'`);
         }
       } else {
@@ -255,6 +276,12 @@ function applyJsonPatch<T>(document: T, operations: Array<PatchOperation>): T {
   return candidate;
 }
 
+function patchOperations(
+  input: JsonPatchInput | Array<PatchOperation>,
+): Array<PatchOperation> {
+  return Array.isArray(input) ? input : input.patch;
+}
+
 function applyMergePatch(target: unknown, patch: unknown): unknown {
   if (patch === null || typeof patch !== "object" || Array.isArray(patch)) {
     return clone(patch);
@@ -271,16 +298,21 @@ function applyMergePatch(target: unknown, patch: unknown): unknown {
   return output;
 }
 
-function flagConfig(flag: FeatureFlag, environmentKey: string): FlagEnvironmentConfig {
+function flagConfig(
+  flag: FeatureFlag,
+  environmentKey: string,
+): FlagEnvironmentConfig {
   const config = flag.environments[environmentKey];
-  if (!config || typeof config !== "object") notFound("environment", environmentKey);
+  if (!config || typeof config !== "object")
+    notFound("environment", environmentKey);
   return config as FlagEnvironmentConfig;
 }
 
 function variationIndex(flag: FeatureFlag, variationId: unknown): number {
   const id = requireString(variationId, "variationId");
   const index = flag.variations.findIndex((variation) => variation._id === id);
-  if (index < 0) invalid(`Variation '${id}' was not found`, { variationId: id });
+  if (index < 0)
+    invalid(`Variation '${id}' was not found`, { variationId: id });
   return index;
 }
 
@@ -350,7 +382,9 @@ function applySemanticPatch(
     invalid("instructions must be a non-empty array");
   }
   if (
-    input.instructions.some((instruction) => instruction.kind === "deleteFlag") &&
+    input.instructions.some(
+      (instruction) => instruction.kind === "deleteFlag",
+    ) &&
     input.instructions.length !== 1
   ) {
     invalid("deleteFlag must be the only semantic instruction");
@@ -364,7 +398,11 @@ function applySemanticPatch(
     switch (kind) {
       case "turnFlagOn":
       case "turnFlagOff": {
-        const config = requireSemanticEnvironment(project, flag, input.environmentKey);
+        const config = requireSemanticEnvironment(
+          project,
+          flag,
+          input.environmentKey,
+        );
         config.on = kind === "turnFlagOn";
         break;
       }
@@ -380,12 +418,15 @@ function applySemanticPatch(
         break;
       }
       case "removeTags": {
-        const values = new Set(requireStringArray(instruction.values, "values"));
+        const values = new Set(
+          requireStringArray(instruction.values, "values"),
+        );
         flag.tags = flag.tags.filter((tag) => !values.has(tag));
         break;
       }
       case "updateVariation": {
-        const variation = flag.variations[variationIndex(flag, instruction.variationId)]!;
+        const variation =
+          flag.variations[variationIndex(flag, instruction.variationId)]!;
         if (
           !Object.hasOwn(instruction, "value") &&
           !Object.hasOwn(instruction, "name") &&
@@ -393,25 +434,47 @@ function applySemanticPatch(
         ) {
           invalid("updateVariation requires value, name, or description");
         }
-        if (Object.hasOwn(instruction, "value")) variation.value = clone(instruction.value);
-        if (Object.hasOwn(instruction, "name")) variation.name = requireString(instruction.name, "name");
+        if (Object.hasOwn(instruction, "value"))
+          variation.value = clone(instruction.value);
+        if (Object.hasOwn(instruction, "name"))
+          variation.name = requireString(instruction.name, "name");
         if (Object.hasOwn(instruction, "description")) {
-          variation.description = requireString(instruction.description, "description");
+          variation.description = requireString(
+            instruction.description,
+            "description",
+          );
         }
         break;
       }
       case "updateFallthrough": {
-        const config = requireSemanticEnvironment(project, flag, input.environmentKey);
+        const config = requireSemanticEnvironment(
+          project,
+          flag,
+          input.environmentKey,
+        );
         if (instruction.variationId !== undefined) {
-          config.fallthrough = { variation: variationIndex(flag, instruction.variationId) };
-        } else if (instruction.rolloutWeights && typeof instruction.rolloutWeights === "object") {
-          const variations = Object.entries(instruction.rolloutWeights).map(([id, weight]) => {
-            if (typeof weight !== "number" || weight < 0 || weight > 100_000) {
-              invalid("rollout weights must be numbers from 0 to 100000");
-            }
-            return { variation: variationIndex(flag, id), weight };
-          });
-          if (variations.reduce((sum, item) => sum + item.weight, 0) !== 100_000) {
+          config.fallthrough = {
+            variation: variationIndex(flag, instruction.variationId),
+          };
+        } else if (
+          instruction.rolloutWeights &&
+          typeof instruction.rolloutWeights === "object"
+        ) {
+          const variations = Object.entries(instruction.rolloutWeights).map(
+            ([id, weight]) => {
+              if (
+                typeof weight !== "number" ||
+                weight < 0 ||
+                weight > 100_000
+              ) {
+                invalid("rollout weights must be numbers from 0 to 100000");
+              }
+              return { variation: variationIndex(flag, id), weight };
+            },
+          );
+          if (
+            variations.reduce((sum, item) => sum + item.weight, 0) !== 100_000
+          ) {
             invalid("rollout weights must total 100000");
           }
           config.fallthrough = {
@@ -427,17 +490,29 @@ function applySemanticPatch(
         break;
       }
       case "updateOffVariation": {
-        const config = requireSemanticEnvironment(project, flag, input.environmentKey);
+        const config = requireSemanticEnvironment(
+          project,
+          flag,
+          input.environmentKey,
+        );
         config.offVariation = variationIndex(flag, instruction.variationId);
         break;
       }
       case "addTargets": {
-        const config = requireSemanticEnvironment(project, flag, input.environmentKey);
+        const config = requireSemanticEnvironment(
+          project,
+          flag,
+          input.environmentKey,
+        );
         semanticTargets(flag, config, instruction, false);
         break;
       }
       case "removeTargets": {
-        const config = requireSemanticEnvironment(project, flag, input.environmentKey);
+        const config = requireSemanticEnvironment(
+          project,
+          flag,
+          input.environmentKey,
+        );
         semanticTargets(flag, config, instruction, true);
         break;
       }
@@ -465,9 +540,14 @@ function applySemanticPatch(
   return { flag, deleted };
 }
 
-function createEnvironmentRecord(projectKey: string, body: EnvironmentPost): Environment {
+function createEnvironmentRecord(
+  projectKey: string,
+  body: EnvironmentPost,
+): Environment {
   return {
-    _links: { self: link(`/api/v2/projects/${projectKey}/environments/${body.key}`) },
+    _links: {
+      self: link(`/api/v2/projects/${projectKey}/environments/${body.key}`),
+    },
     _id: `env-${projectKey}-${body.key}`,
     key: body.key,
     name: body.name,
@@ -524,7 +604,9 @@ export class Context {
   }
 
   listProjects(): Array<Project> {
-    return clone(Object.values(this.state.projects).map(({ project }) => project));
+    return clone(
+      Object.values(this.state.projects).map(({ project }) => project),
+    );
   }
 
   getProject(key: string): Project {
@@ -546,7 +628,11 @@ export class Context {
       includeInSnippetByDefault: body.includeInSnippetByDefault ?? false,
       tags: clone(body.tags ?? []),
       ...(body.defaultClientSideAvailability
-        ? { defaultClientSideAvailability: clone(body.defaultClientSideAvailability) }
+        ? {
+            defaultClientSideAvailability: clone(
+              body.defaultClientSideAvailability,
+            ),
+          }
         : {}),
     };
     const projectState: ProjectState = {
@@ -557,16 +643,28 @@ export class Context {
     };
     this.state.projects[body.key] = projectState;
     const environments = body.environments ?? [
-      { key: "production", name: "Production", color: "2f80ed", critical: true },
+      {
+        key: "production",
+        name: "Production",
+        color: "2f80ed",
+        critical: true,
+      },
       { key: "test", name: "Test", color: "f2c94c" },
     ];
-    for (const environmentBody of environments) this.createEnvironment(body.key, environmentBody);
+    for (const environmentBody of environments)
+      this.createEnvironment(body.key, environmentBody);
     return clone(project);
   }
 
-  patchProject(key: string, input: JsonPatchInput): Project {
+  patchProject(
+    key: string,
+    input: JsonPatchInput | Array<PatchOperation>,
+  ): Project {
     const projectState = this.requireProject(key);
-    const candidate = applyJsonPatch(projectState.project, input.patch);
+    const candidate = applyJsonPatch(
+      projectState.project,
+      patchOperations(input),
+    );
     if (candidate.key !== key) invalid("Project key is immutable");
     requireString(candidate.name, "name");
     projectState.project = candidate;
@@ -575,7 +673,8 @@ export class Context {
 
   deleteProject(key: string): void {
     this.requireProject(key);
-    if (Object.keys(this.state.projects).length === 1) invalid("The last project cannot be deleted");
+    if (Object.keys(this.state.projects).length === 1)
+      invalid("The last project cannot be deleted");
     delete this.state.projects[key];
   }
 
@@ -584,7 +683,8 @@ export class Context {
   }
 
   getEnvironment(projectKey: string, environmentKey: string): Environment {
-    const environment = this.requireProject(projectKey).environments[environmentKey];
+    const environment =
+      this.requireProject(projectKey).environments[environmentKey];
     if (!environment) notFound("environment", environmentKey);
     return clone(environment);
   }
@@ -609,12 +709,17 @@ export class Context {
     return clone(environment);
   }
 
-  patchEnvironment(projectKey: string, environmentKey: string, input: JsonPatchInput): Environment {
+  patchEnvironment(
+    projectKey: string,
+    environmentKey: string,
+    input: JsonPatchInput | Array<PatchOperation>,
+  ): Environment {
     const project = this.requireProject(projectKey);
     const current = project.environments[environmentKey];
     if (!current) notFound("environment", environmentKey);
-    const candidate = applyJsonPatch(current, input.patch);
-    if (candidate.key !== environmentKey) invalid("Environment key is immutable");
+    const candidate = applyJsonPatch(current, patchOperations(input));
+    if (candidate.key !== environmentKey)
+      invalid("Environment key is immutable");
     requireString(candidate.name, "name");
     project.environments[environmentKey] = candidate;
     for (const flag of Object.values(project.flags)) {
@@ -625,8 +730,10 @@ export class Context {
 
   deleteEnvironment(projectKey: string, environmentKey: string): void {
     const project = this.requireProject(projectKey);
-    if (!project.environments[environmentKey]) notFound("environment", environmentKey);
-    if (Object.keys(project.environments).length === 1) invalid("The last environment cannot be deleted");
+    if (!project.environments[environmentKey])
+      notFound("environment", environmentKey);
+    if (Object.keys(project.environments).length === 1)
+      invalid("The last environment cannot be deleted");
     delete project.environments[environmentKey];
     delete project.segments[environmentKey];
     for (const flag of Object.values(project.flags)) {
@@ -648,10 +755,16 @@ export class Context {
     requireString(body.key, "key");
     requireString(body.name, "name");
     if (project.flags[body.key]) conflict("feature flag", body.key);
-    const variations = clone(body.variations ?? [{ value: true }, { value: false }]).map(
-      (variation, index) => ({ ...variation, _id: variation._id ?? `${body.key}-variation-${index}` }),
-    );
-    const defaults = body.defaults ?? { onVariation: 0, offVariation: variations.length - 1 };
+    const variations = clone(
+      body.variations ?? [{ value: true }, { value: false }],
+    ).map((variation, index) => ({
+      ...variation,
+      _id: variation._id ?? `${body.key}-variation-${index}`,
+    }));
+    const defaults = body.defaults ?? {
+      onVariation: 0,
+      offVariation: variations.length - 1,
+    };
     const environments = Object.fromEntries(
       Object.values(project.environments).map((environment) => [
         environment.key,
@@ -666,14 +779,21 @@ export class Context {
       name: body.name,
       key: body.key,
       kind:
-        variations.length === 2 && variations[0]?.value === true && variations[1]?.value === false
+        variations.length === 2 &&
+        variations[0]?.value === true &&
+        variations[1]?.value === false
           ? "boolean"
           : "multivariate",
-      ...(body.description === undefined ? {} : { description: body.description }),
+      ...(body.description === undefined
+        ? {}
+        : { description: body.description }),
       _version: 1,
       creationDate: FIXED_TIMESTAMP,
       clientSideAvailability: clone(
-        body.clientSideAvailability ?? { usingMobileKey: false, usingEnvironmentId: false },
+        body.clientSideAvailability ?? {
+          usingMobileKey: false,
+          usingEnvironmentId: false,
+        },
       ),
       variations,
       temporary: body.temporary ?? true,
@@ -706,10 +826,19 @@ export class Context {
     let candidate = clone(original);
     let deleted = false;
     if ("instructions" in input) {
-      if (contentType && !contentType.includes("domain-model=launchdarkly.semanticpatch")) {
-        invalid("Semantic patches require the LaunchDarkly semantic patch content type");
+      if (
+        contentType &&
+        !contentType.includes("domain-model=launchdarkly.semanticpatch")
+      ) {
+        invalid(
+          "Semantic patches require the LaunchDarkly semantic patch content type",
+        );
       }
-      ({ flag: candidate, deleted } = applySemanticPatch(project, candidate, input));
+      ({ flag: candidate, deleted } = applySemanticPatch(
+        project,
+        candidate,
+        input,
+      ));
     } else if ("merge" in input) {
       if (contentType && !contentType.includes("merge-patch+json")) {
         invalid("Merge patches require application/merge-patch+json");
@@ -741,16 +870,28 @@ export class Context {
   }
 
   listSegments(projectKey: string, environmentKey: string): Array<UserSegment> {
-    return clone(Object.values(this.requireSegments(projectKey, environmentKey)));
+    return clone(
+      Object.values(this.requireSegments(projectKey, environmentKey)),
+    );
   }
 
-  getSegment(projectKey: string, environmentKey: string, segmentKey: string): UserSegment {
-    const segment = this.requireSegments(projectKey, environmentKey)[segmentKey];
+  getSegment(
+    projectKey: string,
+    environmentKey: string,
+    segmentKey: string,
+  ): UserSegment {
+    const segment = this.requireSegments(projectKey, environmentKey)[
+      segmentKey
+    ];
     if (!segment) notFound("segment", segmentKey);
     return clone(segment);
   }
 
-  createSegment(projectKey: string, environmentKey: string, body: SegmentBody): UserSegment {
+  createSegment(
+    projectKey: string,
+    environmentKey: string,
+    body: SegmentBody,
+  ): UserSegment {
     const segments = this.requireSegments(projectKey, environmentKey);
     requireString(body.key, "key");
     requireString(body.name, "name");
@@ -758,7 +899,9 @@ export class Context {
     if (segments[body.key]) conflict("segment", body.key);
     const segment: UserSegment = {
       name: body.name,
-      ...(body.description === undefined ? {} : { description: body.description }),
+      ...(body.description === undefined
+        ? {}
+        : { description: body.description }),
       tags: clone(body.tags ?? []),
       creationDate: FIXED_TIMESTAMP,
       lastModifiedDate: FIXED_TIMESTAMP,
@@ -767,7 +910,11 @@ export class Context {
       excluded: [],
       includedContexts: [],
       excludedContexts: [],
-      _links: { self: link(`/api/v2/segments/${projectKey}/${environmentKey}/${body.key}`) },
+      _links: {
+        self: link(
+          `/api/v2/segments/${projectKey}/${environmentKey}/${body.key}`,
+        ),
+      },
       rules: [],
       version: 1,
       deleted: false,
@@ -782,12 +929,12 @@ export class Context {
     projectKey: string,
     environmentKey: string,
     segmentKey: string,
-    input: JsonPatchInput,
+    input: JsonPatchInput | Array<PatchOperation>,
   ): UserSegment {
     const segments = this.requireSegments(projectKey, environmentKey);
     const current = segments[segmentKey];
     if (!current) notFound("segment", segmentKey);
-    const candidate = applyJsonPatch(current, input.patch);
+    const candidate = applyJsonPatch(current, patchOperations(input));
     if (candidate.key !== segmentKey) invalid("Segment key is immutable");
     if (candidate.unbounded) invalid("Only standard segments are supported");
     requireString(candidate.name, "name");
@@ -797,24 +944,41 @@ export class Context {
     return clone(candidate);
   }
 
-  deleteSegment(projectKey: string, environmentKey: string, segmentKey: string): void {
+  deleteSegment(
+    projectKey: string,
+    environmentKey: string,
+    segmentKey: string,
+  ): void {
     const segments = this.requireSegments(projectKey, environmentKey);
     if (!segments[segmentKey]) notFound("segment", segmentKey);
     delete segments[segmentKey];
   }
 
-  listFlagStatuses(projectKey: string, environmentKey: string): Array<FlagStatusRep> {
+  listFlagStatuses(
+    projectKey: string,
+    environmentKey: string,
+  ): Array<FlagStatusRep> {
     const project = this.requireProject(projectKey);
     this.getEnvironment(projectKey, environmentKey);
     return clone(
-      Object.values(project.flags).map((flag) => this.statusFor(projectKey, environmentKey, flag)),
+      Object.values(project.flags).map((flag) =>
+        this.statusFor(projectKey, environmentKey, flag),
+      ),
     );
   }
 
-  getFlagStatus(projectKey: string, environmentKey: string, flagKey: string): FlagStatusRep {
+  getFlagStatus(
+    projectKey: string,
+    environmentKey: string,
+    flagKey: string,
+  ): FlagStatusRep {
     this.getEnvironment(projectKey, environmentKey);
     return clone(
-      this.statusFor(projectKey, environmentKey, this.requireFlag(projectKey, flagKey)),
+      this.statusFor(
+        projectKey,
+        environmentKey,
+        this.requireFlag(projectKey, flagKey),
+      ),
     );
   }
 
@@ -851,9 +1015,13 @@ export class Context {
     return flag;
   }
 
-  private requireSegments(projectKey: string, environmentKey: string): Record<string, UserSegment> {
+  private requireSegments(
+    projectKey: string,
+    environmentKey: string,
+  ): Record<string, UserSegment> {
     const project = this.requireProject(projectKey);
-    if (!project.environments[environmentKey]) notFound("environment", environmentKey);
+    if (!project.environments[environmentKey])
+      notFound("environment", environmentKey);
     return (project.segments[environmentKey] ??= {});
   }
 
@@ -867,7 +1035,9 @@ export class Context {
     return {
       _links: {
         parent: link(`/api/v2/flags/${projectKey}/${flag.key}`),
-        self: link(`/api/v2/flag-statuses/${projectKey}/${environmentKey}/${flag.key}`),
+        self: link(
+          `/api/v2/flag-statuses/${projectKey}/${environmentKey}/${flag.key}`,
+        ),
       },
       name: !flag.archived && config.on ? "active" : "inactive",
       lastRequested: FIXED_DATE_TIME,
