@@ -33,7 +33,11 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
    - Cover state transitions and core business logic independently of HTTP tests.
 
 5. **Use scenarios for startup init and REPL setup flows**
+   - Always define seed data, state population, and reset orchestration in the API group's `scenarios/` directory.
    - Use `startup` to initialize simulator state when the server starts.
+   - Use a named `reset` scenario to restore the baseline by replacing or clearing and repopulating state.
+   - Context classes initialize empty state containers and own business operations. Do not seed data in constructors or hide fixture restoration in context methods called by scenarios.
+   - Tests that need seeded state should run the appropriate scenario.
    - Use other scenario functions for REPL-invoked setup/actions after startup.
    - Keep scenarios simple and declarative.
    - Scenario code is intentionally lightweight and **does not require unit tests**.
