@@ -4,9 +4,16 @@ import type { activityMarkRepoNotificationsAsRead } from "../../../../types/path
 export const GET: activityListRepoNotificationsForAuthenticatedUser = async (
   $,
 ) => {
-  return $.response[200].random();
+  return $.response[200].json(
+    $.context.listNotifications({
+      ...$.query,
+      owner: $.path.owner,
+      repo: $.path.repo,
+    }),
+  );
 };
 
 export const PUT: activityMarkRepoNotificationsAsRead = async ($) => {
-  return $.response[202].random();
+  $.context.markAllNotificationsRead($.path.owner, $.path.repo, $.body);
+  return $.response[205].empty();
 };

@@ -1,5 +1,7 @@
-import type { markdownRenderRaw } from "../../types/paths/markdown/raw.types.js";
+import type { MarkdownRenderRaw } from "./raw.contract.js";
 
-export const POST: markdownRenderRaw = async ($) => {
-  return $.response[200].random();
+export const POST: MarkdownRenderRaw = async ($) => {
+  const html = $.context.renderRaw($.body);
+  const version = $.context.commonMarkerVersion();
+  return $.response[200].header("X-CommonMarker-Version", version).html(html);
 };

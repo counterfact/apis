@@ -1,8 +1,11 @@
 import type { Context$ } from "../../types/_.context.js";
 import type { organization_full } from "../../types/components/schemas/organization-full.js";
+import type { organization_invitation } from "../../types/components/schemas/organization-invitation.js";
 import type { organization_simple } from "../../types/components/schemas/organization-simple.js";
+import type { org_membership } from "../../types/components/schemas/org-membership.js";
 import type { public_user } from "../../types/components/schemas/public-user.js";
 import type { simple_user } from "../../types/components/schemas/simple-user.js";
+import type { user_search_result_item } from "../../types/components/schemas/user-search-result-item.js";
 
 const API_URL = "https://api.github.com";
 const APP_URL = "https://github.com";
@@ -23,6 +26,58 @@ const paginate = <T>(
   const perPage = asNumber(query?.per_page, DEFAULT_PAGE_SIZE);
   const start = (page - 1) * perPage;
   return items.slice(start, start + perPage);
+};
+
+const parseSearchQuery = (query: string) => {
+  const qualifiers = new Map<string, Array<string>>();
+  const terms: Array<string> = [];
+  let hasUnsupportedQualifier = false;
+  const supportedQualifiers = new Set([
+    "login",
+    "type",
+    "followers",
+    "repos",
+    "repositories",
+    "location",
+  ]);
+
+  for (const token of query.match(/(?:[^\s"]+:"[^"]*"|"[^"]*"|\S+)/g) ?? []) {
+    const qualifier = token.match(/^([a-z_]+):(.*)$/i);
+    if (!qualifier) {
+      terms.push(token.replace(/^"|"$/g, "").toLowerCase());
+      continue;
+    }
+
+    const [, rawKey, rawValue] = qualifier;
+    const key = rawKey.toLowerCase();
+    const value = rawValue.replace(/^"|"$/g, "").toLowerCase();
+    if (!supportedQualifiers.has(key) || !value) {
+      hasUnsupportedQualifier = true;
+      continue;
+    }
+    const values = qualifiers.get(key) ?? [];
+    values.push(value);
+    qualifiers.set(key, values);
+  }
+
+  return { qualifiers, hasUnsupportedQualifier, terms };
+};
+
+const matchesNumericQualifier = (value: number, qualifier: string) => {
+  const match = qualifier.match(/^(<=|>=|<|>|=)?(\d+)$/);
+  if (!match) return false;
+  const [, operator = "=", rawExpected] = match;
+  const expected = Number(rawExpected);
+  if (operator === ">") return value > expected;
+  if (operator === ">=") return value >= expected;
+  if (operator === "<") return value < expected;
+  if (operator === "<=") return value <= expected;
+  return value === expected;
+};
+
+const timestamp = (value: string | undefined) => {
+  const parsed = new Date(value ?? 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 const makeSimpleUser = (
@@ -163,6 +218,9 @@ const makeOrganization = (
     overrides.display_commenter_full_name_setting_enabled ?? false,
   readers_can_create_discussions:
     overrides.readers_can_create_discussions ?? true,
+  created_at: overrides.created_at ?? "2024-01-01T00:00:00Z",
+  updated_at: overrides.updated_at ?? "2024-01-01T00:00:00Z",
+  archived_at: overrides.archived_at ?? "",
 });
 
 const organizationToSimple = (
@@ -207,14 +265,23 @@ export const toSimpleUser = (user: public_user): simple_user => ({
 });
 
 type RootContext = {
+  authenticatedLogin(): string;
   listRepositories(): Array<{ owner: { login: string }; private: boolean }>;
 };
 
 export class Context {
   private usersByLogin = new Map<string, public_user>();
   private orgsByLogin = new Map<string, organization_full>();
+  private orgMembers = new Map<string, Map<string, org_membership>>();
+  private orgInvitations = new Map<
+    string,
+    Map<number, organization_invitation>
+  >();
+  private outsideCollaborators = new Map<string, Set<string>>();
+  private publicMembers = new Map<string, Set<string>>();
   private nextUserId = 100;
   private nextOrgId = 500;
+  private nextInvitationId = 1;
 
   constructor(private readonly $: Context$) {}
 
@@ -274,6 +341,92 @@ export class Context {
     return this.listUsers(query).map((user) => toSimpleUser(user));
   }
 
+  searchUsers(query: {
+    q: string;
+    sort?: string;
+    order?: string;
+    page?: unknown;
+    per_page?: unknown;
+  }) {
+    const parsed = parseSearchQuery(query.q);
+    const userItems: user_search_result_item[] = this.listUsers().map(
+      (user) => ({ ...user, score: 1 }),
+    );
+    const organizationItems: user_search_result_item[] =
+      this.listOrganizations().map((organization) => ({
+        ...makeSimpleUser(
+          organization.login,
+          organization.id,
+          "Organization",
+          organization.name,
+        ),
+        score: 1,
+        public_repos: organization.public_repos,
+        public_gists: organization.public_gists,
+        followers: organization.followers,
+        following: organization.following,
+        name: organization.name,
+        email: organization.email,
+        location: organization.location,
+        blog: organization.blog,
+        company: organization.company,
+        created_at: organization.created_at,
+        updated_at: organization.updated_at,
+      }));
+    let items = parsed.hasUnsupportedQualifier
+      ? []
+      : [...userItems, ...organizationItems].filter((item) => {
+          const haystack = [
+            item.login,
+            item.name ?? "",
+            item.bio ?? "",
+            item.email ?? "",
+            item.company ?? "",
+          ]
+            .join(" ")
+            .toLowerCase();
+          const all = (key: string, predicate: (value: string) => boolean) =>
+            (parsed.qualifiers.get(key) ?? []).every(predicate);
+          const repositoryCount = item.public_repos ?? 0;
+          return (
+            parsed.terms.every((term) => haystack.includes(term)) &&
+            all("login", (value) => item.login.toLowerCase() === value) &&
+            all("type", (value) => item.type.toLowerCase() === value) &&
+            all(
+              "location",
+              (value) => (item.location ?? "").toLowerCase() === value,
+            ) &&
+            all("followers", (value) =>
+              matchesNumericQualifier(item.followers ?? 0, value),
+            ) &&
+            all("repos", (value) =>
+              matchesNumericQualifier(repositoryCount, value),
+            ) &&
+            all("repositories", (value) =>
+              matchesNumericQualifier(repositoryCount, value),
+            )
+          );
+        });
+    const direction = query.order === "asc" ? 1 : -1;
+    items = items.sort((left, right) => {
+      let difference = 0;
+      if (query.sort === "followers") {
+        difference = (left.followers ?? 0) - (right.followers ?? 0);
+      } else if (query.sort === "repositories") {
+        difference = (left.public_repos ?? 0) - (right.public_repos ?? 0);
+      } else if (query.sort === "joined") {
+        difference = timestamp(left.created_at) - timestamp(right.created_at);
+      }
+      if (difference !== 0) return difference * direction;
+      return left.login.localeCompare(right.login);
+    });
+    return {
+      total_count: items.length,
+      incomplete_results: false,
+      items: paginate(items, query),
+    };
+  }
+
   saveOrganization(
     organization: Partial<organization_full> & { login: string },
   ): organization_full {
@@ -327,5 +480,284 @@ export class Context {
     return this.listOrganizations(query).map((organization) =>
       organizationToSimple(organization),
     );
+  }
+
+  private membershipsFor(org: string) {
+    const key = org.toLowerCase();
+    let memberships = this.orgMembers.get(key);
+    if (!memberships) {
+      memberships = new Map();
+      this.orgMembers.set(key, memberships);
+    }
+    return memberships;
+  }
+
+  setOrgMembership(
+    org: string,
+    username: string,
+    role: "admin" | "member" | "billing_manager" = "member",
+  ): org_membership {
+    const organization = this.getOrganization(org);
+    const user = this.getUser(username);
+    if (!organization || !user) {
+      throw new Error(`Unknown organization membership: ${org}/${username}`);
+    }
+    const membership: org_membership = {
+      url: `${API_URL}/orgs/${org}/memberships/${username}`,
+      state: "active",
+      role,
+      direct_membership: true,
+      organization_url: `${API_URL}/orgs/${org}`,
+      organization: organizationToSimple(organization),
+      user: toSimpleUser(user),
+      permissions: { can_create_repository: role === "admin" },
+    };
+    this.membershipsFor(org).set(username.toLowerCase(), membership);
+    this.outsideCollaborators
+      .get(org.toLowerCase())
+      ?.delete(username.toLowerCase());
+    return { ...membership };
+  }
+
+  getOrgMembership(org: string, username: string): org_membership | undefined {
+    const membership = this.orgMembers
+      .get(org.toLowerCase())
+      ?.get(username.toLowerCase());
+    if (!membership) return undefined;
+    const organization = this.getOrganization(org);
+    const user = this.getUser(username);
+    if (!organization || !user) return undefined;
+    return {
+      ...membership,
+      organization: organizationToSimple(organization),
+      organization_url: `${API_URL}/orgs/${organization.login}`,
+      user: toSimpleUser(user),
+    };
+  }
+
+  hasOrganizationMembership(org: string, username: string): boolean {
+    return Boolean(this.getOrgMembership(org, username));
+  }
+
+  isOrgMember(org: string, username: string): boolean {
+    return this.hasOrganizationMembership(org, username);
+  }
+
+  deleteOrgMembership(org: string, username: string): boolean {
+    const deleted =
+      this.orgMembers.get(org.toLowerCase())?.delete(username.toLowerCase()) ??
+      false;
+    this.publicMembers.get(org.toLowerCase())?.delete(username.toLowerCase());
+    return deleted;
+  }
+
+  removeOrgMember(org: string, username: string): boolean {
+    return this.deleteOrgMembership(org, username);
+  }
+
+  listOrgMembers(
+    org: string,
+    query?: { role?: unknown; page?: unknown; per_page?: unknown },
+  ): simple_user[] {
+    let memberships = [
+      ...(this.orgMembers.get(org.toLowerCase())?.keys() ?? []),
+    ]
+      .map((username) => this.getOrgMembership(org, username))
+      .filter((membership): membership is org_membership =>
+        Boolean(membership),
+      );
+    if (query?.role === "admin" || query?.role === "member") {
+      memberships = memberships.filter(
+        ({ role }) => role === String(query.role),
+      );
+    }
+    return paginate(
+      memberships
+        .map(({ user }) => user)
+        .sort((left, right) => left.login.localeCompare(right.login)),
+      query,
+    );
+  }
+
+  private invitationsFor(org: string) {
+    const key = org.toLowerCase();
+    let invitations = this.orgInvitations.get(key);
+    if (!invitations) {
+      invitations = new Map();
+      this.orgInvitations.set(key, invitations);
+    }
+    return invitations;
+  }
+
+  saveOrgInvitation(
+    org: string,
+    invitation: organization_invitation,
+  ): organization_invitation {
+    this.invitationsFor(org).set(invitation.id, { ...invitation });
+    this.nextInvitationId = Math.max(this.nextInvitationId, invitation.id + 1);
+    return { ...invitation };
+  }
+
+  createOrgInvitation(
+    org: string,
+    input: {
+      invitee_id?: number;
+      email?: string;
+      role?: string;
+      team_ids?: number[];
+    },
+  ): organization_invitation {
+    const invitee =
+      input.invitee_id == null
+        ? undefined
+        : this.listUsers().find(({ id }) => id === input.invitee_id);
+    const inviter =
+      this.getUser(this.rootContext().authenticatedLogin()) ??
+      this.listUsers()[0];
+    if (!inviter) throw new Error("An inviter user must be seeded first");
+    const id = this.nextInvitationId++;
+    const email = input.email ?? invitee?.email ?? "invitee@example.com";
+    return this.saveOrgInvitation(org, {
+      id,
+      login: invitee?.login ?? email.split("@")[0]!,
+      email,
+      role: input.role ?? "direct_member",
+      created_at: new Date().toISOString(),
+      inviter: toSimpleUser(inviter),
+      team_count: input.team_ids?.length ?? 0,
+      node_id: `OI_${id}`,
+      invitation_teams_url: `${API_URL}/orgs/${org}/invitations/${id}/teams`,
+      invitation_source: "member",
+    });
+  }
+
+  listOrgInvitations(
+    org: string,
+    query?: {
+      role?: unknown;
+      invitation_source?: unknown;
+      page?: unknown;
+      per_page?: unknown;
+    },
+  ): organization_invitation[] {
+    let invitations = [
+      ...(this.orgInvitations.get(org.toLowerCase())?.values() ?? []),
+    ].filter(({ failed_at }) => !failed_at);
+    if (query?.role && query.role !== "all") {
+      invitations = invitations.filter(
+        ({ role }) => role === String(query.role),
+      );
+    }
+    if (query?.invitation_source && query.invitation_source !== "all") {
+      invitations = invitations.filter(
+        ({ invitation_source }) =>
+          invitation_source === String(query.invitation_source),
+      );
+    }
+    return paginate(
+      invitations.sort((left, right) => left.id - right.id),
+      query,
+    ).map((invitation) => {
+      const inviter = this.getUser(invitation.inviter.login);
+      return {
+        ...invitation,
+        inviter: inviter ? toSimpleUser(inviter) : invitation.inviter,
+      };
+    });
+  }
+
+  listFailedOrgInvitations(
+    org: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): organization_invitation[] {
+    return paginate(
+      [...(this.orgInvitations.get(org.toLowerCase())?.values() ?? [])].filter(
+        ({ failed_at }) => Boolean(failed_at),
+      ),
+      query,
+    ).map((invitation) => ({ ...invitation }));
+  }
+
+  cancelOrgInvitation(org: string, invitationId: number): boolean {
+    return (
+      this.orgInvitations.get(org.toLowerCase())?.delete(invitationId) ?? false
+    );
+  }
+
+  listOrgInvitationTeams(
+    _org?: string,
+    _invitationId?: number,
+    _query?: { page?: unknown; per_page?: unknown },
+  ) {
+    return [];
+  }
+
+  private collaboratorsFor(org: string) {
+    const key = org.toLowerCase();
+    let collaborators = this.outsideCollaborators.get(key);
+    if (!collaborators) {
+      collaborators = new Set();
+      this.outsideCollaborators.set(key, collaborators);
+    }
+    return collaborators;
+  }
+
+  addOutsideCollaborator(org: string, username: string): void {
+    this.deleteOrgMembership(org, username);
+    this.collaboratorsFor(org).add(username.toLowerCase());
+  }
+
+  removeOutsideCollaborator(org: string, username: string): boolean {
+    return (
+      this.outsideCollaborators
+        .get(org.toLowerCase())
+        ?.delete(username.toLowerCase()) ?? false
+    );
+  }
+
+  listOutsideCollaborators(
+    org: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): simple_user[] {
+    const users = [...(this.outsideCollaborators.get(org.toLowerCase()) ?? [])]
+      .map((login) => this.getUser(login))
+      .filter((user): user is public_user => Boolean(user))
+      .map(toSimpleUser);
+    return paginate(users, query);
+  }
+
+  isPublicMember(org: string, username: string): boolean {
+    return (
+      this.publicMembers.get(org.toLowerCase())?.has(username.toLowerCase()) ??
+      false
+    );
+  }
+
+  publicizeMembership(org: string, username: string): void {
+    if (!this.isOrgMember(org, username)) {
+      throw new Error(`${username} is not a member of ${org}`);
+    }
+    const key = org.toLowerCase();
+    let members = this.publicMembers.get(key);
+    if (!members) {
+      members = new Set();
+      this.publicMembers.set(key, members);
+    }
+    members.add(username.toLowerCase());
+  }
+
+  concealMembership(org: string, username: string): void {
+    this.publicMembers.get(org.toLowerCase())?.delete(username.toLowerCase());
+  }
+
+  listPublicMembers(
+    org: string,
+    query?: { page?: unknown; per_page?: unknown },
+  ): simple_user[] {
+    const users = [...(this.publicMembers.get(org.toLowerCase()) ?? [])]
+      .map((login) => this.getUser(login))
+      .filter((user): user is public_user => Boolean(user))
+      .map(toSimpleUser);
+    return paginate(users, query);
   }
 }

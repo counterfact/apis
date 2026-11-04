@@ -2,9 +2,12 @@ import type { orgsCheckMembershipForUser } from "../../../../types/paths/orgs/{o
 import type { orgsRemoveMember } from "../../../../types/paths/orgs/{org}/members/{username}.types.js";
 
 export const GET: orgsCheckMembershipForUser = async ($) => {
-  return $.response[204].empty();
+  return $.context.isOrgMember($.path.org, $.path.username)
+    ? $.response[204].empty()
+    : $.response[404].empty();
 };
 
 export const DELETE: orgsRemoveMember = async ($) => {
+  $.context.removeOrgMember($.path.org, $.path.username);
   return $.response[204].empty();
 };

@@ -6,10 +6,16 @@ import type { organization_simple } from "../types/components/schemas/organizati
 import type { public_user } from "../types/components/schemas/public-user.js";
 import type { simple_user } from "../types/components/schemas/simple-user.js";
 import type { Context as GistsContext } from "./gists/_.context.js";
+import type { Context as CodesOfConductContext } from "./codes_of_conduct/_.context.js";
 import type { Context as EmojisContext } from "./emojis/_.context.js";
+import type { Context as GitignoreContext } from "./gitignore/_.context.js";
 import type { Context as LicensesContext } from "./licenses/_.context.js";
+import type { Context as MarkdownContext } from "./markdown/_.context.js";
+import type { Context as MetaContext } from "./meta/_.context.js";
+import type { Context as NotificationsContext } from "./notifications/_.context.js";
 import type { Context as RateLimitContext } from "./rate_limit/_.context.js";
 import type { Context as ReposContext } from "./repos/_.context.js";
+import type { Context as AuthenticatedUserContext } from "./user/_.context.js";
 import type { Context as UsersContext } from "./users/_.context.js";
 
 export class Context {
@@ -33,6 +39,26 @@ export class Context {
 
   private rateLimitContext(): RateLimitContext {
     return this.loadContext("/rate_limit") as RateLimitContext;
+  }
+
+  private markdownContext(): MarkdownContext {
+    return this.loadContext("/markdown") as MarkdownContext;
+  }
+
+  private codesOfConductContext(): CodesOfConductContext {
+    return this.loadContext("/codes_of_conduct") as CodesOfConductContext;
+  }
+
+  private gitignoreContext(): GitignoreContext {
+    return this.loadContext("/gitignore") as GitignoreContext;
+  }
+
+  private metaContext(): MetaContext {
+    return this.loadContext("/meta") as MetaContext;
+  }
+
+  private notificationsContext(): NotificationsContext {
+    return this.loadContext("/notifications") as NotificationsContext;
   }
 
   saveEmoji(...args: Parameters<EmojisContext["saveEmoji"]>) {
@@ -77,8 +103,124 @@ export class Context {
     return this.rateLimitContext().resetRateLimit(...args);
   }
 
+  renderMarkdown(...args: Parameters<MarkdownContext["renderMarkdown"]>) {
+    return this.markdownContext().renderMarkdown(...args);
+  }
+
+  renderRaw(...args: Parameters<MarkdownContext["renderRaw"]>) {
+    return this.markdownContext().renderRaw(...args);
+  }
+
+  commonMarkerVersion(
+    ...args: Parameters<MarkdownContext["commonMarkerVersion"]>
+  ) {
+    return this.markdownContext().commonMarkerVersion(...args);
+  }
+
+  saveCodeOfConduct(
+    ...args: Parameters<CodesOfConductContext["saveCodeOfConduct"]>
+  ) {
+    return this.codesOfConductContext().saveCodeOfConduct(...args);
+  }
+
+  listCodesOfConduct(
+    ...args: Parameters<CodesOfConductContext["listCodesOfConduct"]>
+  ) {
+    return this.codesOfConductContext().listCodesOfConduct(...args);
+  }
+
+  getCodeOfConduct(
+    ...args: Parameters<CodesOfConductContext["getCodeOfConduct"]>
+  ) {
+    return this.codesOfConductContext().getCodeOfConduct(...args);
+  }
+
+  saveGitignoreTemplate(
+    ...args: Parameters<GitignoreContext["saveGitignoreTemplate"]>
+  ) {
+    return this.gitignoreContext().saveGitignoreTemplate(...args);
+  }
+
+  listGitignoreTemplates(
+    ...args: Parameters<GitignoreContext["listGitignoreTemplates"]>
+  ) {
+    return this.gitignoreContext().listGitignoreTemplates(...args);
+  }
+
+  getGitignoreTemplate(
+    ...args: Parameters<GitignoreContext["getGitignoreTemplate"]>
+  ) {
+    return this.gitignoreContext().getGitignoreTemplate(...args);
+  }
+
+  setApiOverview(...args: Parameters<MetaContext["setApiOverview"]>) {
+    return this.metaContext().setApiOverview(...args);
+  }
+
+  getApiOverview(...args: Parameters<MetaContext["getApiOverview"]>) {
+    return this.metaContext().getApiOverview(...args);
+  }
+
+  saveNotification(
+    ...args: Parameters<NotificationsContext["saveNotification"]>
+  ) {
+    return this.notificationsContext().saveNotification(...args);
+  }
+
+  getNotification(
+    ...args: Parameters<NotificationsContext["getNotification"]>
+  ) {
+    return this.notificationsContext().getNotification(...args);
+  }
+
+  markNotificationRead(
+    ...args: Parameters<NotificationsContext["markNotificationRead"]>
+  ) {
+    return this.notificationsContext().markNotificationRead(...args);
+  }
+
+  markNotificationDone(
+    ...args: Parameters<NotificationsContext["markNotificationDone"]>
+  ) {
+    return this.notificationsContext().markNotificationDone(...args);
+  }
+
+  markAllNotificationsRead(
+    ...args: Parameters<NotificationsContext["markAllNotificationsRead"]>
+  ) {
+    return this.notificationsContext().markAllNotificationsRead(...args);
+  }
+
+  listNotifications(
+    ...args: Parameters<NotificationsContext["listNotifications"]>
+  ) {
+    return this.notificationsContext().listNotifications(...args);
+  }
+
+  getThreadSubscription(
+    ...args: Parameters<NotificationsContext["getThreadSubscription"]>
+  ) {
+    return this.notificationsContext().getThreadSubscription(...args);
+  }
+
+  setThreadSubscription(
+    ...args: Parameters<NotificationsContext["setThreadSubscription"]>
+  ) {
+    return this.notificationsContext().setThreadSubscription(...args);
+  }
+
+  deleteThreadSubscription(
+    ...args: Parameters<NotificationsContext["deleteThreadSubscription"]>
+  ) {
+    return this.notificationsContext().deleteThreadSubscription(...args);
+  }
+
   private usersContext(): UsersContext {
     return this.loadContext("/users") as UsersContext;
+  }
+
+  private authenticatedUserContext(): AuthenticatedUserContext {
+    return this.loadContext("/user") as AuthenticatedUserContext;
   }
 
   private reposContext(): ReposContext {
@@ -193,6 +335,10 @@ export class Context {
     return this.usersContext().listSimpleOrganizations(query);
   }
 
+  searchUsers(...args: Parameters<UsersContext["searchUsers"]>) {
+    return this.usersContext().searchUsers(...args);
+  }
+
   saveRepository(...args: Parameters<ReposContext["saveRepository"]>) {
     return this.reposContext().saveRepository(...args);
   }
@@ -213,8 +359,34 @@ export class Context {
     return this.reposContext().deleteRepository(...args);
   }
 
+  addRepositoryCollaborator(
+    ...args: Parameters<ReposContext["addRepositoryCollaborator"]>
+  ) {
+    return this.reposContext().addRepositoryCollaborator(...args);
+  }
+
   listRepositories(...args: Parameters<ReposContext["listRepositories"]>) {
     return this.reposContext().listRepositories(...args);
+  }
+
+  listAllIssues(...args: Parameters<ReposContext["listAllIssues"]>) {
+    return this.reposContext().listAllIssues(...args);
+  }
+
+  searchCommits(...args: Parameters<ReposContext["searchCommits"]>) {
+    return this.reposContext().searchCommits(...args);
+  }
+
+  searchLabels(...args: Parameters<ReposContext["searchLabels"]>) {
+    return this.reposContext().searchLabels(...args);
+  }
+
+  searchTopics(...args: Parameters<ReposContext["searchTopics"]>) {
+    return this.reposContext().searchTopics(...args);
+  }
+
+  searchCode(...args: Parameters<ReposContext["searchCode"]>) {
+    return this.reposContext().searchCode(...args);
   }
 
   listUserRepositories(
@@ -431,5 +603,329 @@ export class Context {
 
   listReleases(...args: Parameters<ReposContext["listReleases"]>) {
     return this.reposContext().listReleases(...args);
+  }
+
+  setOrgMembership(...args: Parameters<UsersContext["setOrgMembership"]>) {
+    return this.usersContext().setOrgMembership(...args);
+  }
+
+  getOrgMembership(...args: Parameters<UsersContext["getOrgMembership"]>) {
+    return this.usersContext().getOrgMembership(...args);
+  }
+
+  hasOrganizationMembership(
+    ...args: Parameters<UsersContext["hasOrganizationMembership"]>
+  ) {
+    return this.usersContext().hasOrganizationMembership(...args);
+  }
+
+  isOrgMember(...args: Parameters<UsersContext["isOrgMember"]>) {
+    return this.usersContext().isOrgMember(...args);
+  }
+
+  deleteOrgMembership(
+    ...args: Parameters<UsersContext["deleteOrgMembership"]>
+  ) {
+    return this.usersContext().deleteOrgMembership(...args);
+  }
+
+  removeOrgMember(...args: Parameters<UsersContext["removeOrgMember"]>) {
+    return this.usersContext().removeOrgMember(...args);
+  }
+
+  listOrgMembers(...args: Parameters<UsersContext["listOrgMembers"]>) {
+    return this.usersContext().listOrgMembers(...args);
+  }
+
+  saveOrgInvitation(...args: Parameters<UsersContext["saveOrgInvitation"]>) {
+    return this.usersContext().saveOrgInvitation(...args);
+  }
+
+  createOrgInvitation(
+    ...args: Parameters<UsersContext["createOrgInvitation"]>
+  ) {
+    return this.usersContext().createOrgInvitation(...args);
+  }
+
+  listOrgInvitations(...args: Parameters<UsersContext["listOrgInvitations"]>) {
+    return this.usersContext().listOrgInvitations(...args);
+  }
+
+  listFailedOrgInvitations(
+    ...args: Parameters<UsersContext["listFailedOrgInvitations"]>
+  ) {
+    return this.usersContext().listFailedOrgInvitations(...args);
+  }
+
+  cancelOrgInvitation(
+    ...args: Parameters<UsersContext["cancelOrgInvitation"]>
+  ) {
+    return this.usersContext().cancelOrgInvitation(...args);
+  }
+
+  listOrgInvitationTeams(
+    ...args: Parameters<UsersContext["listOrgInvitationTeams"]>
+  ) {
+    return this.usersContext().listOrgInvitationTeams(...args);
+  }
+
+  addOutsideCollaborator(
+    ...args: Parameters<UsersContext["addOutsideCollaborator"]>
+  ) {
+    return this.usersContext().addOutsideCollaborator(...args);
+  }
+
+  removeOutsideCollaborator(
+    ...args: Parameters<UsersContext["removeOutsideCollaborator"]>
+  ) {
+    return this.usersContext().removeOutsideCollaborator(...args);
+  }
+
+  listOutsideCollaborators(
+    ...args: Parameters<UsersContext["listOutsideCollaborators"]>
+  ) {
+    return this.usersContext().listOutsideCollaborators(...args);
+  }
+
+  isPublicMember(...args: Parameters<UsersContext["isPublicMember"]>) {
+    return this.usersContext().isPublicMember(...args);
+  }
+
+  publicizeMembership(
+    ...args: Parameters<UsersContext["publicizeMembership"]>
+  ) {
+    return this.usersContext().publicizeMembership(...args);
+  }
+
+  concealMembership(...args: Parameters<UsersContext["concealMembership"]>) {
+    return this.usersContext().concealMembership(...args);
+  }
+
+  listPublicMembers(...args: Parameters<UsersContext["listPublicMembers"]>) {
+    return this.usersContext().listPublicMembers(...args);
+  }
+
+  setProfile(...args: Parameters<AuthenticatedUserContext["setProfile"]>) {
+    return this.authenticatedUserContext().setProfile(...args);
+  }
+
+  authenticatedLogin(
+    ...args: Parameters<AuthenticatedUserContext["authenticatedLogin"]>
+  ) {
+    return this.authenticatedUserContext().authenticatedLogin(...args);
+  }
+
+  getProfile(...args: Parameters<AuthenticatedUserContext["getProfile"]>) {
+    return this.authenticatedUserContext().getProfile(...args);
+  }
+
+  updateProfile(
+    ...args: Parameters<AuthenticatedUserContext["updateProfile"]>
+  ) {
+    return this.authenticatedUserContext().updateProfile(...args);
+  }
+
+  saveEmail(...args: Parameters<AuthenticatedUserContext["saveEmail"]>) {
+    return this.authenticatedUserContext().saveEmail(...args);
+  }
+
+  listEmails(...args: Parameters<AuthenticatedUserContext["listEmails"]>) {
+    return this.authenticatedUserContext().listEmails(...args);
+  }
+
+  addEmail(...args: Parameters<AuthenticatedUserContext["addEmail"]>) {
+    return this.authenticatedUserContext().addEmail(...args);
+  }
+
+  deleteEmail(...args: Parameters<AuthenticatedUserContext["deleteEmail"]>) {
+    return this.authenticatedUserContext().deleteEmail(...args);
+  }
+
+  listPublicEmails(
+    ...args: Parameters<AuthenticatedUserContext["listPublicEmails"]>
+  ) {
+    return this.authenticatedUserContext().listPublicEmails(...args);
+  }
+
+  setEmailVisibility(
+    ...args: Parameters<AuthenticatedUserContext["setEmailVisibility"]>
+  ) {
+    return this.authenticatedUserContext().setEmailVisibility(...args);
+  }
+
+  saveSshKey(...args: Parameters<AuthenticatedUserContext["saveSshKey"]>) {
+    return this.authenticatedUserContext().saveSshKey(...args);
+  }
+
+  listSshKeys(...args: Parameters<AuthenticatedUserContext["listSshKeys"]>) {
+    return this.authenticatedUserContext().listSshKeys(...args);
+  }
+
+  addSshKey(...args: Parameters<AuthenticatedUserContext["addSshKey"]>) {
+    return this.authenticatedUserContext().addSshKey(...args);
+  }
+
+  getSshKey(...args: Parameters<AuthenticatedUserContext["getSshKey"]>) {
+    return this.authenticatedUserContext().getSshKey(...args);
+  }
+
+  deleteSshKey(...args: Parameters<AuthenticatedUserContext["deleteSshKey"]>) {
+    return this.authenticatedUserContext().deleteSshKey(...args);
+  }
+
+  saveGpgKey(...args: Parameters<AuthenticatedUserContext["saveGpgKey"]>) {
+    return this.authenticatedUserContext().saveGpgKey(...args);
+  }
+
+  listGpgKeys(...args: Parameters<AuthenticatedUserContext["listGpgKeys"]>) {
+    return this.authenticatedUserContext().listGpgKeys(...args);
+  }
+
+  addGpgKey(...args: Parameters<AuthenticatedUserContext["addGpgKey"]>) {
+    return this.authenticatedUserContext().addGpgKey(...args);
+  }
+
+  getGpgKey(...args: Parameters<AuthenticatedUserContext["getGpgKey"]>) {
+    return this.authenticatedUserContext().getGpgKey(...args);
+  }
+
+  deleteGpgKey(...args: Parameters<AuthenticatedUserContext["deleteGpgKey"]>) {
+    return this.authenticatedUserContext().deleteGpgKey(...args);
+  }
+
+  saveSshSigningKey(
+    ...args: Parameters<AuthenticatedUserContext["saveSshSigningKey"]>
+  ) {
+    return this.authenticatedUserContext().saveSshSigningKey(...args);
+  }
+
+  listSshSigningKeys(
+    ...args: Parameters<AuthenticatedUserContext["listSshSigningKeys"]>
+  ) {
+    return this.authenticatedUserContext().listSshSigningKeys(...args);
+  }
+
+  addSshSigningKey(
+    ...args: Parameters<AuthenticatedUserContext["addSshSigningKey"]>
+  ) {
+    return this.authenticatedUserContext().addSshSigningKey(...args);
+  }
+
+  getSshSigningKey(
+    ...args: Parameters<AuthenticatedUserContext["getSshSigningKey"]>
+  ) {
+    return this.authenticatedUserContext().getSshSigningKey(...args);
+  }
+
+  deleteSshSigningKey(
+    ...args: Parameters<AuthenticatedUserContext["deleteSshSigningKey"]>
+  ) {
+    return this.authenticatedUserContext().deleteSshSigningKey(...args);
+  }
+
+  follow(...args: Parameters<AuthenticatedUserContext["follow"]>) {
+    return this.authenticatedUserContext().follow(...args);
+  }
+
+  unfollow(...args: Parameters<AuthenticatedUserContext["unfollow"]>) {
+    return this.authenticatedUserContext().unfollow(...args);
+  }
+
+  isFollowing(...args: Parameters<AuthenticatedUserContext["isFollowing"]>) {
+    return this.authenticatedUserContext().isFollowing(...args);
+  }
+
+  saveFollower(...args: Parameters<AuthenticatedUserContext["saveFollower"]>) {
+    return this.authenticatedUserContext().saveFollower(...args);
+  }
+
+  listFollowing(
+    ...args: Parameters<AuthenticatedUserContext["listFollowing"]>
+  ) {
+    return this.authenticatedUserContext().listFollowing(...args);
+  }
+
+  listFollowers(
+    ...args: Parameters<AuthenticatedUserContext["listFollowers"]>
+  ) {
+    return this.authenticatedUserContext().listFollowers(...args);
+  }
+
+  starRepo(...args: Parameters<AuthenticatedUserContext["starRepo"]>) {
+    return this.authenticatedUserContext().starRepo(...args);
+  }
+
+  unstarRepo(...args: Parameters<AuthenticatedUserContext["unstarRepo"]>) {
+    return this.authenticatedUserContext().unstarRepo(...args);
+  }
+
+  isStarred(...args: Parameters<AuthenticatedUserContext["isStarred"]>) {
+    return this.authenticatedUserContext().isStarred(...args);
+  }
+
+  listStarredRepos(
+    ...args: Parameters<AuthenticatedUserContext["listStarredRepos"]>
+  ) {
+    return this.authenticatedUserContext().listStarredRepos(...args);
+  }
+
+  subscribeRepo(
+    ...args: Parameters<AuthenticatedUserContext["subscribeRepo"]>
+  ) {
+    return this.authenticatedUserContext().subscribeRepo(...args);
+  }
+
+  listSubscriptions(
+    ...args: Parameters<AuthenticatedUserContext["listSubscriptions"]>
+  ) {
+    return this.authenticatedUserContext().listSubscriptions(...args);
+  }
+
+  listOrgMemberships(
+    ...args: Parameters<AuthenticatedUserContext["listOrgMemberships"]>
+  ) {
+    return this.authenticatedUserContext().listOrgMemberships(...args);
+  }
+
+  listUserRepos(
+    ...args: Parameters<AuthenticatedUserContext["listUserRepos"]>
+  ) {
+    return this.authenticatedUserContext().listUserRepos(...args);
+  }
+
+  listAssignedIssues(
+    ...args: Parameters<AuthenticatedUserContext["listAssignedIssues"]>
+  ) {
+    return this.authenticatedUserContext().listAssignedIssues(...args);
+  }
+
+  saveSocialAccount(
+    ...args: Parameters<AuthenticatedUserContext["saveSocialAccount"]>
+  ) {
+    return this.authenticatedUserContext().saveSocialAccount(...args);
+  }
+
+  listSocialAccounts(
+    ...args: Parameters<AuthenticatedUserContext["listSocialAccounts"]>
+  ) {
+    return this.authenticatedUserContext().listSocialAccounts(...args);
+  }
+
+  addSocialAccounts(
+    ...args: Parameters<AuthenticatedUserContext["addSocialAccounts"]>
+  ) {
+    return this.authenticatedUserContext().addSocialAccounts(...args);
+  }
+
+  deleteSocialAccounts(
+    ...args: Parameters<AuthenticatedUserContext["deleteSocialAccounts"]>
+  ) {
+    return this.authenticatedUserContext().deleteSocialAccounts(...args);
+  }
+
+  saveAuthenticatedRepository(
+    ...args: Parameters<AuthenticatedUserContext["saveAuthenticatedRepository"]>
+  ) {
+    return this.authenticatedUserContext().saveAuthenticatedRepository(...args);
   }
 }

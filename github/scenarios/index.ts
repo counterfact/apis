@@ -450,6 +450,74 @@ export const releases: Scenario = ($) => {
   });
 };
 
+export const notifications: Scenario = ($) => {
+  const repository = $.context.getRepository("counterfact", "platform-api");
+  if (!repository) {
+    throw new Error(
+      "notifications requires counterfact/platform-api; run the repositories scenario first",
+    );
+  }
+
+  const fixtures = [
+    {
+      id: "101",
+      reason: "mention",
+      title: "New comment on issue #1",
+      type: "Issue" as const,
+      url: "https://api.github.com/repos/counterfact/platform-api/issues/1",
+      latestCommentUrl:
+        "https://api.github.com/repos/counterfact/platform-api/issues/comments/11",
+      updatedAt: "2026-08-18T13:00:00.000Z",
+    },
+    {
+      id: "102",
+      reason: "review_requested",
+      title: "Pull request #1 received a review",
+      type: "PullRequest" as const,
+      url: "https://api.github.com/repos/counterfact/platform-api/pulls/1",
+      latestCommentUrl:
+        "https://api.github.com/repos/counterfact/platform-api/pulls/1/reviews/21",
+      updatedAt: "2026-08-18T12:00:00.000Z",
+    },
+    {
+      id: "103",
+      reason: "subscribed",
+      title: "Workflow CI completed",
+      type: "CheckSuite" as const,
+      url: "https://api.github.com/repos/counterfact/platform-api/actions/runs/401",
+      latestCommentUrl:
+        "https://api.github.com/repos/counterfact/platform-api/actions/runs/401",
+      updatedAt: "2026-08-18T11:00:00.000Z",
+    },
+  ];
+
+  let firstFixtureId: string | undefined;
+  for (const fixture of fixtures) {
+    const existingFixture = $.context
+      .listNotifications({ all: true, per_page: 100 })
+      .find(({ subject }) => subject.url === fixture.url);
+    const saved = $.context.saveNotification({
+      id:
+        existingFixture?.id ??
+        ($.context.getNotification(fixture.id) ? undefined : fixture.id),
+      repository,
+      subject: {
+        title: fixture.title,
+        url: fixture.url,
+        latest_comment_url: fixture.latestCommentUrl,
+        type: fixture.type,
+      },
+      reason: fixture.reason,
+      updated_at: fixture.updatedAt,
+      last_read_at: fixture.updatedAt,
+    });
+    firstFixtureId ??= saved.id;
+  }
+  if (firstFixtureId) {
+    $.context.setThreadSubscription(firstFixtureId, { ignored: false });
+  }
+};
+
 export const rateLimit: Scenario = ($) => {
   $.context.setRateLimit("core", { limit: 5000 });
   $.context.setRateLimit("search", { limit: 30 });
@@ -457,10 +525,202 @@ export const rateLimit: Scenario = ($) => {
   $.context.setRateLimit("code_search", { limit: 10 });
 };
 
+export const codesOfConduct: Scenario = ($) => {
+  const entries = [
+    {
+      key: "citizen_code_of_conduct",
+      name: "Citizen Code of Conduct",
+      html_url: "http://citizencodeofconduct.org/",
+      body: "# Citizen Code of Conduct\n\nThis deterministic simulator fixture represents the Citizen Code of Conduct.",
+    },
+    {
+      key: "contributor_covenant",
+      name: "Contributor Covenant",
+      html_url: "http://contributor-covenant.org/version/1/4/",
+      body: `# Contributor Covenant Code of Conduct
+
+## Our Pledge
+
+In the interest of fostering an open and welcoming environment, we as contributors and maintainers pledge to making participation in our project and our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
+
+## Our Standards
+
+Examples of behavior that contributes to creating a positive environment include:
+
+* Using welcoming and inclusive language
+* Being respectful of differing viewpoints and experiences
+* Gracefully accepting constructive criticism
+* Focusing on what is best for the community
+* Showing empathy towards other community members
+
+Examples of unacceptable behavior by participants include:
+
+* The use of sexualized language or imagery and unwelcome sexual attention or advances
+* Trolling, insulting/derogatory comments, and personal or political attacks
+* Public or private harassment
+* Publishing others' private information, such as a physical or electronic address, without explicit permission
+* Other conduct which could reasonably be considered inappropriate in a professional setting
+
+## Our Responsibilities
+
+Project maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
+
+Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct, or to ban temporarily or permanently any contributor for other behaviors that they deem inappropriate, threatening, offensive, or harmful.
+
+## Scope
+
+This Code of Conduct applies both within project spaces and in public spaces when an individual is representing the project or its community. Examples of representing a project or community include using an official project e-mail address, posting via an official social media account, or acting as an appointed representative at an online or offline event. Representation of a project may be further defined and clarified by project maintainers.
+
+## Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at [EMAIL]. The project team will review and investigate all complaints, and will respond in a way that it deems appropriate to the circumstances. The project team is obligated to maintain confidentiality with regard to the reporter of an incident. Further details of specific enforcement policies may be posted separately.
+
+Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
+
+## Attribution
+
+This Code of Conduct is adapted from the [Contributor Covenant](http://contributor-covenant.org), version 1.4, available at [http://contributor-covenant.org/version/1/4](http://contributor-covenant.org/version/1/4/).`,
+    },
+  ];
+
+  for (const { key, name, html_url, body } of entries) {
+    $.context.saveCodeOfConduct({
+      key,
+      name,
+      url: `https://api.github.com/codes_of_conduct/${key}`,
+      html_url,
+      body,
+    });
+  }
+};
+
+export const gitignoreTemplates: Scenario = ($) => {
+  const templates = [
+    {
+      name: "Go",
+      source: "# Binaries for programs and plugins\n*.exe\n*.test\n*.out\n",
+    },
+    {
+      name: "Java",
+      source: "# Compiled class files\n*.class\n# Package files\n*.jar\n",
+    },
+    { name: "Node", source: "# Dependencies\nnode_modules/\n# Logs\n*.log\n" },
+    {
+      name: "Python",
+      source: "# Byte-compiled files\n__pycache__/\n*.py[cod]\n.venv/\n",
+    },
+    { name: "Ruby", source: "# Bundler\n.bundle/\nvendor/bundle\n*.gem\n" },
+  ];
+  for (const template of templates) {
+    $.context.saveGitignoreTemplate(template);
+  }
+};
+
+export const apiMetadata: Scenario = ($) => {
+  $.context.setApiOverview({
+    verifiable_password_authentication: true,
+    ssh_key_fingerprints: {
+      SHA256_RSA: "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8",
+      SHA256_ED25519: "SHA256:p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM",
+    },
+    api: ["192.30.252.0/22", "185.199.108.0/22"],
+    git: ["192.30.252.0/22"],
+    hooks: ["192.30.252.0/22"],
+    web: ["185.199.108.0/22"],
+    actions: ["20.201.28.0/25"],
+    packages: ["140.82.112.0/20"],
+    pages: ["185.199.108.0/22"],
+  });
+};
+
+export const organizationMembers: Scenario = ($) => {
+  $.context.setOrgMembership("counterfact", "octocat", "admin");
+  $.context.setOrgMembership("counterfact", "mona", "member");
+  $.context.publicizeMembership("counterfact", "mona");
+  const invitations = $.context.listOrgInvitations("counterfact");
+  if (!invitations.some(({ login }) => login === "hubot")) {
+    if (invitations.some(({ id }) => id === 201)) {
+      $.context.createOrgInvitation("counterfact", {
+        invitee_id: $.context.getUser("hubot")?.id,
+        role: "direct_member",
+      });
+    } else {
+      const [inviter] = $.context.listSimpleUsers();
+      $.context.saveOrgInvitation("counterfact", {
+        id: 201,
+        login: "hubot",
+        email: "hubot@example.com",
+        role: "direct_member",
+        created_at: "2024-01-02T00:00:00Z",
+        inviter,
+        team_count: 0,
+        node_id: "OI_201",
+        invitation_teams_url:
+          "https://api.github.com/orgs/counterfact/invitations/201/teams",
+        invitation_source: "member",
+      });
+    }
+  }
+};
+
+export const authenticatedUser: Scenario = ($) => {
+  $.context.setProfile({
+    login: "octocat",
+    id: 1,
+    name: "The Octocat",
+    email: "octocat@github.com",
+  });
+  $.context.saveEmail({
+    email: "octocat@github.com",
+    primary: true,
+    verified: true,
+    visibility: "public",
+  });
+  $.context.saveEmail({
+    email: "octocat@users.noreply.github.com",
+    primary: false,
+    verified: true,
+    visibility: "private",
+  });
+  if (
+    !$.context.listSshKeys().some(({ title }) => title === "Octocat laptop")
+  ) {
+    if ($.context.getSshKey(301)) {
+      $.context.addSshKey({
+        title: "Octocat laptop",
+        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICounterfact octocat",
+      });
+    } else {
+      $.context.saveSshKey({
+        id: 301,
+        title: "Octocat laptop",
+        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICounterfact octocat",
+        url: "https://api.github.com/user/keys/301",
+        created_at: "2024-01-03T00:00:00Z",
+        verified: true,
+        read_only: false,
+      });
+    }
+  }
+  $.context.follow("mona");
+  $.context.saveFollower("hubot");
+  $.context.starRepo("counterfact", "platform-api");
+  $.context.subscribeRepo("counterfact", "actions-demo");
+  $.context.saveSocialAccount({
+    provider: "github",
+    url: "https://github.com/octocat",
+  });
+};
+
 export const seedGitHub: Scenario = ($) => {
   void emojis($);
+  void codesOfConduct($);
+  void gitignoreTemplates($);
+  void apiMetadata($);
   void identities($);
   void repositories($);
+  void organizationMembers($);
+  void authenticatedUser($);
   void labels($);
   void issues($);
   void milestones($);
@@ -468,6 +728,7 @@ export const seedGitHub: Scenario = ($) => {
   void actions($);
   void commitStatuses($);
   void releases($);
+  void notifications($);
   void licenses($);
   void gists($);
   void gistComments($);
