@@ -58,7 +58,7 @@ test("voice settings persist across HTTP requests, deletion and reset stay consi
       "next_page_token=-1",
       "sort=bad",
       "sort_direction=bad",
-      "gender=female",
+      "voice_type=personal",
     ]) {
       assert.equal((await request(`/v2/voices?${query}`)).status, 400, query);
     }

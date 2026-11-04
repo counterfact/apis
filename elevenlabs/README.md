@@ -66,10 +66,32 @@ curl 'http://localhost:3100/v2/voices?page_size=1&search=narration'
 
 V2 supports `search` (name, description, category, and labels), `category`,
 `sort` (`name` or `created_at_unix`), `sort_direction`, `page_size` (1–100),
-and `next_page_token`. Tokens are local integer offsets. Other V2 filters
+`next_page_token`, `gender`, `age`, `accent`, `language`, `use_cases`, and
+`voice_ids` (at most 100 IDs). Tokens are local integer offsets. Other V2 filters
 return HTTP 400 rather than being silently ignored. `total_count` is always
 returned, as required by the snapshot's response schema; `include_total_count`
 is accepted. A page beyond the end returns an empty list and a null token.
+
+Label filters read `labels.gender`, `labels.age`, `labels.accent`,
+`labels.language`, and `labels.use_case`. They use exact, case-sensitive values
+as a local simulator convention; the contract does not specify case handling.
+Multiple languages or use cases match any supplied value. Different filters
+combine with AND before sorting and pagination. Voices missing a requested
+label do not match, even if `verified_languages` contains that language.
+Unknown voice IDs are omitted and repeated IDs do not duplicate results.
+Omitted/null arrays leave the filter inactive; empty arrays match no voices.
+
+Send array values as repeated query parameters:
+
+```sh
+curl 'http://localhost:3100/v2/voices?language=en&language=es&use_cases=narration'
+curl 'http://localhost:3100/v2/voices?voice_ids=sim-narrator&voice_ids=sim-assistant'
+```
+
+The optional `voiceDiscovery` scenario adds a Spanish narrator and a voice
+without discovery labels to the current collection. It replaces its own two
+fixtures and leaves other voices alone; `reset` removes these extra fixtures. In programmatic use, call
+`app.scenario("voiceDiscovery", "api")`.
 
 Settings edits preserve omitted and null values and leave defaults and other
 voices unchanged. Missing voices return HTTP 404 with
@@ -93,6 +115,14 @@ Generation reads both local contracts and preserves authored handlers.
 Tests verify spec provenance, version routing, and shared voice behavior over
 real HTTP, plus context state transitions and listing rules directly.
 HTTP tests require permission to listen on localhost.
+
+For the discovery slice, Jev checked the public contract's natural-language
+filter descriptions. It supported matching any supplied language/use case and
+using labels, and found no stated case-insensitive rule. Those readings were
+reviewed against the contract and implemented with deterministic code and
+tests. The [exact request](../scripts/typesafe/requests/elevenlabs-voice-filters.json)
+and [returned judgments](../scripts/typesafe/results/elevenlabs-voice-filters.json)
+are retained for review. Jev is not called by the simulator or its tests.
 
 Some upstream paths have sibling wildcard parameters with different names
 (agent branches, knowledge-base documents, pronunciation dictionaries, and

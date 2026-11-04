@@ -12,6 +12,9 @@ export const reset: Scenario = ($) => {
         labels: {
           language: "en",
           use_case: index === 0 ? "narration" : "conversational",
+          gender: index === 0 ? "female" : "male",
+          age: index === 0 ? "middle_aged" : "young",
+          accent: index === 0 ? "american" : "british",
         },
         description: "Local simulator fixture; no audio is synthesized.",
         available_for_tiers: [],
@@ -25,3 +28,44 @@ export const reset: Scenario = ($) => {
   );
 };
 export const startup: Scenario = reset;
+
+/** Add discovery examples to the current state; reset removes them. */
+export const voiceDiscovery: Scenario = ($) => {
+  $.context.voices.set("sim-spanish-narrator", {
+    voice_id: "sim-spanish-narrator",
+    name: "Simulator Spanish Narrator",
+    category: "generated",
+    labels: {
+      language: "es",
+      use_case: "narration",
+      gender: "female",
+      age: "middle_aged",
+      accent: "spanish",
+    },
+    description:
+      "Local Spanish-language discovery fixture; no audio is synthesized.",
+    available_for_tiers: [],
+    high_quality_base_model_ids: ["eleven_multilingual_v2"],
+    settings: defaultSettings(),
+    is_owner: true,
+    is_legacy: false,
+    created_at_unix: 1_735_689_602,
+  });
+  $.context.voices.set("sim-unlabeled", {
+    voice_id: "sim-unlabeled",
+    name: "Simulator Unlabeled Voice",
+    category: "generated",
+    labels: {},
+    verified_languages: [
+      { language: "en", model_id: "eleven_multilingual_v2" },
+    ],
+    description:
+      "Local fixture without discovery labels; no audio is synthesized.",
+    available_for_tiers: [],
+    high_quality_base_model_ids: ["eleven_multilingual_v2"],
+    settings: defaultSettings(),
+    is_owner: true,
+    is_legacy: false,
+    created_at_unix: 1_735_689_603,
+  });
+};

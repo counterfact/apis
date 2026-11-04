@@ -31,11 +31,20 @@ export class Context {
       "sort",
       "sort_direction",
       "include_total_count",
+      "gender",
+      "age",
+      "accent",
+      "language",
+      "use_cases",
+      "voice_ids",
     ]);
     for (const [key, value] of Object.entries(query)) {
       if (value !== null && value !== undefined && !supported.has(key)) {
         return { error: `The simulator does not support the '${key}' filter` };
       }
+    }
+    if (query.voice_ids && query.voice_ids.length > 100) {
+      return { error: "voice_ids must contain at most 100 IDs" };
     }
     const size = query.page_size ?? 10;
     const token = query.next_page_token ?? "0";
@@ -59,6 +68,14 @@ export class Context {
     let voices = this.listVoices().filter(
       (voice) =>
         (!query.category || voice.category === query.category) &&
+        (query.gender == null || voice.labels.gender === query.gender) &&
+        (query.age == null || voice.labels.age === query.age) &&
+        (query.accent == null || voice.labels.accent === query.accent) &&
+        (query.language == null ||
+          query.language.includes(voice.labels.language)) &&
+        (query.use_cases == null ||
+          query.use_cases.includes(voice.labels.use_case)) &&
+        (query.voice_ids == null || query.voice_ids.includes(voice.voice_id)) &&
         (!search ||
           [
             voice.name,

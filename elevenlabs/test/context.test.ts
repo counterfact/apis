@@ -3,6 +3,7 @@ import test from "node:test";
 import { Context, defaultSettings } from "../api/routes/_.context.js";
 import { reset, startup } from "../api/scenarios/index.js";
 import type { Scenario } from "../api/types/index.js";
+import type { HTTP_GET_Query } from "../api/types/v2/paths/voices.types.js";
 
 async function runScenario(context: Context, scenario: Scenario) {
   await scenario({
@@ -72,8 +73,48 @@ test("V2 listing filters before pagination and rejects invalid options", async (
     { page_size: 1.5 },
     { next_page_token: "1e2" },
     { next_page_token: "9007199254740992" },
-    { gender: "female" },
+    { voice_type: "personal" },
   ]) {
     assert.equal(typeof context.listVoicesV2(query).error, "string");
   }
+});
+
+test("discovery filters use labels and IDs without mutating voice state", async () => {
+  const context = new Context();
+  await runScenario(context, startup);
+  const before = context.listVoices();
+  const ids = (query: HTTP_GET_Query) => {
+    const result = context.listVoicesV2(query);
+    assert.equal(result.error, undefined);
+    return result.page!.voices.map((voice) => voice.voice_id);
+  };
+  assert.deepEqual(ids({ gender: "female", language: ["fr", "en"] }), [
+    "sim-narrator",
+  ]);
+  assert.deepEqual(ids({ age: "young", accent: "british" }), ["sim-assistant"]);
+  assert.deepEqual(ids({ use_cases: ["absent", "narration"] }), [
+    "sim-narrator",
+  ]);
+  assert.deepEqual(
+    ids({ voice_ids: ["sim-narrator", "sim-narrator", "missing"] }),
+    ["sim-narrator"],
+  );
+  assert.deepEqual(ids({ voice_ids: ["sim-assistant"], gender: "female" }), []);
+  assert.deepEqual(
+    ids({ gender: null, language: null, use_cases: null, voice_ids: null }),
+    ["sim-narrator", "sim-assistant"],
+  );
+  for (const query of [
+    { language: [] },
+    { use_cases: [] },
+    { voice_ids: [] },
+    { gender: "Female" },
+  ]) {
+    assert.deepEqual(ids(query), []);
+  }
+  assert.equal(
+    context.listVoicesV2({ voice_ids: Array(101).fill("sim-narrator") }).error,
+    "voice_ids must contain at most 100 IDs",
+  );
+  assert.deepEqual(context.listVoices(), before);
 });

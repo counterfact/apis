@@ -1,0 +1,37 @@
+{
+  "model": "jev-1.14.0",
+  "state": {
+    "source": "https://api.elevenlabs.io/openapi.json",
+    "endpoint": "GET /v2/voices",
+    "parameter_descriptions": {
+      "gender": "Gender used for filtering, based on the voice's 'gender' label.",
+      "age": "Age used for filtering, based on the voice's 'age' label.",
+      "language": "Languages used for filtering, based on the voice's 'language' label. Voices matching any of the given languages are returned.",
+      "accent": "Accent used for filtering, based on the voice's 'accent' label.",
+      "use_cases": "Use cases used for filtering, based on the voice's 'use_case' label. Voices matching any of the given use cases are returned.",
+      "voice_ids": "Voice IDs to lookup by. Maximum 100 voice IDs."
+    }
+  },
+  "questions": {
+    "language_any": {
+      "type": "noul",
+      "instructions": "Does the language description say that matching any one requested language is sufficient?"
+    },
+    "use_cases_any": {
+      "type": "noul",
+      "instructions": "Does the use_cases description say that matching any one requested use case is sufficient?"
+    },
+    "gender_uses_label": {
+      "type": "noul",
+      "instructions": "Does the gender description identify the gender label as the field to filter?"
+    },
+    "language_uses_verified_languages": {
+      "type": "noul",
+      "instructions": "Does the language description identify verified_languages as the field to filter?"
+    },
+    "case_insensitive_specified": {
+      "type": "noul",
+      "instructions": "Do these parameter descriptions specify case-insensitive label matching?"
+    }
+  }
+}
