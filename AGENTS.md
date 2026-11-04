@@ -57,3 +57,34 @@ Every PR description must include a section titled exactly `## Manual acceptance
 - Context unit tests verify internal logic.
 - Scenario updates follow the startup-init and REPL-invoked scenario model.
 - Scope remains limited to one API/subset per iteration.
+
+## Commit each completed slice
+
+- After completing a coherent slice of changes, run the relevant checks and commit that slice before handing it back to Patrick.
+- Do not wait for a separate request to commit. If the task contains several slices, commit each completed slice separately.
+- Include only changes belonging to the slice; leave unrelated work untouched.
+- Honor any explicit instruction to leave changes uncommitted. If checks fail or a commit is blocked, explain what remains unresolved.
+
+## Optional TypeSafe / Jev development checks
+
+Use TypeSafe/Jev for narrow semantic judgments that help development, such as
+checking whether an excerpt supports a documentation claim. Use deterministic
+code and tests for exact facts. Jev provides evidence, not authority to approve
+or merge a change.
+
+Follow the installed `typesafe-ai` skill for question design; do not install a
+duplicate. Use `scripts/typesafe/development.mjs` for prepared requests and see
+`scripts/typesafe/README.md` for commands and credential setup.
+
+Patrick's existing authorization covers routine development judgments using
+public Counterfact source and synthetic examples, with spending controlled at
+the provider. Do not ask again within that scope. Do not send unpublished local
+changes, credentials, environment dumps, ignored/private files, personal data,
+or unrelated content. Prepare only the evidence needed for each question.
+Do not add client-side spending ledgers or approval files.
+
+Keep API keys in the ignored, owner-only `.env.typesafe.local` beside the common
+Git directory. Never print credentials or raw provider errors. A failed API call
+is an error, never a false judgment. Ordinary simulator runtime, builds, and
+tests must not call TypeSafe. The helper's default mode validates locally;
+`--send` explicitly makes a live request.
