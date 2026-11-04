@@ -1,0 +1,21 @@
+/**
+ * Allows the agent to explicitly skip its turn.
+ *
+ * This tool should be invoked by the LLM when the user indicates they would like
+ * to think or take a short pause before continuing the conversation—e.g. when
+ * they say: "Give me a second", "Let me think", or "One moment please".  After
+ * calling this tool, the assistant should not speak until the user speaks
+ * again, or if wait_timeout_secs is set, until that wait elapses and the
+ * agent generates a check-in.
+ */
+export type SkipTurnToolConfig = {
+  /**
+   * @default "skip_turn"
+   */
+  system_tool_type?: "skip_turn";
+  /**
+   * Seconds to wait after skip_turn before the agent generates a contextual check-in. The "End conversation after silence" timer is paused during the wait. -1 disables the wait: after skip_turn the agent stays silent until the caller speaks, and that timer keeps running. Applies to voice conversations only.
+   * @default -1
+   */
+  wait_timeout_secs?: number;
+};

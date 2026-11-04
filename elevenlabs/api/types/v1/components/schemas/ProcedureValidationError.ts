@@ -1,0 +1,10 @@
+export type ProcedureValidationError = {
+  /**
+   * JSON path to the error, e.g. 'trigger', 'steps[0].instruction'
+   */
+  path: string;
+  /**
+   * Human-readable error message
+   */
+  message: string;
+};

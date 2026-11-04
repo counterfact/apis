@@ -1,0 +1,11 @@
+/**
+ * A model that represents an tool dependent on a knowledge base/tools
+ * to which the user has no direct access.
+ */
+export type DependentUnknownToolIdentifier = {
+  /**
+   * @default "unknown"
+   */
+  type?: "unknown";
+  id: string;
+};

@@ -1,0 +1,6 @@
+export type AllowedValues = {
+  /**
+   * Name of a dynamic variable that must resolve to a JSON array of permitted values, e.g. ["ws_alpha", "ws_beta"]. System variables work only if they resolve to a list.
+   */
+  dynamic_variable: string;
+};

@@ -1,0 +1,14 @@
+export type DubbingError = {
+  /**
+   * Stable identifier for the failure, safe to branch on. New codes are added over time, so we recommend treating an unrecognized value as `internal_error`.
+   */
+  code: string;
+  /**
+   * Human-readable description of the failure, for display. The wording may change at any time, so we recommend branching on `code` instead.
+   */
+  message: string;
+  /**
+   * Whether resubmitting the same input could succeed. A value of false means the failure describes the input or the account, so an identical retry will fail the same way.
+   */
+  retryable: boolean;
+};

@@ -1,0 +1,11 @@
+spec:
+  - source: openapi.v1.yaml
+    group: api
+    prefix: /v1
+    version: v1
+  - source: openapi.v2.yaml
+    group: api
+    prefix: /v2
+    version: v2
+destination: .
+port: 3100

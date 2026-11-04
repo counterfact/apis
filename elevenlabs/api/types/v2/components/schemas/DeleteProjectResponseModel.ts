@@ -1,0 +1,9 @@
+/**
+ * @example {"status":"ok"}
+ */
+export type DeleteProjectResponseModel = {
+  /**
+   * The status of the studio project deletion request. If the request was successful, the status will be 'ok'. Otherwise an error message with status 500 will be returned.
+   */
+  status: string;
+};

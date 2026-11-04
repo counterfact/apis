@@ -1,0 +1,9 @@
+/**
+ * Overrides for the voice's saved settings, applied to one generation.
+ */
+export type ElevenV3VoiceSettings = {
+  /**
+   * How consistent the voice stays across generations. Lower values give more expressive, varied speech.
+   */
+  stability?: number | null;
+};

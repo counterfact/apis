@@ -1,0 +1,21 @@
+import type { StringSchema } from "./StringSchema.js";
+import type { NumberSchema } from "./NumberSchema.js";
+import type { IntegerSchema } from "./IntegerSchema.js";
+import type { BooleanSchema } from "./BooleanSchema.js";
+import type { ImageSchema } from "./ImageSchema.js";
+import type { VideoSchema } from "./VideoSchema.js";
+import type { AudioSchema } from "./AudioSchema.js";
+import type { VoiceSchema } from "./VoiceSchema.js";
+import type { ObjectSchema } from "./ObjectSchema.js";
+import type { ArraySchema } from "./ArraySchema.js";
+export type ContentSchema =
+  | (StringSchema & { type: "string" })
+  | (NumberSchema & { type: "number" })
+  | (IntegerSchema & { type: "integer" })
+  | (BooleanSchema & { type: "boolean" })
+  | (ImageSchema & { type: "image" })
+  | (VideoSchema & { type: "video" })
+  | (AudioSchema & { type: "audio" })
+  | (VoiceSchema & { type: "voice" })
+  | (ObjectSchema & { type: "object" })
+  | (ArraySchema & { type: "array" });
