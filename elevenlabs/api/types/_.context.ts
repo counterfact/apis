@@ -30,6 +30,7 @@ import type { Context as MusicFinetunesContext } from "../routes/music/finetunes
 import type { Context as ProductionsOrdersContext } from "../routes/productions/orders/_.context";
 import type { Context as StudioProjectsContext } from "../routes/studio/projects/_.context";
 import type { Context as VoicesCollectionsContext } from "../routes/voices/collections/_.context";
+import type { Context as VoicesPvcContext } from "../routes/voices/pvc/_.context";
 import type { Context as WorkspaceAnalyticsContext } from "../routes/workspace/analytics/_.context";
 import type { Context as WorkspaceAuthConnectionsContext } from "../routes/workspace/auth-connections/_.context";
 import type { Context as WorkspaceGroupsContext } from "../routes/workspace/groups/_.context";
@@ -137,6 +138,7 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/voices/collections" | `/voices/collections/${string}`,
   ): VoicesCollectionsContext;
+  loadContext(path: "/voices/pvc" | `/voices/pvc/${string}`): VoicesPvcContext;
   loadContext(
     path: "/workspace/analytics" | `/workspace/analytics/${string}`,
   ): WorkspaceAnalyticsContext;

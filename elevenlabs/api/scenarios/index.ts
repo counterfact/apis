@@ -1,3 +1,5 @@
+import { resetPvcVoices } from "./pvc-voices.js";
+export { emptyPvcVoices } from "./pvc-voices.js";
 import { resetVoiceLibrary } from "./voice-library.js";
 export { emptyVoiceLibrary } from "./voice-library.js";
 import {resetAgentProcedures} from "./agent-procedures.js";
@@ -157,6 +159,7 @@ export const reset: Scenario = ($) => {
       },
     ]),
   );
+  resetPvcVoices($);
   resetCollections($);
 };
 export const startup: Scenario = reset;

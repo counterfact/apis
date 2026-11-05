@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 288 now have authored
-behavior. The remaining 149 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 290 now have authored
+behavior. The remaining 147 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1934,3 +1934,30 @@ These matching, ordering, inclusion and error rules are local simulator conventi
 Rates, usage, reader eligibility and trending values are synthetic metadata,
 not provider pricing or analytics. No previews, audio, billing, provider catalog
 fetch or voice import occurs. Shared-voice import remains generated.
+
+
+## Professional voice metadata
+
+`POST /v1/voices/pvc` creates an empty professional voice, and
+`POST /v1/voices/pvc/{voice_id}` edits its metadata. Both operate on the canonical
+owned-voice map, so V1/V2 lists, filters, detail, settings, collection membership,
+subscription slot counts and deletion observe the same record. No samples,
+verified languages, trained models, preview or audio are created. Fine-tuning
+state is empty and training is disabled locally; this is metadata storage only.
+
+Names and languages must be nonblank strings; language is stored in both
+`labels.language` and `fine_tuning.language`. Labels replace the other labels while
+retaining the sample language; an explicit conflicting language label returns 400.
+An omitted or null labels value preserves labels. Omitted description preserves
+it, while null clears it. Other metadata, settings and collection membership
+survive edits. Only owned professional voices can be edited; other categories
+return 409, nonowned records 403 and missing voices 404. Invalid requests leave
+records and ID counters unchanged. These language, null, ID and error conventions
+are local behavior, with unchanged contracts and validation enabled.
+
+Contexts start empty. `api/scenarios/pvc-voices.ts` owns the synthetic creation
+time, ID counter and canonical accessor. Reset restores the two original voices
+and the PVC counter. `emptyPvcVoices` removes professional records only and resets
+the counter, preserving other voices. Instances isolate changes and reads return
+copies. Sample upload, verification and training routes remain generated and
+uncounted as unfinished implementation; no provider or AI request occurs.

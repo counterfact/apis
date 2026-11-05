@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/voices/pvc/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Run_PVC_training_v1_voices_pvc__voice_id__train_post } from "../../../../components/schemas/Body_Run_PVC_training_v1_voices_pvc__voice_id__train_post.js";
 import type { StartPVCVoiceTrainingResponseModel } from "../../../../components/schemas/StartPVCVoiceTrainingResponseModel.js";
