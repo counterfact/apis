@@ -1,3 +1,5 @@
+import {resetTriageTickets} from './triage-tickets.js';
+export {emptyTriageTickets} from './triage-tickets.js';
 import { resetBatchCalls } from "./batch-calling.js";
 import { resetLlmCatalog } from "./llm-catalog.js";
 export { emptyLlmCatalog } from "./llm-catalog.js";
@@ -54,6 +56,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetTriageTickets($);
   resetLlmCatalog($);
   resetRealtimeGroups($);
   resetGroups($);

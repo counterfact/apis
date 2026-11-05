@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 150 now have authored
-behavior. The remaining 287 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 161 now have authored
+behavior. The remaining 276 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1157,6 +1157,47 @@ Startup and `reset` populate both in `api/scenarios/llm-catalog.ts`.
 Run `.scenario emptyLlmCatalog` to return an empty model list with the default
 deprecation timing still present; `reset` restores all entries. Clearing this
 catalog does not modify stored agents. Each simulator instance has isolated state.
+
+## Agent conversation triage tickets
+
+Eleven workspace and per-agent ticket operations now share persistent local state:
+list, conversation/manual creation, detail, partial update, delete, comments,
+turn comments, merge, and assignable-user discovery. Startup/reset seed
+`sim-ticket` in `api/scenarios/triage-tickets.ts`; `emptyTriageTickets` clears
+records and counters. Contexts start empty, and instances are isolated.
+
+Conversation creation requires a live conversation and agent, and at least one
+overall or turn comment. A repeat request for a conversation with an open or
+in-progress ticket adds its description as a discussion comment, appends turn
+comments, and raises priority when needed. Manual tickets have no conversations.
+Titles default to the first 120 characters of the description, or a fixed local
+follow-up title. IDs use `sim-ticket-created-N`, and mutation timestamps advance
+from a fixed scenario clock. No Architect, clustering, AI, or provider runs.
+
+PATCH preserves omitted fields; null clears priority/assignee and preserves
+null title/description/status. Priority and status changes retain audit history.
+Merged tickets cannot be reopened, and setting merged status directly is rejected.
+Turn indexes must exist in one of the ticket's live conversations. Assignable users
+read the current non-service workspace member directory; all members have access
+in this local model. Missing assignees are rejected. Authentication and real
+permission checks are not simulated.
+
+Merge validates 1–50 distinct open source tickets belonging to the target agent
+before changing any records. Targets may be open, in progress, or resolved.
+Conversation IDs move to the target without duplicates, its priority rises to the
+highest source priority, and sources remain as merged records pointing to it.
+Source discussion stays on its original ticket. A target with merged sources
+cannot be deleted until those sources are deleted, preventing dangling links.
+Deleting tickets preserves agent and conversation records.
+
+Lists combine all contract filters before decimal-offset pagination (1–100,
+default 100), sort newest first with ID ties ascending, or priority descending
+before creation time. Nullable source/priority arrays normalize singleton query
+values for Counterfact #2615. Search matches title, description, discussion and
+turn comments case-insensitively and returns the first match with a complete
+whitespace-collapsed text snippet and highlight offsets. Errors, ordering, clock,
+IDs, default title, null-update and deletion rules are local simulator conventions.
+Unknown IDs return 404; invalid requests return 400 and merge conflicts return 409.
 
 ## Development
 
