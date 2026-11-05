@@ -6,7 +6,7 @@ export const resetMusicFinetunes: Scenario = ($) => {
   emptyMusicFinetunes($);
   const context = $.loadContext("/music/finetunes");
   context.nextFinetune = 0;
-  context.creationDefaults = { createdAt: "2025-01-04T00:00:00Z", status: "completed", progress: 1 };
+  context.creationDefaults = { createdAt: "2025-01-04T00:00:00Z", status: "completed", progress: 1, maxCombinedInputBytes: 8 * 1024 * 1024 };
   context.modelExists = id => $.context.models.has(id);
   context.validateAudio = input => $.loadContext("/music").validateAudio(input);
   for (const [index, [id, name, created_by, visibility]] of (

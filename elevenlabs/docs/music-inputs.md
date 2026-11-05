@@ -25,8 +25,9 @@ metadata, timestamps and counters.
   exist. SFX, separate tracks, audio-reference analysis and C2PA are unsupported.
 
 Audio uploads are bounded to 8 MiB and 600 measured seconds per file; finetune
-input totals are limited to 16 MiB. Videos have an 8 MiB per-file and 16 MiB total
-limit. Processing output supports mp3_44100_128; no codec conversion or streaming
+input totals are limited to 8 MiB. Videos have an 8 MiB per-file and 8 MiB total
+limit. These combined limits leave room for multipart headers and fields within
+the runtime’s 10 MiB wire-body limit. Processing output supports mp3_44100_128; no codec conversion or streaming
 is performed. Failed requests leave records and counters unchanged. Reset clears
 new songs/finetunes and restores counters and baseline metadata.
 

@@ -82,3 +82,43 @@ test("music processing Dispatcher returns valid six/two-stem ZIPs and MPEG video
  assert.equal((await h.requestMultipart("/v1/music/video-to-music",{videos:[video],use_audio_as_reference:true})).status,400);
  assert.equal((await h.requestMultipart("/v1/music/video-to-music?output_format=pcm_44100",{videos:[video]})).status,400);
 });
+
+test("combined music inputs: training accepts 8 MiB and rejects larger requests atomically", async () => {
+  const r = await setup(), finetunes = r.loadContext("/music/finetunes");
+  const half = 4 * 1024 * 1024;
+  const wav = (size: number) => {
+    const bytes = Buffer.alloc(size);
+    bytes.write("RIFF"); bytes.writeUInt32LE(size - 8, 4); bytes.write("WAVEfmt ", 8);
+    bytes.writeUInt32LE(16, 16); bytes.writeUInt16LE(1, 20); bytes.writeUInt16LE(1, 22);
+    bytes.writeUInt32LE(8000, 24); bytes.writeUInt32LE(16000, 28);
+    bytes.writeUInt16LE(2, 32); bytes.writeUInt16LE(16, 34);
+    bytes.write("data", 36); bytes.writeUInt32LE(size - 44, 40);
+    return file(bytes, "audio/wav", "bounded.wav");
+  };
+  const training = { name: "Bounded model", primary_genre: "ambient", files: [wav(half), wav(half)] };
+  const created = finetunes.create(training);
+  assert.equal(finetunes.get(created.id).name, "Bounded model");
+  const records = structuredClone(finetunes.records), nextFinetune = finetunes.nextFinetune;
+  assert.throws(() => finetunes.create({ ...training, files: [training.files[0], wav(half + 2)] }), { code: "training_files_too_large" });
+  assert.deepEqual(finetunes.records, records); assert.equal(finetunes.nextFinetune, nextFinetune);
+
+  await r.run(scenarios.reset);
+  assert.equal(finetunes.records.size, 3);
+  assert.throws(() => finetunes.create({ ...training, files: [training.files[0], wav(half + 2)] }), { code: "training_files_too_large" });
+  assert.equal(finetunes.nextFinetune, 0);
+});
+
+test("combined music inputs: video accepts 8 MiB and rejects larger requests atomically", async () => {
+  const r = await setup(), music = r.loadContext("/music"), half = 4 * 1024 * 1024;
+  const video = file(new Uint8Array(half), "video/mp4", "opaque.mp4");
+  const output = music.videoToMusic({ videos: [video, video] });
+  assert.equal(music.songs.get(output.songId)!.durationMs, 3840);
+  const songs = structuredClone(music.songs), nextSong = music.nextSong;
+  assert.throws(() => music.videoToMusic({ videos: [video, file(new Uint8Array(half + 2), "video/mp4", "opaque.mp4")] }), { code: "video_size_exceeded" });
+  assert.deepEqual(music.songs, songs); assert.equal(music.nextSong, nextSong);
+
+  await r.run(scenarios.reset);
+  assert.equal(music.songs.size, 0);
+  assert.throws(() => music.videoToMusic({ videos: [video, file(new Uint8Array(half + 2), "video/mp4", "opaque.mp4")] }), { code: "video_size_exceeded" });
+  assert.equal(music.nextSong, 0);
+});

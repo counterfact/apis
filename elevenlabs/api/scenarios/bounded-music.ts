@@ -13,6 +13,7 @@ export const resetBoundedMusic: Scenario = ($) => {
   c.modelExists = (id) => $.context.models.has(id);
   c.defaults = {
     durationMs: 3840,
+    maxCombinedInputBytes: 8 * 1024 * 1024,
     plan: {
       positive_global_styles: [],
       negative_global_styles: [],

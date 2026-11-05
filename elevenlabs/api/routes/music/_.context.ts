@@ -31,7 +31,7 @@ export class Context {
   audio = new Uint8Array();
   nextSong = 0;
   nextPlan = 0;
-  defaults?: { plan: MusicPrompt; durationMs: number; metadata: SongMetadata };
+  defaults?: { plan: MusicPrompt; durationMs: number; maxCombinedInputBytes: number; metadata: SongMetadata };
   modelExists: ((id: string) => boolean) | undefined;
   stemNames: Record<string, string[]> = {};
   private ready() {
@@ -217,7 +217,7 @@ export class Context {
         return fail(400, "invalid_video_file");
       size += video.data.length;
     }
-    if (size > 16 * 1024 * 1024) return fail(400, "video_size_exceeded");
+    if (size > this.defaults!.maxCombinedInputBytes) return fail(400, "video_size_exceeded");
     if ((input.model_id != null && input.model_id !== "music_v1") ||
         ["add_sfx", "separate_tracks", "use_audio_as_reference", "sign_with_c2pa"].some(k => input[k] != null && input[k] !== false))
       return fail(400, "unsupported_music_option");

@@ -17,7 +17,7 @@ const object = (v: unknown): v is Record<string, unknown> =>
 export class Context {
   records = new Map<string, Finetune>();
   nextFinetune = 0;
-  creationDefaults?: { createdAt: string; status: Finetune["status"]; progress: number };
+  creationDefaults?: { createdAt: string; status: Finetune["status"]; progress: number; maxCombinedInputBytes: number };
   modelExists?: (id: string) => boolean;
   validateAudio?: (input: unknown) => { audio: Uint8Array };
   create(input: unknown) {
@@ -32,7 +32,7 @@ export class Context {
     if (!this.modelExists("music_v1")) return fail(404, "model_not_found");
     let size = 0;
     for (const source of input.files) size += this.validateAudio(source).audio.length;
-    if (size > 16 * 1024 * 1024) return fail(400, "training_files_too_large");
+    if (size > this.creationDefaults.maxCombinedInputBytes) return fail(400, "training_files_too_large");
     let next = this.nextFinetune + 1;
     while (this.records.has(`sim-music-finetune-${next}`)) next++;
     const row: Finetune = { id: `sim-music-finetune-${next}`, name: input.name, primary_genre: input.primary_genre,
