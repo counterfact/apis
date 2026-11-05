@@ -29,6 +29,15 @@ export const defaultSettings = (): VoiceSettingsResponseModel => ({
 export class Context {
   history = new Map<string, SpeechHistoryItemResponseModel>();
 
+  getHistoryItem(id: string) {
+    const item = this.history.get(id);
+    return item ? structuredClone(item) : undefined;
+  }
+
+  deleteHistoryItem(id: string) {
+    return this.history.delete(id);
+  }
+
   listHistory(query: HistoryQuery): HistoryListResult {
     const size = query.page_size ?? 100;
     if (!Number.isInteger(size) || size < 1 || size > 1000) {

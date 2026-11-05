@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 426 operations retain their
+the stateful voices implementation. The remaining 424 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -124,9 +124,15 @@ data, which the pinned Counterfact runtime's default body parser does not
 parse. That operation needs [runtime multipart support](https://github.com/counterfact/api-simulator/issues/2607)
 before it can be simulated faithfully.
 
-## Speech history listing
+## Speech history
 
 `GET /v1/history` returns two synthetic historical metadata items, newest first.
+`GET /v1/history/{history_item_id}` reads an item; `DELETE` on the same path
+removes it from subsequent reads and history lists. Missing or already deleted
+items return HTTP 404 with `detail.status: "history_item_not_found"`, a local
+simulator convention. Deleting history does not change voices, models, or quota.
+Deleting a voice leaves its historical metadata intact. Run `reset` to restore
+deleted history items.
 These fixtures do not represent generated audio; audio retrieval remains generated.
 Startup and `reset` populate `api/scenarios/history.ts`. Run `.scenario emptyHistory`
 (or `app.scenario("emptyHistory", "api")`) to exercise an empty collection.
