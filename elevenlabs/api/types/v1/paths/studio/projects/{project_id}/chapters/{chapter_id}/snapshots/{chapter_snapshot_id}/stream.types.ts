@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../../../../../routes/studio/projects/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../../../../../counterfact-types/index.ts";
 import type { Body_Stream_chapter_audio_v1_studio_projects__project_id__chapters__chapter_id__snapshots__chapter_snapshot_id__stream_post } from "../../../../../../../../components/schemas/Body_Stream_chapter_audio_v1_studio_projects__project_id__chapters__chapter_id__snapshots__chapter_snapshot_id__stream_post.js";
 import type { HTTPValidationError } from "../../../../../../../../components/schemas/HTTPValidationError.js";

@@ -1,11 +1,47 @@
 import type { Routes } from "../../../types/index.js";
+import type { Context } from "./_.context.js";
 type Route = Routes["/studio"]["/projects"]["/{project_id}"];
-export const POST: Route["POST"] = async ($) => {
-  return $.response.status(200).random();
-};
 export const GET: Route["GET"] = async ($) => {
-  return $.response.status(200).random();
+  const c = $.context as unknown as Context;
+  try {
+    return $.response.status(200).json(c.get($.path.project_id));
+  } catch (error) {
+    if (error instanceof Error && error.name === "StudioError") {
+      const e = error as Error & { status: number; code: string };
+      return $.x.response
+        .status(e.status)
+        .json({ detail: { status: e.code, message: e.message } });
+    }
+    throw error;
+  }
+};
+export const POST: Route["POST"] = async ($) => {
+  const c = $.context as unknown as Context;
+  try {
+    return $.response
+      .status(200)
+      .json(c.updateProject($.path.project_id, $.body));
+  } catch (error) {
+    if (error instanceof Error && error.name === "StudioError") {
+      const e = error as Error & { status: number; code: string };
+      return $.x.response
+        .status(e.status)
+        .json({ detail: { status: e.code, message: e.message } });
+    }
+    throw error;
+  }
 };
 export const DELETE: Route["DELETE"] = async ($) => {
-  return $.response.status(200).random();
+  const c = $.context as unknown as Context;
+  try {
+    return $.response.status(200).json(c.deleteProject($.path.project_id));
+  } catch (error) {
+    if (error instanceof Error && error.name === "StudioError") {
+      const e = error as Error & { status: number; code: string };
+      return $.x.response
+        .status(e.status)
+        .json({ detail: { status: e.code, message: e.message } });
+    }
+    throw error;
+  }
 };

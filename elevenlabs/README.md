@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 189 now have authored
-behavior. The remaining 248 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 200 now have authored
+behavior. The remaining 237 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1319,6 +1319,52 @@ Test create and PUT remain generated and uncounted because their recursive
 request schemas hit [Counterfact #2613](https://github.com/counterfact/api-simulator/issues/2613).
 Finite detail responses validate normally; the guarded request probe is recorded
 in `COUNTERFACT_ISSUES.md`. Request and response validation remain enabled.
+
+## Studio project and chapter metadata
+
+Eleven Studio operations now share scenario-seeded local projects and chapters:
+project list/detail/update/delete, chapter list/create/detail/update/delete,
+pronunciation-dictionary attachment, and muted-track reads. Startup and `reset`
+seed `sim-project` and `sim-chapter` in `api/scenarios/studio-projects.ts`;
+`emptyStudioProjects` clears projects, chapters, muted flags and the chapter ID
+counter. Context state starts empty. Reads are defensive copies and instances
+are isolated. Project lists sort newest first with ascending ID ties; chapter
+lists retain insertion order. Missing projects/chapters return 404.
+
+Project updates require name and both default voice IDs. Omitted optional
+metadata is preserved; explicit null clears title, author or ISBN. Voice IDs
+are inert configuration references and also serve as local project voice refs;
+changing/deleting canonical voices does not rewrite saved projects. Names must
+be nonblank. New chapters start empty with IDs `sim-chapter-created-N` and cannot
+be downloaded. Non-null `from_url` returns 400; no remote content is fetched.
+Project deletion removes its chapters and muted flags while preserving voices
+and dictionaries. Chapter deletion removes its muted flag. The seed chapter is
+flagged muted as synthetic metadata; no track or audio is processed.
+
+Chapter update preserves omitted/null name and content. A supplied content object
+replaces all blocks atomically; empty blocks clear content. Only TTS text nodes
+are supported. Missing block IDs become `<chapter_id>-block-N`; duplicate block
+IDs return 400. Input `sub_type` is validated but has no field in the output
+schema. Node voice IDs project to the same `project_voice_ref_id`. Statistics
+count JavaScript UTF-16 string units and all blocks as unconverted paragraphs,
+with zero converted text; edits clear conversion metadata and download readiness.
+No speech synthesis, conversion, credit calculation or background jobs occur.
+
+Dictionary attachment validates the whole unique-ID list before replacing it.
+Unknown dictionaries/versions return 404 without changing locators or chapters;
+an empty list clears attachments. Null version IDs resolve to the canonical
+latest version at attachment time, then store explicit IDs and metadata snapshots.
+Later dictionary changes do not silently update those snapshots. Metadata uses
+the current dictionary name, creator, archive time and creation time, rule count
+from the selected stored version, and the version ID as local version name.
+`invalidate_affected_text` defaults true: changed locators clear every chapter's
+conversion metadata and download readiness. False preserves those flags. This is
+a conservative local invalidation convention; no pronunciation processing runs.
+
+These IDs, ordering, errors, projections, counts and mutation rules are local
+conventions. Authentication and permissions are not enforced. Multipart project
+creation/content import, podcasts and conversion/snapshot/audio operations remain
+generated and uncounted. Contracts and request/response validation stay enabled.
 
 ## Development
 

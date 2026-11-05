@@ -1,3 +1,5 @@
+import { resetStudioProjects } from "./studio-projects.js";
+export { emptyStudioProjects } from "./studio-projects.js";
 import { resetAgentTests } from "./agent-tests.js";
 export { emptyAgentTests } from "./agent-tests.js";
 import { resetSpeechEngines } from "./speech-engines.js";
@@ -62,6 +64,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetStudioProjects($);
   resetAgentTests($);
   resetSpeechEngines($);
   resetMcpServers($);

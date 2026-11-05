@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/studio/projects/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Create_Pronunciation_Dictionaries_v1_studio_projects__project_id__pronunciation_dictionaries_post } from "../../../../components/schemas/Body_Create_Pronunciation_Dictionaries_v1_studio_projects__project_id__pronunciation_dictionaries_post.js";
 import type { CreatePronunciationDictionaryResponseModel } from "../../../../components/schemas/CreatePronunciationDictionaryResponseModel.js";

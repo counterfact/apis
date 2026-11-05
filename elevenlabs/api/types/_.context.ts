@@ -19,6 +19,7 @@ import type { Context as ConvaiTagsContext } from "../routes/convai/tags/_.conte
 import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.context";
 import type { Context as ConvaiTriageTicketsContext } from "../routes/convai/triage-tickets/_.context";
 import type { Context as ConvaiV2Context } from "../routes/convai/v2/_.context";
+import type { Context as StudioProjectsContext } from "../routes/studio/projects/_.context";
 import type { Context as VoicesCollectionsContext } from "../routes/voices/collections/_.context";
 import type { Context as WorkspaceAnalyticsContext } from "../routes/workspace/analytics/_.context";
 import type { Context as WorkspaceAuthConnectionsContext } from "../routes/workspace/auth-connections/_.context";
@@ -90,6 +91,9 @@ interface LoadContextDefinitions {
     path: "/convai/triage-tickets" | `/convai/triage-tickets/${string}`,
   ): ConvaiTriageTicketsContext;
   loadContext(path: "/convai/v2" | `/convai/v2/${string}`): ConvaiV2Context;
+  loadContext(
+    path: "/studio/projects" | `/studio/projects/${string}`,
+  ): StudioProjectsContext;
   loadContext(
     path: "/voices/collections" | `/voices/collections/${string}`,
   ): VoicesCollectionsContext;
