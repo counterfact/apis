@@ -2,6 +2,8 @@ import type { Scenario } from "../types/index.js";
 export const emptyConversations: Scenario = ($) => {
   const context = $.loadContext("/convai/conversations");
   context.conversations = new Map();
+  context.smartMatches=new Map();context.analysisFixtures=new Map();context.analysisFixtureVersions=new Map();context.analysisDefinitions=()=>new Map([...$.loadContext("/convai/analysis-items").items].map(([id,r])=>[id,r.item.current_version_id]));context.agents=()=>$.loadContext("/convai/agents").agents;
+  $.loadContext("/convai/analytics").conversations=()=>context;
   $.loadContext("/convai/users").conversations = () => context.conversations;
   context.sipMessages = new Map();
   context.references = new Map();
@@ -48,4 +50,13 @@ export const conversationUserContacts: Scenario = ($) => {
   anonymous.conversation_id = "sim-conversation-anonymous";
   anonymous.user_id = null;
   c.conversations.set(anonymous.conversation_id, anonymous);
+};
+
+export const conversationInsights:Scenario=($)=>{
+ const c=$.loadContext("/convai/conversations"),agent=$.loadContext("/convai/agents").agents.get("sim-agent")!;
+ agent.configuration.platform_settings??={};agent.configuration.platform_settings.analysis_items={evaluation_criteria:[{source:"user",analysis_item_id:"sim-analysis-evaluation"}],data_collection:[{source:"user",analysis_item_id:"sim-analysis-data"}]};
+ c.smartMatches.set("assistance",[{conversationId:"sim-conversation",index:1,text:"Here is synthetic support information.",score:0.9}]);
+ c.analysisFixtureVersions=new Map([["sim-analysis-evaluation","sim-analysis-evaluation-v1"],["sim-analysis-data","sim-analysis-data-v1"]]);
+ c.analysisFixtures.set("sim-conversation",{call_successful:"success",transcript_summary:"Scenario analysis: support answered.",call_summary_title:"Synthetic analysis",evaluation_criteria_results:{"sim-analysis-evaluation":{criteria_id:"sim-analysis-evaluation",result:"success",rationale:"Explicit synthetic fixture"}},data_collection_results:{"sim-analysis-data":{data_collection_id:"sim-analysis-data",value:"support",rationale:"Explicit synthetic fixture"}}});
+ const live=structuredClone(c.conversations.get("sim-conversation")!);live.conversation_id="sim-conversation-live";live.status="in-progress";live.transcript=[];live.analysis=null;c.conversations.set(live.conversation_id,live);
 };

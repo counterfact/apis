@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {createScenarioRunner} from "../test-support/scenarios.js";
+import {createDispatcherHarness} from "../test-support/dispatcher.js";
+import * as scenarios from "../api/scenarios/index.js";
+test("conversation insights search canonical messages and filter before pagination",async()=>{
+ const r=await createScenarioRunner();await r.run(scenarios.startup);const c=r.loadContext("/convai/conversations");
+ assert.equal(c.searchMessages({text_query:"HELP"}).results[0].transcript_index,0);
+ assert.equal(c.searchMessages({text_query:"support",page_size:1}).results[0].chunk_highlights!.filter(x=>x.is_hit)[0].value,"support");
+ assert.equal(c.searchMessages({text_query:"support",agent_id:"missing"}).results.length,0);
+ assert.throws(()=>c.searchMessages({text_query:"x",page_size:51}),{status:400});
+ await r.run(scenarios.conversationInsights);
+ assert.equal(c.searchMessages({text_query:"assistance"},true).results[0].transcript_index,1);
+ c.conversations.get("sim-conversation")!.transcript[1].message="replaced";
+ assert.equal(c.searchMessages({text_query:"assistance"},true).results.length,0);
+});
+test("analysis applies explicit fixtures using live criteria and preserves unrelated state atomically",async()=>{
+ const r=await createScenarioRunner();await r.run(scenarios.startup);await r.run(scenarios.conversationInsights);const c=r.loadContext("/convai/conversations");
+ const result=c.runAnalysis("sim-conversation");assert.equal(result.analysis!.evaluation_criteria_results!["sim-analysis-evaluation"].result,"success");
+ assert.equal(result.analysis!.data_collection_results!["sim-analysis-data"].value,"support");
+ result.analysis!.transcript_summary="caller mutation";assert.notEqual(c.getConversation("sim-conversation").analysis!.transcript_summary,"caller mutation");
+ c.conversations.get("sim-conversation")!.analysis!.scoped=[{scope:"agent",source_agent_id:"sim-agent",successful:"unknown",evaluation_criteria_results:{other:{criteria_id:"other",result:"unknown",rationale:"Preserved"}}}];
+ c.runAnalysis("sim-conversation",{evaluation_id:"sim-analysis-evaluation",scope:"agent"});assert.equal(c.getConversation("sim-conversation").analysis!.scoped![0].scope,"agent");assert.equal(c.getConversation("sim-conversation").analysis!.scoped![0].evaluation_criteria_results!.other.result,"unknown");
+ c.conversations.get("sim-conversation")!.analysis=null;const selective=c.runAnalysis("sim-conversation",{evaluation_id:"sim-analysis-evaluation"});assert.equal(selective.analysis!.data_collection_results,undefined);assert.equal(selective.analysis!.call_successful,"unknown");assert.deepEqual(Object.keys(selective.analysis!.evaluation_criteria_results!),["sim-analysis-evaluation"]);
+ const before=c.getConversation("sim-conversation");assert.throws(()=>c.runAnalysis("sim-conversation",{evaluation_id:"missing"}),{status:404});assert.deepEqual(c.getConversation("sim-conversation"),before);
+ r.loadContext("/convai/analysis-items").items.get("sim-analysis-evaluation")!.item.current_version_id="changed";assert.throws(()=>c.runAnalysis("sim-conversation"),{code:"analysis_fixture_stale"});assert.deepEqual(c.getConversation("sim-conversation"),before);
+ r.loadContext("/convai/agents").agents.delete("sim-agent");assert.throws(()=>c.runAnalysis("sim-conversation"),{status:404});assert.deepEqual(c.getConversation("sim-conversation"),before);
+});
+test("validated Dispatcher exposes five insights operations, observable analysis and live counts",async()=>{
+ const h=await createDispatcherHarness();const req=async(path:string,method="GET",body?:unknown,status=200)=>{const res=await h.request("/v1/convai"+path,{method,...(body===undefined?{}:{headers:{"content-type":"application/json"},body:JSON.stringify(body)})});assert.equal(res.status,status,await res.clone().text());return res;};
+ assert.equal((await(await req("/conversations/messages/text-search?text_query=help")).json()).results.length,1);
+ await h.scenario("conversationInsights");assert.equal((await(await req("/conversations/messages/smart-search?text_query=assistance")).json()).results[0].transcript_index,1);
+ assert.equal((await(await req("/analytics/live-count?agent_ids=sim-agent")).json()).count,1);
+ assert.equal((await(await req("/analytics/live-count?agent_id=missing&agent_ids=sim-agent")).json()).count,1);
+ assert.equal((await(await req("/conversations/sim-conversation/analysis/run","POST")).json()).analysis.data_collection_results["sim-analysis-data"].value,"support");
+ await req("/conversations/sim-conversation/analysis/evaluations/run","POST",{evaluation_id:"sim-analysis-evaluation"});
+ await req("/conversations/sim-conversation/analysis/evaluations/run","POST",{evaluation_id:"missing"},404);
+ await req("/conversations/messages/text-search?text_query=help&topic_ids=unsupported","GET",undefined,400);
+ await req("/conversations/sim-conversation-live","DELETE");assert.equal((await(await req("/analytics/live-count")).json()).count,0);
+ const other=await createDispatcherHarness();assert.equal((await(await other.request("/v1/convai/analytics/live-count")).json()).count,0);
+ await h.scenario("reset");assert.equal((await(await req("/analytics/live-count")).json()).count,0);assert.equal((await(await req("/conversations/messages/smart-search?text_query=assistance")).json()).results.length,0);
+});

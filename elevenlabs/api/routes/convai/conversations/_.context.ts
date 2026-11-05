@@ -30,6 +30,67 @@ const page = <T>(values: T[], size: number, cursor: unknown, max: number) => {
   return { items: structuredClone(values.slice(offset, offset + size)), next_cursor: has_more ? String(offset + size) : null, has_more };
 };
 export class Context {
+  agents?: () => Map<string, import("../agents/_.context.js").StoredAgent>;
+  smartMatches = new Map<string, {conversationId:string;index:number;text:string;score:number}[]>();
+  analysisDefinitions?:()=>Map<string,string>;
+  analysisFixtureVersions=new Map<string,string>();
+  analysisFixtures = new Map<string, NonNullable<Conversation["analysis"]>>();
+  liveCount(query:Record<string,unknown>={}) {
+    const ids=query.agent_ids==null?null:typeof query.agent_ids==="string"?[query.agent_ids]:query.agent_ids;
+    if(ids!==null&&(!Array.isArray(ids)||ids.some(x=>typeof x!=="string"))||query.agent_id!=null&&typeof query.agent_id!=="string")return invalid();
+    return {count:[...this.conversations.values()].filter(c=>["initiated","in-progress"].includes(c.status)&&(ids?ids.includes(c.agent_id):query.agent_id==null||c.agent_id===query.agent_id)).length};
+  }
+  searchMessages(input:Record<string,unknown>,smart=false) {
+    const {text_query,sort_by="search_score",cursor,page_size=20,...filters}=input;
+    if(typeof text_query!=="string"||!text_query.trim()||!["search_score","created_at"].includes(String(sort_by)))return invalid();
+    integer(page_size,1,50);
+    if(smart&&Object.keys(filters).some(k=>!["agent_id","branch_id"].includes(k)))return invalid();
+    const supported=["agent_id","branch_id","version_id","user_id","visited_agent_ids","visited_agent_branch_ids","call_successful","call_start_before_unix","call_start_after_unix","call_duration_min_secs","call_duration_max_secs","rating_min","rating_max","has_feedback_comment","main_languages","exclude_statuses","termination_reasons","summary_mode","conversation_initiation_source","text_only","conversation_product_type","include_invalid_tool_calls"];
+    if(Object.keys(filters).some(k=>!supported.includes(k))||filters.summary_mode==="include")return invalid();
+    // Reuse the existing validated conversation-filter semantics before message ranking.
+    const allowed=new Set<string>();let next:string|null|undefined=null;
+    do {const result=this.listConversations({...filters,page_size:100,cursor:next} as ListQuery);for(const c of result.conversations)allowed.add(c.conversation_id);next=result.next_cursor;}while(next!=null);
+    const rows:import("../../../types/v1/components/schemas/MessagesSearchResult.js").MessagesSearchResult[]=[];
+    if(smart) for(const match of this.smartMatches.get(text_query)??[]){const c=this.conversations.get(match.conversationId),turn=c?.transcript[match.index];if(!c||!allowed.has(c.conversation_id)||turn?.message!==match.text||turn.contextual_update_info)continue;rows.push({conversation_id:c.conversation_id,agent_id:c.agent_id,agent_name:c.agent_name,transcript_index:match.index,chunk_text:match.text,chunk_highlights:null,score:match.score,conversation_start_time_unix_secs:c.metadata.start_time_unix_secs});}
+    else for(const c of this.conversations.values())if(allowed.has(c.conversation_id))for(const [index,turn]of c.transcript.entries()){
+      if(!turn.message||turn.contextual_update_info)continue;const text=turn.message,query=text_query.toLowerCase(),at=text.toLowerCase().indexOf(query);if(at<0)continue;
+      rows.push({conversation_id:c.conversation_id,agent_id:c.agent_id,agent_name:c.agent_name,transcript_index:index,chunk_text:text,chunk_highlights:[{value:text.slice(0,at),is_hit:false},{value:text.slice(at,at+query.length),is_hit:true},{value:text.slice(at+query.length),is_hit:false}].filter(x=>x.value),score:query.length/text.length,conversation_start_time_unix_secs:c.metadata.start_time_unix_secs});
+    }
+    rows.sort((a,b)=>(sort_by==="created_at"?b.conversation_start_time_unix_secs-a.conversation_start_time_unix_secs:b.score-a.score)||a.conversation_id.localeCompare(b.conversation_id)||a.transcript_index-b.transcript_index);
+    const result=page(rows,Number(page_size),cursor,50);return {results:result.items,has_more:result.has_more,next_cursor:result.next_cursor};
+  }
+  runAnalysis(id:string,input?:unknown) {
+    const conversation=this.stored(id),agent=this.agents?.().get(conversation.agent_id);
+    if(!agent)throw new ConversationError(404,"agent_not_found","Agent not found");
+    if(!["done","failed"].includes(conversation.status))throw new ConversationError(409,"conversation_not_complete","Conversation is not complete");
+    if(input!==undefined&&(!object(input)||Object.keys(input).some(k=>!["evaluation_id","scope"].includes(k))||typeof input.evaluation_id!=="string"||input.scope!=null&&!["conversation","agent"].includes(String(input.scope))))return invalid();
+    const refs=agent.configuration.platform_settings?.analysis_items;
+    const evaluations=(refs?.evaluation_criteria??[]).map(r=>r.analysis_item_id),data=(refs?.data_collection??[]).map(r=>r.analysis_item_id);
+    const legacy=agent.configuration.platform_settings;
+    if((legacy?.evaluation?.criteria?.length??0)>0||Object.keys(legacy?.data_collection??{}).length>0)throw new ConversationError(400,"unsupported_legacy_analysis","Only attached analysis-item fixtures are supported");
+    const fixture=this.analysisFixtures.get(id);
+    if(!fixture)throw new ConversationError(409,"analysis_fixture_unavailable","No synthetic analysis fixture is configured");
+    const selected=input as {evaluation_id:string;scope?:"conversation"|"agent"}|undefined;
+    if(selected&&!evaluations.includes(selected.evaluation_id))throw new ConversationError(404,"evaluation_not_found","Evaluation is not attached to the current agent");
+    const ids=selected?[selected.evaluation_id]:evaluations;
+    const definitions=this.analysisDefinitions?.()??new Map();
+    for(const key of [...ids,...(selected?[]:data)]){
+      if(!definitions.has(key))throw new ConversationError(404,"analysis_item_not_found","Current analysis item not found");
+      if(definitions.get(key)!==this.analysisFixtureVersions.get(key))throw new ConversationError(409,"analysis_fixture_stale","No fixture for current analysis definition version");
+    }
+    if(ids.some(key=>!fixture.evaluation_criteria_results?.[key])||!selected&&data.some(key=>!fixture.data_collection_results?.[key]))throw new ConversationError(409,"analysis_fixture_unavailable","No synthetic criterion result is configured");
+    const next=structuredClone(conversation.analysis??{call_successful:"unknown" as const,transcript_summary:""});
+    const results=Object.fromEntries(ids.map(key=>[key,structuredClone(fixture.evaluation_criteria_results![key]!)]));
+    if(selected?.scope==="agent"){
+      const branchId=conversation.branch_id??agent.mainBranch?.id;
+      const matchesScope=(s:NonNullable<typeof next.scoped>[number])=>s.scope==="agent"&&s.source_agent_id===conversation.agent_id&&(s.source_branch_id??branchId)===branchId;
+      const previous=next.scoped?.find(matchesScope);
+      next.scoped=[...(next.scoped??[]).filter(s=>!matchesScope(s)),{scope:"agent",source_agent_id:conversation.agent_id,source_branch_id:branchId,evaluation_criteria_results:{...previous?.evaluation_criteria_results,...results},data_collection_results:previous?.data_collection_results,successful:previous?.successful??fixture.call_successful}];
+    }else if(selected){next.evaluation_criteria_results={...next.evaluation_criteria_results,...results};next.evaluation_criteria_results_list=Object.values(next.evaluation_criteria_results);}
+    else {next.evaluation_criteria_results=results;next.evaluation_criteria_results_list=Object.values(results);next.data_collection_results=Object.fromEntries(data.map(key=>[key,structuredClone(fixture.data_collection_results![key]!) ]));next.data_collection_results_list=Object.values(next.data_collection_results);next.call_successful=fixture.call_successful;next.transcript_summary=fixture.transcript_summary;next.call_summary_title=fixture.call_summary_title;}
+    conversation.analysis=next;return this.getConversation(id);
+  }
+
   conversations = new Map<string, Conversation>();
   sipMessages = new Map<string, SIPLogMessage[]>();
   references = new Map<string, string>();

@@ -8,6 +8,7 @@ import type { Context as ConvaiAgentContext } from "../routes/convai/agent/_.con
 import type { Context as ConvaiAgentTestingContext } from "../routes/convai/agent-testing/_.context";
 import type { Context as ConvaiAgentsContext } from "../routes/convai/agents/_.context";
 import type { Context as ConvaiAnalysisItemsContext } from "../routes/convai/analysis-items/_.context";
+import type { Context as ConvaiAnalyticsContext } from "../routes/convai/analytics/_.context";
 import type { Context as ConvaiBatchCallingContext } from "../routes/convai/batch-calling/_.context";
 import type { Context as ConvaiConversationsContext } from "../routes/convai/conversations/_.context";
 import type { Context as ConvaiEnvironmentVariablesContext } from "../routes/convai/environment-variables/_.context";
@@ -79,6 +80,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/analysis-items" | `/convai/analysis-items/${string}`,
   ): ConvaiAnalysisItemsContext;
+  loadContext(
+    path: "/convai/analytics" | `/convai/analytics/${string}`,
+  ): ConvaiAnalyticsContext;
   loadContext(
     path: "/convai/batch-calling" | `/convai/batch-calling/${string}`,
   ): ConvaiBatchCallingContext;

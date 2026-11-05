@@ -61,7 +61,7 @@ export { emptyWorkspaceMembers } from "./workspace-members.js";
 import { resetRealtimeGroups } from "./realtime-groups.js";
 export { emptyRealtimeGroups } from "./realtime-groups.js";
 import { resetConversations } from "./conversations.js";
-export { emptyConversations, conversationUserContacts } from "./conversations.js";
+export { emptyConversations, conversationUserContacts, conversationInsights } from "./conversations.js";
 import { resetPhoneNumbers } from "./phone-numbers.js";
 export { emptyPhoneNumbers } from "./phone-numbers.js";
 import { resetServiceAccounts } from "./service-accounts.js";

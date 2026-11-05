@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 313 now have authored
-behavior. The remaining 124 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 318 now have authored
+behavior. The remaining 119 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2213,3 +2213,48 @@ requests return 400. Responses are copies; reset clears jobs, added documents,
 rankings, file URLs and counters, restores source fixtures, and isolates instances.
 These matching, ranking, fixture URL and lifecycle rules are local conventions;
 request/response validation and contracts remain unchanged.
+
+
+## Conversation search and synthetic analysis
+
+Five operations now search saved transcript messages, apply local analysis fixtures,
+and report live conversation counts. Text search uses a case-insensitive substring
+of plain message text. Each hit returns its canonical transcript index and three
+matched/unmatched highlight segments; the score is query length divided by message
+length. Smart search returns only explicit exact-query rankings configured by
+`conversationInsights`, with no semantic model, embedding or provider request.
+A ranked message is omitted if its conversation is deleted, transcript index changes,
+or current text differs from the fixture. Context-update and empty turns are excluded.
+
+Supported conversation filters apply before message ranking and pagination. Search
+sorts by descending score (default) or descending creation time, then conversation ID
+and transcript index. Decimal-offset cursors paginate 1–50 messages (default 20).
+Advanced evaluation/data/tool/procedure/topic filters and summary inclusion return
+400 explicitly. Smart search accepts agent and branch filters only. Empty queries,
+invalid sort/page/cursor options return 400. Unknown agent/filter values match no conversations.
+These lexical matching, scoring and pagination rules are simulator conventions.
+
+The two analysis POST routes synchronously apply an explicit scenario snapshot;
+they do not evaluate a transcript or invoke a model. `conversationInsights` attaches
+two current analysis items and stores synthetic success and collected-topic results.
+Full analysis replaces current evaluation/data results using live canonical main
+attachments. A single-evaluation rerun updates only the requested result; agent-scope
+results preserve unrelated criteria/data and other branch scopes. A previously empty
+analysis starts with unknown overall success and an empty summary for a selective run.
+Single reruns preserve existing overall success, summary and data results.
+
+Analysis requires a completed or failed conversation and an existing live agent.
+Unconfigured outcomes or changed current definition versions return 409 before any
+mutation; missing agents, attached definitions or requested evaluations return 404.
+Legacy inline analysis definitions are unsupported and return 400. Current definition
+versions must match the explicit scenario fixture. Reset restores baseline definitions;
+then rerun the setup to configure the fixture again. Historical reads and search remain available after
+agent deletion. Reads return copies and failed operations leave analysis unchanged.
+
+Live count derives directly from initiated/in-progress canonical conversations;
+processing, done and failed records are excluded. `agent_ids` (singleton/repeated)
+takes precedence over `agent_id`; an empty array matches none. The setup adds one
+in-progress record, and deleting it changes the count immediately. Context containers
+start empty; startup/reset in `api/scenarios/conversations.ts` clear rankings/outcomes
+and restore the historical baseline. Instances isolate state. Contracts and request/
+response validation remain unchanged; all values are synthetic local conventions.
