@@ -20,12 +20,43 @@ type RulesResult =
   | { value: RulesVersion; error?: never; missing?: never }
   | { value?: never; error: string; missing?: never }
   | { value?: never; error?: never; missing: true };
+type DownloadResult =
+  | { value: string; error?: never; missing?: never }
+  | { value?: never; error: string; missing?: never }
+  | { value?: never; error?: never; missing: "dictionary" | "version" };
+
+const escapeXml = (value: string) => value.replace(/[&<>"'\r\n\t]/g, (character) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;",
+  "\r": "&#13;", "\n": "&#10;", "\t": "&#9;",
+})[character]!);
 
 export class Context {
   dictionaries = new Map<string, DictionaryRecord>();
   nextDictionaryNumber = 0;
   creationDefaults?: { createdBy: string; timeUnix: number };
   archiveTimeUnix?: number;
+
+  downloadDictionary(id: string, versionId: string): DownloadResult {
+    const dictionary = this.dictionaries.get(id);
+    if (!dictionary) return { missing: "dictionary" };
+    const rules = dictionary.versions.get(versionId);
+    if (!rules) return { missing: "version" };
+    const text = rules.flatMap((rule) => rule.type === "alias"
+      ? [rule.string_to_replace, rule.alias]
+      : [rule.string_to_replace, rule.phoneme, rule.alphabet]);
+    if (text.some((value) => /[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u.test(value))) {
+      return { error: "This version contains characters that XML 1.0 cannot represent" };
+    }
+    const lexemes = rules.map((rule) => {
+      const pronunciation = rule.type === "alias"
+        ? `<alias>${escapeXml(rule.alias)}</alias>`
+        : `<phoneme alphabet="${escapeXml(rule.alphabet)}">${escapeXml(rule.phoneme)}</phoneme>`;
+      return `<lexeme><grapheme>${escapeXml(rule.string_to_replace)}</grapheme>${pronunciation}</lexeme>\n`;
+    }).join("");
+    return { value: '<?xml version="1.0" encoding="UTF-8"?>\n'
+      + '<lexicon version="1.0" xmlns="http://www.w3.org/2005/01/pronunciation-lexicon" alphabet="ipa" xml:lang="en-US">\n'
+      + lexemes + '</lexicon>\n' };
+  }
 
   updateDictionary(id: string, input: UpdateDictionary) {
     const dictionary = this.dictionaries.get(id);

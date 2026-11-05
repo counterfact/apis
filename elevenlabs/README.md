@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 417 operations retain their
+the stateful voices implementation. The remaining 416 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -251,6 +251,21 @@ preserves an existing archive timestamp. Responses contain metadata without
 rules and are isolated copies. Malformed bodies return HTTP 400 without changing
 state, and unknown dictionary IDs return HTTP 404. `reset` restores metadata,
 archive timestamps, and all rule versions.
+
+`GET /v1/pronunciation-dictionaries/{dictionary_id}/{version_id}/download`
+returns the requested version's alias and phoneme rules as XML PLS with the
+contract's `text/plain` content type and a fixed attachment filename,
+`pronunciation-dictionary.pls`. Older versions remain available after rule and
+metadata edits; resetting removes versions created after startup. Unknown
+dictionary or version IDs return HTTP 404. Empty versions return an empty
+lexicon, and reads do not change state.
+
+XML text and attributes are escaped, and versions containing characters forbidden
+by XML 1.0 return HTTP 400. As local export conventions, the lexicon declares
+`en-US` and a default `ipa` alphabet; phoneme rules retain their own alphabet.
+Rule order and duplicates are preserved. Matching flags (`case_sensitive` and
+`word_boundaries`) have no PLS representation here and are omitted from the
+export. This simulator does not apply pronunciation rules to speech.
 
 ## Development
 
