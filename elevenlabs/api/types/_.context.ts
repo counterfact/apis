@@ -2,10 +2,12 @@
 import type { Context as ConvaiAgentsContext } from "../routes/convai/agents/_.context";
 import type { Context as ConvaiEnvironmentVariablesContext } from "../routes/convai/environment-variables/_.context";
 import type { Context as ConvaiEnvironmentsContext } from "../routes/convai/environments/_.context";
+import type { Context as ConvaiPhoneNumbersContext } from "../routes/convai/phone-numbers/_.context";
 import type { Context as ConvaiSecretsContext } from "../routes/convai/secrets/_.context";
 import type { Context as ConvaiSettingsContext } from "../routes/convai/settings/_.context";
 import type { Context as ConvaiTagsContext } from "../routes/convai/tags/_.context";
 import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.context";
+import type { Context as ConvaiV2Context } from "../routes/convai/v2/_.context";
 import type { Context as VoicesCollectionsContext } from "../routes/voices/collections/_.context";
 import type { Context as WorkspaceAnalyticsContext } from "../routes/workspace/analytics/_.context";
 import type { Context as WorkspaceAuthConnectionsContext } from "../routes/workspace/auth-connections/_.context";
@@ -28,6 +30,9 @@ interface LoadContextDefinitions {
     path: "/convai/environments" | `/convai/environments/${string}`,
   ): ConvaiEnvironmentsContext;
   loadContext(
+    path: "/convai/phone-numbers" | `/convai/phone-numbers/${string}`,
+  ): ConvaiPhoneNumbersContext;
+  loadContext(
     path: "/convai/secrets" | `/convai/secrets/${string}`,
   ): ConvaiSecretsContext;
   loadContext(
@@ -39,6 +44,7 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/tools" | `/convai/tools/${string}`,
   ): ConvaiToolsContext;
+  loadContext(path: "/convai/v2" | `/convai/v2/${string}`): ConvaiV2Context;
   loadContext(
     path: "/voices/collections" | `/voices/collections/${string}`,
   ): VoicesCollectionsContext;

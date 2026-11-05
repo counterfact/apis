@@ -21,3 +21,12 @@ network listener, or simulator-specific test harness.
 Existing wildcard-ambiguity and date-format diagnostics are observed during
 tests. They are not treated as additional confirmed bugs without a concrete
 incorrect routing or validation result.
+
+## Optional request bodies
+
+[Counterfact #2614](https://github.com/counterfact/api-simulator/issues/2614):
+Counterfact 3.1.0 / runtime 0.3.2 rejects an absent optional object body before
+invoking the handler. Reproduced using a minimal public Dispatcher request with
+`requestBody.required: false`; sending JSON `{}` permits a no-op service-account
+key PATCH. The simulator keeps request validation enabled and tests the installed
+runtime limitation without changing its source contract.

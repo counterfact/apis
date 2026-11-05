@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 81 now have authored
-behavior. The remaining 356 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 88 now have authored
+behavior. The remaining 349 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -706,7 +706,8 @@ without enforcing authentication, quotas, network access, expiry jobs or plan
 entitlements. Bare IPv4/IPv6 addresses get /32 or /128 suffixes; supplied valid
 CIDRs are preserved. Credit/concurrency limits must be nonnegative safe integers.
 
-The installed runtime rejects an absent PATCH body despite its optional contract;
+The installed runtime rejects an absent PATCH body despite its optional contract
+([Counterfact #2614](https://github.com/counterfact/api-simulator/issues/2614));
 send `{}` for a no-op. Request validation remains enabled.
 PATCH preserves omitted fields and `no_update` values. Null names and nullable
 numeric limits preserve their values; `clear` removes numeric limits, IP
@@ -723,6 +724,54 @@ UTC), accepting 15 minutes through 90 days ahead inclusively. Omitted/null
 create expiry means never expires. Creation timestamps use this same clock.
 ID allocation, frozen time, limits, defaults, null handling and errors are local
 simulator conventions. Workspace downgrade and enterprise policy are not modeled.
+
+## Phone-number configuration
+
+Seven phone operations now share canonical configuration: import/list at
+`/v1/convai/phone-numbers`, detail/PATCH/DELETE at its `/{phone_number_id}`
+subpath, SIP-log reads at `/{phone_number_id}/sip-messages`, and the paginated
+list at `/v1/convai/v2/phone-numbers` (this path belongs to the V1 contract).
+The root context stays unchanged; a small V2 context forwards to the phone context.
+
+Imports accept Twilio, Exotel and SIP-trunk configuration. Provider omission is
+inferred from `sid` (Twilio), `account_sid` (Exotel), or otherwise SIP. The local
+simulator requires nonempty labels and E.164-style numbers, rejects duplicate
+numbers with 409, and allocates `sim-phone-created-N` IDs. Provider credentials
+are accepted for schema-shaped requests but never returned or retained as secrets.
+SIP credentials are projected to username and `has_auth_credentials`; supplying
+a new password sets the flag, an omitted/null password preserves the existing
+flag, and null credentials clear it. No authentication, network connections,
+webhook setup, SMS, live calls, provider verification, or secret resolution occurs.
+Twilio `region_config` is explicitly unsupported (400).
+
+PATCH is atomic and supports label, agent assignment, environment/branch metadata,
+and SIP trunk, stack, and message-storage configuration. Omitted fields preserve
+state; null label/stack/message-storage fields preserve values; null agent unassigns
+and clears its environment/branch; null environment/branch clears that metadata.
+Null trunk configuration removes the trunk. A supplied trunk object replaces its
+configuration using contract defaults, retaining the prior credential flag when
+no new password is provided. SIP-only settings on non-SIP phones return 400.
+Agent assignment requires an existing agent; list/detail resolve its current name
+from canonical agent state, and a deleted agent projects as unassigned. Branch and
+environment strings are stored metadata, without branch or environment lookup.
+
+V1 list filters combine provider, assigned agent, and assigned branch. The paged
+list adds case-insensitive label/phone substring filters, exact ID or label/phone
+substring search, outbound capability filtering, and `label`/`phone_number` sorting.
+IDs break sort ties in ascending order. The default sort is label ascending;
+filters combine before pagination. Page sizes are 1–1000 (default 100), cursors
+are decimal offsets, and offsets beyond the end produce an empty page. The nullable
+outbound boolean uses the same narrow boundary normalization documented in
+[Counterfact #2612](https://github.com/counterfact/api-simulator/issues/2612).
+
+Startup and `reset` seed synthetic Twilio and SIP phones plus two historical SIP
+messages in `api/scenarios/phone-numbers.ts`; `emptyPhoneNumbers` clears both
+collections and the ID counter. Log pages sort newest first, accept 1–20 records
+(default 20), and use decimal offset cursors. Imports create no logs; message-storage
+settings do not erase historical fixtures. Deletion removes the phone and its
+logs, preserving agents. Missing phones return 404. Responses are defensive copies
+and instances isolate state. Error codes, IDs, pagination and the above metadata
+and update conventions are local simulator behavior.
 
 ## Development
 

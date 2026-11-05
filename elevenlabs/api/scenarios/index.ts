@@ -1,3 +1,5 @@
+import { resetPhoneNumbers } from "./phone-numbers.js";
+export { emptyPhoneNumbers } from "./phone-numbers.js";
 import { resetServiceAccounts } from "./service-accounts.js";
 export { emptyServiceAccounts } from "./service-accounts.js";
 import { resetGroups } from "./groups.js";
@@ -39,6 +41,7 @@ export const reset: Scenario = ($) => {
   resetGroups($);
   resetServiceAccounts($);
   resetAgents($);
+  resetPhoneNumbers($);
   resetTools($);
   resetSecrets($);
   resetEnvironments($);
