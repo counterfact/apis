@@ -1,3 +1,5 @@
+import { resetMcpServers } from "./mcp-servers.js";
+export { emptyMcpServers, mcpDefinitionChanged, mcpAgentReference } from "./mcp-servers.js";
 import {resetTriageTickets} from './triage-tickets.js';
 export {emptyTriageTickets} from './triage-tickets.js';
 import { resetBatchCalls } from "./batch-calling.js";
@@ -56,6 +58,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetMcpServers($);
   resetTriageTickets($);
   resetLlmCatalog($);
   resetRealtimeGroups($);

@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/convai/mcp-servers/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { MCPToolConfigOverrideCreateRequestModel } from "../../../../components/schemas/MCPToolConfigOverrideCreateRequestModel.js";
 import type { MCPServerResponseModel } from "../../../../components/schemas/MCPServerResponseModel.js";

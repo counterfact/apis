@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 161 now have authored
-behavior. The remaining 276 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 174 now have authored
+behavior. The remaining 263 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1198,6 +1198,53 @@ turn comments case-insensitively and returns the first match with a complete
 whitespace-collapsed text snippet and highlight offsets. Errors, ordering, clock,
 IDs, default title, null-update and deletion rules are local simulator conventions.
 Unknown IDs return 404; invalid requests return 400 and merge conflicts return 409.
+
+## MCP server configuration
+
+Thirteen `/v1/convai/mcp-servers` operations now persist local server
+configuration, server approval policy, per-tool approvals and tool overrides.
+Startup/reset seed `sim-mcp` and a fictional `lookup` tool in
+`api/scenarios/mcp-servers.ts`; contexts start empty. `emptyMcpServers` clears
+records and counters. Creation uses IDs `sim-mcp-created-N`, scenario-owned
+owner/access metadata and deterministic timestamps. Each instance is isolated.
+Reads return defensive copies, including approved definition snapshots.
+
+Server creation accepts an HTTPS URL without embedded credentials, or a secret
+locator URL retained as metadata. Secret tokens, headers, request metadata and
+auth references are stored configuration only: no values are resolved, no remote
+MCP server is contacted, and no tool or response mock executes. Created servers
+have an empty local tool catalog. Nonempty initial approval/override lists return
+400; use their dedicated operations after populating local discovery state in a
+scenario. PATCH supports exactly the contract's mutable fields; name, URL and
+transport have no PATCH fields. Omitted/null ordinary PATCH fields preserve
+values; null secret token, auth connection or tool sound clears that field.
+
+Tool discovery reads scenario-owned definitions and supports only the default
+`production` environment; other environments return 400. Per-tool approval mode
+projects `not_approved`, `up_to_date` or `needs_review` for each discovered tool.
+Approval records store a SHA-256 hash of the description/input-schema snapshot,
+using sorted JSON object keys as a local hashing convention. A supplied definition
+that differs from discovery remains `needs_review`. Run `mcpDefinitionChanged`
+to replace the fixture definition and demonstrate drift; its earlier approval
+snapshot remains available. Approval writes require per-tool mode (409 otherwise)
+and a known local tool (404 otherwise). Removing an absent approval is a no-op.
+
+Overrides require a known local tool; duplicate creation returns 409, and missing
+override reads/updates/deletes return 404. PATCH replaces supplied fields while
+preserving omitted fields. Null override values mean inheritance; null
+`assignments` becomes an empty list to satisfy the response contract. Fields are
+stored metadata and do not change the discovered definition or approval hash.
+Invalid changes are rejected before state mutation.
+
+Dependent agents are derived from current canonical `mcp_server_ids` and
+`native_mcp_server_ids`, including duplicated agents. `mcpAgentReference` adds the
+fixture reference. Deletion returns 409 while a live agent references the server;
+after references/agents are removed it returns an empty JSON object and removes
+its discovery/approval state. Missing server IDs return 404. All fictional
+resources use admin access metadata; authentication and access enforcement are
+not simulated. These errors, IDs, ordering, hashing and deletion safeguards are
+local simulator conventions. No network requests, model inference or real
+credentials are needed.
 
 ## Development
 
