@@ -67,7 +67,7 @@ test("AudioNative owns only its publication queue and can repopulate blank Studi
   const other = studio.podcast({model_id:"eleven_multilingual_v2",mode:{type:"bulletin",bulletin:{host_voice_id:"sim-narrator"}},source:{type:"text",text:"Unrelated conversion."}}).project.project_id;
   const job = structuredClone(studio.pending.get(other));
   assert.deepEqual(c.settings(other), {enabled:false,snapshot_id:null,settings:null});
-  studio.blankContent("sim-project",undefined); c.update({url});
+  studio.updateContent("sim-project",undefined); c.update({url});
   await r.run(scenarios.completeAudioNative);
   assert.deepEqual(studio.pending.get(other),job); assert.equal(studio.get(other).state,"converting");
   assert.equal(studio.listSnapshots(other).snapshots.length,0);

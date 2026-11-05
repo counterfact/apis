@@ -328,6 +328,43 @@ export class Context {
     const c = this.validationContext(),
       p: StoredProject = { metadata: m, chapters: new Map(), muted: new Set() };
     c.projects.set(id, p);
+    c.populateContent(id, b);
+    if (b.pronunciation_dictionary_locators != null) {
+      if (!Array.isArray(b.pronunciation_dictionary_locators)) return invalid();
+      let locators;
+      try {
+        locators = b.pronunciation_dictionary_locators.map((v) =>
+          JSON.parse(v),
+        );
+      } catch {
+        return invalid();
+      }
+      c.attachDictionaries(id, { pronunciation_dictionary_locators: locators });
+    }
+    if (b.auto_convert === true) c.convert(id);
+    this.projects.set(id, p);
+    if (c.pending.has(id)) this.pending.set(id, c.pending.get(id)!);
+    this.nextProject = sequence;
+    this.nextChapterId = c.nextChapterId;
+    return { project: this.projectSummary(p) };
+  }
+  /** Called only on detached candidates, so rejected imports cannot change live state. */
+  private populateContent(id: string, b: Obj) {
+    const p = this.stored(id),
+      m = p.metadata,
+      limits = this.documentLimits;
+    if (!limits) throw new Error("Run Studio initialization scenario first");
+    if (b.from_document == null && b.from_content_json == null) return;
+    if (
+      !this.voiceExists(m.default_title_voice_id) ||
+      !this.voiceExists(m.default_paragraph_voice_id) ||
+      !this.modelExists(m.default_model_id)
+    )
+      throw new StudioError(
+        404,
+        "studio_dependency_not_found",
+        "Voice or speech model not found",
+      );
     let chapters: unknown;
     if (b.from_document != null)
       chapters = [
@@ -367,8 +404,8 @@ export class Context {
         return invalid();
       for (const value of chapters) {
         const ch = input(value, ["name", "blocks"]),
-          created = c.createChapter(id, { name: ch.name }).chapter;
-        c.updateChapter(id, created.chapter_id, {
+          created = this.createChapter(id, { name: ch.name }).chapter;
+        this.updateChapter(id, created.chapter_id, {
           content: { blocks: ch.blocks },
         });
         const stored = p.chapters.get(created.chapter_id)!;
@@ -385,72 +422,34 @@ export class Context {
           );
       }
     }
-    if (b.pronunciation_dictionary_locators != null) {
-      if (!Array.isArray(b.pronunciation_dictionary_locators)) return invalid();
-      let locators;
-      try {
-        locators = b.pronunciation_dictionary_locators.map((v) =>
-          JSON.parse(v),
-        );
-      } catch {
-        return invalid();
-      }
-      c.attachDictionaries(id, { pronunciation_dictionary_locators: locators });
-    }
-    if (b.auto_convert === true) c.convert(id);
-    this.projects.set(id, p);
-    if (c.pending.has(id)) this.pending.set(id, c.pending.get(id)!);
-    this.nextProject = sequence;
-    this.nextChapterId = c.nextChapterId;
-    return { project: this.projectSummary(p) };
   }
   replaceDocumentText(id: string, text: string, autoConvert: boolean) {
-    const live = this.stored(id);
-    this.idle(id);
+    const p = this.stored(id);
     if (
       typeof text !== "string" ||
       !text.trim() ||
       text.length > (this.documentLimits?.maxCharacters ?? 0)
     )
       return invalid();
-    const c = this.validationContext(),
-      p = structuredClone(live);
-    p.chapters = new Map();
-    p.muted = new Set();
-    p.metadata.can_be_downloaded = false;
-    p.metadata.state = "default";
-    c.projects.set(id, p);
-    const chapter = c.createChapter(id, {
-      name: p.metadata.title || p.metadata.name,
-    }).chapter;
-    c.updateChapter(id, chapter.chapter_id, {
-      content: {
-        blocks: [
-          {
-            nodes: [
-              {
-                type: "tts_node",
-                text,
-                voice_id: p.metadata.default_paragraph_voice_id,
-              },
-            ],
-          },
-        ],
-      },
+    return this.updateContent(id, {
+      auto_convert: autoConvert,
+      from_content_json: JSON.stringify([
+        {
+          name: p.metadata.title || p.metadata.name,
+          blocks: [
+            {
+              nodes: [
+                {
+                  type: "tts_node",
+                  text,
+                  voice_id: p.metadata.default_paragraph_voice_id,
+                },
+              ],
+            },
+          ],
+        },
+      ]),
     });
-    if (
-      !this.voiceExists(p.metadata.default_paragraph_voice_id) ||
-      !this.modelExists(p.metadata.default_model_id)
-    )
-      throw new StudioError(
-        404,
-        "studio_dependency_not_found",
-        "Voice or speech model not found",
-      );
-    if (autoConvert) c.convert(id);
-    this.projects.set(id, p);
-    this.nextChapterId = c.nextChapterId;
-    if (c.pending.has(id)) this.pending.set(id, c.pending.get(id)!);
   }
   private idle(id: string) {
     if (this.pending.has(id))
@@ -617,7 +616,7 @@ export class Context {
     value: unknown,
     chapter?: string,
   ) {
-    const b = input(value, ["convert_to_mpeg"]);
+    const b = input(value === undefined ? {} : value, ["convert_to_mpeg"]);
     if (
       b.convert_to_mpeg !== undefined &&
       typeof b.convert_to_mpeg !== "boolean"
@@ -667,13 +666,39 @@ export class Context {
     end.writeUInt32LE(offset, 16);
     return new Uint8Array(Buffer.concat([...files, d, end]));
   }
-  blankContent(id: string, value: unknown, contentType?: string) {
-    const p = this.stored(id);
+  updateContent(id: string, value: unknown) {
+    const live = this.stored(id);
     this.idle(id);
-    if (value !== undefined || contentType !== undefined) return invalid();
+    const b = input(value === undefined ? {} : value, [
+      "from_url",
+      "from_document",
+      "from_content_json",
+      "auto_convert",
+    ]);
+    if (b.from_url != null)
+      throw new StudioError(
+        400,
+        "unsupported_studio_import",
+        "Remote project imports are not supported",
+      );
+    if (
+      Number(b.from_document != null) + Number(b.from_content_json != null) >
+        1 ||
+      (b.auto_convert !== undefined && typeof b.auto_convert !== "boolean")
+    )
+      return invalid();
+    const c = this.validationContext(),
+      p = structuredClone(live);
     p.chapters = new Map();
     p.muted = new Set();
     p.metadata.can_be_downloaded = false;
+    p.metadata.state = "default";
+    c.projects.set(id, p);
+    c.populateContent(id, b);
+    if (b.auto_convert === true) c.convert(id);
+    this.projects.set(id, p);
+    this.nextChapterId = c.nextChapterId;
+    if (c.pending.has(id)) this.pending.set(id, c.pending.get(id)!);
     return { project: this.projectSummary(p) };
   }
   podcast(value: unknown) {
@@ -915,7 +940,7 @@ export class Context {
   updateChapter(project: string, id: string, value: unknown) {
     this.idle(project);
     const old = this.storedChapter(project, id),
-      b = input(value, ["name", "content"]);
+      b = input(value === undefined ? {} : value, ["name", "content"]);
     if (b.name != null && !text(b.name)) return invalid();
     const candidate = structuredClone(old);
     if (b.name != null) candidate.name = b.name as string;

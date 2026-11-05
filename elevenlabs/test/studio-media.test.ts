@@ -61,7 +61,7 @@ test("Studio conversion captures immutable content and scenario completion", asy
   });
   assert.throws(() => c.convert("sim-project"));
   assert.equal(c.pending.size, 0);
-  c.blankContent("sim-project", undefined);
+  c.updateContent("sim-project", undefined);
   assert.equal(c.get("sim-project").chapters.length, 0);
   assert.deepEqual(c.snapshot("sim-project", s.project_snapshot_id), snap);
   assert.throws(() =>
@@ -193,6 +193,6 @@ test("Studio podcast queues synthetic bulletin; blank content clears live chapte
         headers: { "content-type": "multipart/form-data; boundary=x" },
       })
     ).status,
-    400,
+    200,
   );
 });

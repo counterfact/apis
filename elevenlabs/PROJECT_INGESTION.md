@@ -6,6 +6,17 @@ chapter/block/tts-node content using the existing Studio chapter rules. Sources
 are mutually exclusive. Default voices and model come from scenario configuration
 and are checked against the current voice/model catalogs before any state changes.
 
+`POST /v1/studio/projects/{project_id}/content` uses the same bounded document or
+structured-content ingestion and replaces the live chapters while preserving
+project metadata and historical snapshots. An absent body or empty multipart body
+clears chapters and muted tracks. `auto_convert` validates and queues the complete
+replacement atomically; pending conversions prevent replacement. Remote URL
+imports are explicitly unsupported.
+
+Studio chapter edits accept an absent body as an unchanged chapter. Both Studio
+snapshot stream operations accept an absent body for their default MP3 fixture.
+Null and invalid option bodies remain errors.
+
 `POST /v1/audio-native` creates a player-enabled Studio project; `name` alone
 creates a blank project. TXT/HTML uploads become a chapter prefixed with the
 player title and author. Player settings come from scenarios and request overrides.

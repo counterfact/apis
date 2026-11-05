@@ -5,13 +5,7 @@ export const POST: Route["POST"] = async ($) => {
   try {
     return $.response
       .status(200)
-      .json(
-        c.blankContent(
-          $.path.project_id,
-          ($ as unknown as { body?: unknown }).body,
-          ($.headers as Record<string, string>)["content-type"],
-        ),
-      );
+      .json(c.updateContent($.path.project_id, $.body));
   } catch (error) {
     if (error instanceof Error && error.name === "StudioError") {
       const e = error as Error & { status: number; code: string };
