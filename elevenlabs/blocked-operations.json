@@ -1,0 +1,875 @@
+{
+  "formatVersion": 1,
+  "runtime": {
+    "counterfact": "3.1.0",
+    "@counterfact/runtime": "0.3.2"
+  },
+  "coverage": {
+    "contractOperations": 437,
+    "authoredOperations": 394,
+    "generatedOperations": 43,
+    "multipartBlocked": 30,
+    "multipartRequiredBody": 25,
+    "multipartOptionalBody": 5,
+    "recursiveJsonBlocked": 13,
+    "unclassified": 0,
+    "versions": {
+      "v1": 436,
+      "v2": 1
+    },
+    "excluded": {
+      "GET /docs": "Unversioned documentation redirect; outside both API versions."
+    }
+  },
+  "evidenceDocument": "BLOCKED_OPERATIONS.md",
+  "operations": [
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/assets",
+      "operationId": "upload_asset",
+      "routeFile": "api/routes/assets.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Upload_asset_v1_assets_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/audio-isolation",
+      "operationId": "audio_isolation",
+      "routeFile": "api/routes/audio-isolation.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Audio_Isolation_v1_audio_isolation_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/audio-isolation/stream",
+      "operationId": "audio_isolation_stream",
+      "routeFile": "api/routes/audio-isolation/stream.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Audio_Isolation_Stream_v1_audio_isolation_stream_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/audio-native",
+      "operationId": "create_audio_native_project",
+      "routeFile": "api/routes/audio-native.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Creates_Audio_Native_enabled_project__v1_audio_native_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/audio-native/{project_id}/content",
+      "operationId": "audio_native_project_update_content_endpoint",
+      "routeFile": "api/routes/audio-native/{project_id}/content.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": false,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Update_audio_native_Project_content_v1_audio_native__project_id__content_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Optional wire body, but update requires article file; absent body cannot perform a content update."
+    },
+    {
+      "version": "v1",
+      "method": "PUT",
+      "path": "/v1/convai/agent-testing/{test_id}",
+      "operationId": "update_agent_response_test_route",
+      "routeFile": "api/routes/convai/agent-testing/{test_id}.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": null
+      },
+      "evidence": "agent-test-guarded-abort",
+      "reason": "Recursive PUT request schema shares the agent-test create schema family; guarded create probe exhausted its heap and aborted with SIGABRT. See evidence limitations."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agent-testing/create",
+      "operationId": "create_agent_response_test_route",
+      "routeFile": "api/routes/convai/agent-testing/create.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": null
+      },
+      "evidence": "agent-test-guarded-abort",
+      "reason": "Guarded recursive request probe aborted with SIGABRT and heap exhaustion before a result; see agent-test evidence limitations."
+    },
+    {
+      "version": "v1",
+      "method": "PATCH",
+      "path": "/v1/convai/agents/{agent_id}",
+      "operationId": "patch_agent_settings_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": false,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/Body_Patches_an_Agent_settings_v1_convai_agents__agent_id__patch"
+      },
+      "evidence": "agent-tool-recursive-requests",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/avatar",
+      "operationId": "post_agent_avatar_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}/avatar.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Post_Agent_avatar_v1_convai_agents__agent_id__avatar_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/branches",
+      "operationId": "create_branch_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}/branches.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/Body_Create_a_new_branch_v1_convai_agents__agent_id__branches_post"
+      },
+      "evidence": "additional-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "syntheticProbeBody": {
+        "parent_version_id": "probe",
+        "name": "Probe",
+        "description": "Synthetic"
+      }
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/drafts",
+      "operationId": "create_agent_draft_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}/drafts.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/Body_Create_agent_draft_v1_convai_agents__agent_id__drafts_post"
+      },
+      "evidence": "additional-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "syntheticProbeBody": {
+        "conversation_config": {},
+        "platform_settings": {},
+        "workflow": {
+          "nodes": {
+            "start": {
+              "type": "start"
+            }
+          },
+          "edges": {}
+        },
+        "name": "Probe"
+      }
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/hold-audio",
+      "operationId": "post_agent_hold_audio_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}/hold-audio.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Post_Agent_hold_audio_v1_convai_agents__agent_id__hold_audio_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/run-tests",
+      "operationId": "run_agent_test_suite_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}/run-tests.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/RunAgentTestsRequestModel"
+      },
+      "evidence": "invocation-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/simulate-conversation",
+      "operationId": "run_conversation_simulation_route",
+      "routeFile": "api/routes/convai/agents/{agent_id}/simulate-conversation.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/Body_Simulates_a_conversation_v1_convai_agents__agent_id__simulate_conversation_post"
+      },
+      "evidence": "additional-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "syntheticProbeBody": {
+        "simulation_specification": {
+          "simulated_user_config": {}
+        }
+      }
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/{agent_id}/simulate-conversation/stream",
+      "operationId": "run_conversation_simulation_route_stream",
+      "routeFile": "api/routes/convai/agents/{agent_id}/simulate-conversation/stream.ts",
+      "generatedKind": "empty",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/Body_Simulates_a_conversation__Stream__v1_convai_agents__agent_id__simulate_conversation_stream_post"
+      },
+      "evidence": "additional-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "syntheticProbeBody": {
+        "simulation_specification": {
+          "simulated_user_config": {}
+        }
+      }
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/agents/create",
+      "operationId": "create_agent_route",
+      "routeFile": "api/routes/convai/agents/create.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/Body_Create_Agent_v1_convai_agents_create_post"
+      },
+      "evidence": "agent-tool-recursive-requests",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/conversations/{conversation_id}/files",
+      "operationId": "upload_file_route",
+      "routeFile": "api/routes/convai/conversations/{conversation_id}/files.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Upload_file_v1_convai_conversations__conversation_id__files_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/knowledge-base",
+      "operationId": "add_documentation_to_knowledge_base",
+      "routeFile": "api/routes/convai/knowledge-base.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": false,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Add_to_knowledge_base_v1_convai_knowledge_base_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Optional wire body, but document creation requires URL or file; absent body supplies neither."
+    },
+    {
+      "version": "v1",
+      "method": "PATCH",
+      "path": "/v1/convai/knowledge-base/{documentation_id}/update-file",
+      "operationId": "update_file_document_route",
+      "routeFile": "api/routes/convai/knowledge-base/{documentation_id}/update-file.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Update_file_document_v1_convai_knowledge_base__documentation_id__update_file_patch"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/knowledge-base/file",
+      "operationId": "create_file_document_route",
+      "routeFile": "api/routes/convai/knowledge-base/file.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Create_file_document_v1_convai_knowledge_base_file_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/test-invocations/{test_invocation_id}/resubmit",
+      "operationId": "resubmit_tests_route",
+      "routeFile": "api/routes/convai/test-invocations/{test_invocation_id}/resubmit.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/ResubmitTestsRequestModel"
+      },
+      "evidence": "invocation-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/convai/tools",
+      "operationId": "add_tool_route",
+      "routeFile": "api/routes/convai/tools.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/ToolRequestModel"
+      },
+      "evidence": "agent-tool-recursive-requests",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+    },
+    {
+      "version": "v1",
+      "method": "PATCH",
+      "path": "/v1/convai/tools/{tool_id}",
+      "operationId": "update_tool_route",
+      "routeFile": "api/routes/convai/tools/{tool_id}.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/ToolRequestModel"
+      },
+      "evidence": "agent-tool-recursive-requests",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/dubbing",
+      "operationId": "create_dubbing",
+      "routeFile": "api/routes/dubbing.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": false,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Dub_a_video_or_an_audio_file_v1_dubbing_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Optional wire body, but dubbing creation requires uploaded media or a source URL; absent body supplies neither."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/dubbing/project",
+      "operationId": "dubbing_project_create",
+      "routeFile": "api/routes/dubbing/project.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": false,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Create_Dubbing_Project_v1_dubbing_project_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Optional wire body, but dubbing creation requires uploaded media or a source URL; absent body supplies neither."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/flows/templates/{template_id}/runs",
+      "operationId": "create_public_template_run",
+      "routeFile": "api/routes/flows/templates/{template_id}/runs.ts",
+      "generatedKind": "random",
+      "blocker": "recursive-json-request",
+      "issue": 2613,
+      "requestMedia": [
+        "application/json"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "application/json": "#/components/schemas/TemplateRunCreateRequest"
+      },
+      "evidence": "additional-exact-template-probes",
+      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "syntheticProbeBody": {
+        "inputs": {}
+      }
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/forced-alignment",
+      "operationId": "forced_alignment",
+      "routeFile": "api/routes/forced-alignment.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Create_forced_alignment_v1_forced_alignment_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/music/finetunes",
+      "operationId": "create_finetune",
+      "routeFile": "api/routes/music/finetunes.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Create_Music_Finetune_v1_music_finetunes_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/music/stem-separation",
+      "operationId": "separate_song_stems",
+      "routeFile": "api/routes/music/stem-separation.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Stem_separation_v1_music_stem_separation_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/music/upload",
+      "operationId": "upload_song",
+      "routeFile": "api/routes/music/upload.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Upload_music_v1_music_upload_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/music/video-to-music",
+      "operationId": "video_to_music",
+      "routeFile": "api/routes/music/video-to-music.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Video_to_Music_v1_music_video_to_music_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/productions/orders/{order_id}/media",
+      "operationId": "public_register_media",
+      "routeFile": "api/routes/productions/orders/{order_id}/media.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Register_media_v1_productions_orders__order_id__media_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/pronunciation-dictionaries/add-from-file",
+      "operationId": "add_from_file",
+      "routeFile": "api/routes/pronunciation-dictionaries/add-from-file.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Add_a_pronunciation_dictionary_v1_pronunciation_dictionaries_add_from_file_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/similar-voices",
+      "operationId": "get_similar_library_voices",
+      "routeFile": "api/routes/similar-voices.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": false,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Get_similar_library_voices_v1_similar_voices_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Optional wire body, but similarity requires supplied audio_file; absent body supplies no audio."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/speech-to-text",
+      "operationId": "speech_to_text",
+      "routeFile": "api/routes/speech-to-text.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Speech_to_Text_v1_speech_to_text_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/studio/projects",
+      "operationId": "add_project",
+      "routeFile": "api/routes/studio/projects.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Create_Studio_project_v1_studio_projects_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voice-changer/{voice_id}",
+      "operationId": "speech_to_speech_full",
+      "routeFile": "api/routes/voice-changer/{voice_id}.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Voice_Changer_v1_voice_changer__voice_id__post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voice-changer/{voice_id}/stream",
+      "operationId": "speech_to_speech_stream",
+      "routeFile": "api/routes/voice-changer/{voice_id}/stream.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Voice_Changer_Streaming_v1_voice_changer__voice_id__stream_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voices/{voice_id}/edit",
+      "operationId": "edit_voice",
+      "routeFile": "api/routes/voices/{voice_id}/edit.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Edit_voice_v1_voices__voice_id__edit_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voices/add",
+      "operationId": "add_voice",
+      "routeFile": "api/routes/voices/add.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Add_voice_v1_voices_add_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voices/pvc/{voice_id}/captcha",
+      "operationId": "verify_pvc_voice_captcha",
+      "routeFile": "api/routes/voices/pvc/{voice_id}/captcha.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Verify_PVC_voice_captcha_v1_voices_pvc__voice_id__captcha_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voices/pvc/{voice_id}/samples",
+      "operationId": "add_pvc_voice_samples",
+      "routeFile": "api/routes/voices/pvc/{voice_id}/samples.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Add_samples_to_PVC_voice_v1_voices_pvc__voice_id__samples_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    },
+    {
+      "version": "v1",
+      "method": "POST",
+      "path": "/v1/voices/pvc/{voice_id}/verification",
+      "operationId": "request_pvc_manual_verification",
+      "routeFile": "api/routes/voices/pvc/{voice_id}/verification.ts",
+      "generatedKind": "random",
+      "blocker": "multipart-input",
+      "issue": 2607,
+      "requestMedia": [
+        "multipart/form-data"
+      ],
+      "requestBodyRequired": true,
+      "requestSchemaRefs": {
+        "multipart/form-data": "#/components/schemas/Body_Request_manual_verification_v1_voices_pvc__voice_id__verification_post"
+      },
+      "evidence": "multipart-parser",
+      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+    }
+  ]
+}

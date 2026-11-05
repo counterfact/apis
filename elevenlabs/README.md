@@ -159,7 +159,12 @@ The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
 the stateful voices implementation. Of 437 operations, 394 now have authored
-behavior. The remaining 43 operations retain their generated responses. This simulator does not synthesize speech.
+behavior. The remaining 43 operations retain their generated responses: 30 multipart-input
+operations blocked by #2607 and 13 recursive JSON request operations blocked by
+#2613. The [operation-by-operation blocker inventory](BLOCKED_OPERATIONS.md) and
+[machine-readable manifest](blocked-operations.json) record the exact remaining
+method/path set and evidence. No unclassified operations remain. This simulator
+does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.

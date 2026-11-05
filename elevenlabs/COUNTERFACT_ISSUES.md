@@ -77,3 +77,29 @@ establish feasibility. Resource limits were 256 MB heap, 256 KB stack and a
 400 before invoking it. These controls identify the request failure; they do not
 establish a response-generation bug. This is the same cause as the existing
 issue; no duplicate response-generation issue is asserted.
+
+## Additional recursive request operations
+
+The same [#2613](https://github.com/counterfact/api-simulator/issues/2613) request
+validation failure is confirmed for five additional operations:
+
+- POST /v1/convai/agents/{agent_id}/branches
+- POST /v1/convai/agents/{agent_id}/drafts
+- POST /v1/convai/agents/{agent_id}/simulate-conversation
+- POST /v1/convai/agents/{agent_id}/simulate-conversation/stream
+- POST /v1/flows/templates/{template_id}/runs
+
+Each exact-template public Dispatcher probe against the unchanged V1 contract
+throws RangeError: Maximum call stack size exceeded in json-schema-traverse
+before its custom handler is called. The probes use explicit JSON request and
+response media, enabled validation, finite synthetic bodies, a 256 MB heap, a
+256 KB stack and a 12-second subprocess timeout. They differ from the agent-test
+heap-exhaustion/SIGABRT result above; neither result establishes a response
+generation failure. [The blocker inventory](BLOCKED_OPERATIONS.md#additional-exact-template-probes)
+records the five bodies and the exact registration/control protocol.
+
+All 43 remaining generated operations are accounted for in
+[blocked-operations.json](blocked-operations.json): 30 multipart-input operations
+under #2607 (25 required wire bodies and five optional bodies needing meaningful
+file/URL/audio input), and 13 recursive JSON request operations under #2613.
+Bodyless Studio content reset and procedure compile are authored and excluded.
