@@ -10,7 +10,11 @@
     "serve": "counterfact --config counterfact.yaml --serve --no-update-check",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "audit:operations": "node scripts/audit-operations.mjs",
+    "probe:operation": "node scripts/probe-operation.mjs",
+    "verify:command": "node scripts/verify-command.mjs",
+    "test:tools": "node --test scripts/test/*.test.mjs"
   },
   "dependencies": {
     "counterfact": "3.1.0"

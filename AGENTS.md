@@ -43,6 +43,21 @@ Generate and evolve simulator code **one API (or coherent API subset) at a time*
    - Keep scenarios simple and declarative.
    - Scenario code is intentionally lightweight and **does not require unit tests**.
 
+## Implementation discipline
+
+- Before a slice, identify canonical state owners and every context that reads or mutates that state. Use live accessors across contexts; copy immutable history. Refactor shared ownership first when needed.
+- Make the contract's normal default request succeed. Add related scenario fixtures and dependencies rather than reject a default because its implementation is missing.
+- Separate unfinished implementation from runtime blockers. Require a minimal reproduction and a validation control before classifying a route as blocked; optional request bodies still require a business-semantics check.
+- When delegating, provide a compact slice packet and file references rather than repeat these instructions or the conversation. Use a fresh implementation agent per slice when requested; publish prerequisites before a fresh behavior slice.
+- Freeze implementation before final verification. Use focused checks while iterating and one full suite for the final runtime change; rerun only checks justified by subsequent changes. Use lighter checks for documentation-only changes.
+- Record the exact command, exit status, source state and unique log path. Verify completed log summaries, not stale filenames or partial output.
+- Count canonical method + versioned path operations with an audit tool. Generated random responses and untouched empty handlers are not completed routes; a changed handler still needs behavioral evidence.
+- Commit each verified slice and push immediately when pushing is authorized. Verify the published ref and tree. Never force-push unrelated history to work around a transport problem.
+
+For the compact slice workflow, handoff template and publication fallback, read
+[`docs/agent-workflow.md`](docs/agent-workflow.md) when planning or coordinating
+implementation work. Load version-specific runtime notes only when applicable.
+
 ## Manual acceptance tests
 
 Every PR description must include a section titled exactly `## Manual acceptance tests` with 3–6 checkboxes. Each checkbox must describe an observable behavior (not an implementation detail). When creating the PR, leave all boxes unchecked — the reviewer checks each one after manually verifying the behavior. All boxes must be checked before the PR can be merged.
