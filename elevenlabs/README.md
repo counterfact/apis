@@ -113,8 +113,23 @@ npm test
 
 Generation reads both local contracts and preserves authored handlers.
 Tests verify spec provenance, version routing, and shared voice behavior over
-real HTTP, plus context state transitions and listing rules directly.
-HTTP tests require permission to listen on localhost.
+Counterfact’s Dispatcher, plus context state transitions and listing rules directly.
+`test-support/dispatcher.ts` loads the actual route, context, and scenario modules
+using Counterfact's public runtime exports. It reads both configured contracts,
+runs `startup`, shares state across V1/V2, and exposes `request(path, options)`
+and `scenario(name, "api")`. Each harness instance has isolated state. No port,
+file watcher, or cleanup step is needed.
+
+Requests support `method`, `headers`, and JSON string `body` options, with
+repeated query parameters preserved. Other Fetch options are not simulated.
+Responses expose the standard `Response` status, headers, `json()`, and `text()`
+interfaces. Unsupported body formats and streaming responses fail explicitly.
+
+These are Dispatcher integration tests: routing, parameter conversion, handler
+execution, content negotiation, and request/response validation run in the real
+runtime. This project assumes Counterfact's transport and body parsing work
+correctly; the harness does not test those layers. Scenario route-client helpers
+are unsupported; scenarios here initialize or change context directly.
 
 For the discovery slice, Jev checked the public contract's natural-language
 filter descriptions. It supported matching any supplied language/use case and
