@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 400 operations retain their
+the stateful voices implementation. The remaining 395 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -355,7 +355,7 @@ live in `api/routes/workspace/webhooks/_.context.ts`; the root stays unchanged.
 The simulator stores configuration only: it makes no callback requests, checks
 no remote URLs, and simulates neither delivery, signing, retries, automatic
 disabling, authentication, nor admin permissions. Secrets are predictable test
-values. This brings stateful coverage to 37 of 437 operations.
+values.
 
 ## Workspace auth connection configuration
 
@@ -390,6 +390,34 @@ instances are isolated. State and business rules live in the separate
 This is configuration storage only: no token requests, remote credential checks,
 OAuth flows, authentication, or permission enforcement occur. Use synthetic
 credentials only. Other credential types are intentionally unsupported.
+
+## Conversation tags
+
+Five operations persist workspace tags: `GET`/`POST /v1/convai/tags` and
+`GET`/`PATCH`/`DELETE /v1/convai/tags/{tag_id}`. Lists return
+`conversation_tags`, `has_more`, and `next_cursor`, ordered by creation time
+newest first with tag ID as a tie-breaker. `page_size` defaults to 100 and
+accepts integers from 1 through 100. Cursors are nonnegative integer offsets;
+invalid cursors return HTTP 400. Offsets beyond the end return an empty page.
+Pagination reflects current state rather than a snapshot.
+
+Creation returns full metadata with IDs starting at `sim-tag-created-1`, a
+fixed fictional workspace/owner, and timestamps advancing one second per
+allocated ID. Duplicate titles are allowed, without trimming or case changes.
+PATCH preserves omitted fields and null titles; explicit null clears the
+description and an empty object is a no-op. Titles require 1–120 characters
+and descriptions allow up to 1000. Missing IDs return HTTP 404 with
+`detail.status: "tag_not_found"`; invalid requests return HTTP 400 without
+mutating state or allocating IDs. Successful deletion returns an empty HTTP 204.
+These IDs, duplicate-title, null, tie-breaker, cursor, and error rules are local
+simulator conventions. Reads return defensive copies and instances are isolated.
+
+Startup and `reset` populate one fictional `sim-tag` and restore metadata and
+counters in `api/scenarios/tags.ts`. Run `.scenario emptyTags` (or
+`app.scenario("emptyTags", "api")`) to clear tags and reset creation numbering.
+Business rules live in `api/routes/convai/tags/_.context.ts`; the root context
+is unchanged. Conversation assignment, ownership checks, authentication, and
+permissions are not simulated. Stateful coverage is now 42 of 437 operations.
 
 ## Development
 
