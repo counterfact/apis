@@ -1,92 +1,42 @@
-# Operation backlog after the runtime upgrade
+# Remaining generated operations
 
-Counterfact 3.2.1 / runtime 0.4.1 fixes the runtime blockers recorded below.
-These tables preserve the original 43-operation implementation backlog and old
-reproductions. They do not assert failures in the upgraded runtime. The operation
-audit reports current authored and generated counts; the JSON manifest is reduced
-as each implementation slice completes.
+Counterfact 3.2.1 and runtime 0.4.1 are installed. The contracts contain 437
+operations: 431 authored and six generated, with no missing or empty handlers.
+The 37 formerly blocked multipart/JSON operations that now work were implemented
+in separate verified slices. The six remaining operations exhaust memory during
+request validation before the handler runs; they are not counted as implemented.
 
-# Historical blocker inventory
+| Method | Path | Current blocker |
+| --- | --- | --- |
+| PATCH | `/v1/convai/agents/{agent_id}` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
+| POST | `/v1/convai/agents/{agent_id}/branches` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
+| POST | `/v1/convai/agents/{agent_id}/drafts` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
+| POST | `/v1/convai/agents/{agent_id}/run-tests` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
+| POST | `/v1/convai/agents/create` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
+| POST | `/v1/convai/test-invocations/{test_invocation_id}/resubmit` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
 
-The two pinned contracts contain 437 operations: 436 V1 operations and one V2
-operation (GET /v2/voices). There are 394 authored operations and exactly 43
-remaining generated operations. The upstream unversioned GET /docs redirect is
-excluded, as recorded in [contract provenance](openapi.provenance.json).
-All remaining operations have a concrete runtime blocker: 30 require multipart
-input and 13 have recursive JSON request-schema failures. None is classified
-merely because implementation is missing or its response schema is recursive.
+## Shared-schema expansion (runtime 0.4.1)
 
-[blocked-operations.json](blocked-operations.json) records the exact method and
-versioned path set, operation IDs, request schema references, generated handler
-kind, reasons and evidence groups. The table below has exactly the same 43 rows.
-These handlers remain generated and are not counted as authored behavior;
-generated output is not a supported stateful simulator implementation.
+Exact-template probes register a custom finite handler against the unchanged V1
+contract, send finite JSON requests, and keep both validators enabled. The six
+operations abort before handler entry under the 256 MiB probe bound. Agent create
+also exhausts a 512 MiB heap. The public synthetic reproducer in #2626 uses a
+small shared schema graph: depth five succeeds; depth 22 exhausts 256 MiB after
+document loading and before handler entry. This is not the old cycle traversal
+failure or a claim about response generation.
 
-## Operation inventory
+The upstream fix has been merged. It is not present in the pinned 3.2.1/0.4.1
+packages. Recheck these operations after upgrading to a release containing that
+fix; do not disable request validation or alter the contracts to mark them done.
 
-Body required/optional reflects requestBody.required in the unchanged contract;
-it does not establish whether an absent body has meaningful business behavior.
+Run `npm run audit:operations -- --check-blockers` to verify exact agreement with
+[blocked-operations.json](blocked-operations.json). All multipart handlers are now
+authored. [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) summarizes the work.
 
-| Method | Versioned path | Blocker | Wire body | Reason and evidence |
-| --- | --- | --- | --- | --- |
-| POST | `/v1/assets` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/audio-isolation` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/audio-isolation/stream` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/audio-native` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/audio-native/{project_id}/content` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Optional | Optional wire body, but update requires article file; absent body cannot perform a content update. [Evidence](#multipart-parser) |
-| PUT | `/v1/convai/agent-testing/{test_id}` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template guarded PUT probe aborted with SIGABRT before its synchronous handler-entry marker ran; the saved evidence does not establish the abort cause. [Evidence](#agent-test-guarded-abort) |
-| POST | `/v1/convai/agent-testing/create` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Guarded recursive request probe aborted with SIGABRT and heap exhaustion before a result; see agent-test evidence limitations. [Evidence](#agent-test-guarded-abort) |
-| PATCH | `/v1/convai/agents/{agent_id}` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Optional | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#agent-tool-recursive-requests) |
-| POST | `/v1/convai/agents/{agent_id}/avatar` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/convai/agents/{agent_id}/branches` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#additional-exact-template-probes) |
-| POST | `/v1/convai/agents/{agent_id}/drafts` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#additional-exact-template-probes) |
-| POST | `/v1/convai/agents/{agent_id}/hold-audio` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/convai/agents/{agent_id}/run-tests` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#invocation-exact-template-probes) |
-| POST | `/v1/convai/agents/{agent_id}/simulate-conversation` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#additional-exact-template-probes) |
-| POST | `/v1/convai/agents/{agent_id}/simulate-conversation/stream` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#additional-exact-template-probes) |
-| POST | `/v1/convai/agents/create` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#agent-tool-recursive-requests) |
-| POST | `/v1/convai/conversations/{conversation_id}/files` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/convai/knowledge-base` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Optional | Optional wire body, but document creation requires URL or file; absent body supplies neither. [Evidence](#multipart-parser) |
-| PATCH | `/v1/convai/knowledge-base/{documentation_id}/update-file` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/convai/knowledge-base/file` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/convai/test-invocations/{test_invocation_id}/resubmit` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#invocation-exact-template-probes) |
-| POST | `/v1/convai/tools` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#agent-tool-recursive-requests) |
-| PATCH | `/v1/convai/tools/{tool_id}` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#agent-tool-recursive-requests) |
-| POST | `/v1/dubbing` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Optional | Optional wire body, but dubbing creation requires uploaded media or a source URL; absent body supplies neither. [Evidence](#multipart-parser) |
-| POST | `/v1/dubbing/project` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Optional | Optional wire body, but dubbing creation requires uploaded media or a source URL; absent body supplies neither. [Evidence](#multipart-parser) |
-| POST | `/v1/flows/templates/{template_id}/runs` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#additional-exact-template-probes) |
-| POST | `/v1/forced-alignment` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/music/finetunes` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/music/stem-separation` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/music/upload` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/music/video-to-music` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/productions/orders/{order_id}/media` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/pronunciation-dictionaries/add-from-file` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/similar-voices` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Optional | Optional wire body, but similarity requires supplied audio_file; absent body supplies no audio. [Evidence](#multipart-parser) |
-| POST | `/v1/speech-to-text` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/studio/projects` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voice-changer/{voice_id}` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voice-changer/{voice_id}/stream` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voices/{voice_id}/edit` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voices/add` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voices/pvc/{voice_id}/captcha` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voices/pvc/{voice_id}/samples` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
-| POST | `/v1/voices/pvc/{voice_id}/verification` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
+## Historical evidence from 3.1.0 / 0.3.2
 
-## Pinned sources
-
-This evidence applies to Counterfact 3.1.0 and runtime 0.3.2, pinned in
-[package.json](package.json) and [package-lock.json](package-lock.json).
-The source contracts are [openapi.v1.yaml](openapi.v1.yaml) and
-[openapi.v2.yaml](openapi.v2.yaml); their hashes and upstream origin are in
-[openapi.provenance.json](openapi.provenance.json). Use these snapshots for
-reproduction rather than a changing live contract.
-
-The published runtime source exposes the relevant boundaries:
-
-- [create-koa-app.js](https://unpkg.com/@counterfact/runtime@0.3.2/dist/server/web-server/create-koa-app.js) installs default koa-bodyparser.
-- [dispatcher.js](https://unpkg.com/@counterfact/runtime@0.3.2/dist/server/dispatcher.js) selects the operation using the registered matched template, then validates requests before invoking the handler.
-- [request-validator.js](https://unpkg.com/@counterfact/runtime@0.3.2/dist/server/request-validator.js) uses AJV for application/json request schemas; it does not parse multipart data.
+The notes below explain the original runtime limitations. They are historical;
+the table above and current manifest are authoritative for this checkout.
 
 ## Multipart parser
 

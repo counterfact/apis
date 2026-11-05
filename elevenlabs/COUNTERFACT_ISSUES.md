@@ -1,46 +1,33 @@
-# Counterfact compatibility status
+# Counterfact runtime observations
 
-The simulator now pins Counterfact 3.2.1 and runtime 0.4.1. Regeneration fixes
-collection context bindings and supplies MultipartFile request types. Nullable
-primitive and array query conversion, optional bodies, version availability,
-initial module identity are fixed upstream. Several recursive request schemas now
-validate, but agent configuration graphs can still exhaust memory (see #2626).
-The affected collection casts and query coercion workarounds have been removed.
-Stable error tags remain a valid application convention, rather than a runtime
-requirement. The Dispatcher harness remains the project's deliberate integration
-test boundary; it is not a compatibility workaround.
+This checkout pins Counterfact 3.2.1 and runtime 0.4.1. Contracts are unchanged;
+request and response validation remain enabled. Generated bindings were refreshed.
+Old collection-context assertions and scalar query-coercion workarounds were
+removed. Optional object-body operations now use their existing empty-object
+semantics when the body is omitted, while preserving explicit invalid inputs.
+The Dispatcher harness is a deliberate project test boundary, not a compatibility
+workaround; multipart tests supply the runtime's public parsed MultipartFile shape.
 
-The original reports below are historical evidence for 3.1.0 / 0.3.2.
-The remaining generated handlers are an implementation backlog after the upgrade.
-Use the operation audit for current counts. Actual multipart parser behavior is
-owned by Counterfact; simulator tests supply the public MultipartFile shape.
+## Reproduced observations in the pinned release
 
-## Current schema expansion blocker — #2626
+| Issue | Reproduction and effect | Project behavior |
+| --- | --- | --- |
+| [#2626](https://github.com/counterfact/api-simulator/issues/2626) | Shared schema graphs expand until heap exhaustion; six full-contract agent mutation requests abort before their handlers. A synthetic graph has a successful small control and bounded failing larger control. | Six operations remain generated and uncounted. The upstream source fix is merged but absent from this pin. |
+| [#2627](https://github.com/counterfact/api-simulator/issues/2627) | A scalar numeric query such as `count=3600junk` reaches the handler as 3600. | No duplicate transport parser is added. Business numeric validation cannot recover text already discarded by the runtime. |
+| [#2631](https://github.com/counterfact/api-simulator/issues/2631) | First new ModuleLoader preserves class identity; second and third fresh loaders over unchanged plain ESM files break context and custom-error instanceof checks. | Existing stable application error tags remain useful across loader instances; no claim that all class-identity cases are fixed. |
+| [#2632](https://github.com/counterfact/api-simulator/issues/2632) | Generated optional object request bodies omit undefined even though the runtime passes undefined for a valid absent body. | Context entry points explicitly supply meaningful defaults for omitted bodies. Contracts and generated files are not hand-edited. |
 
-[Counterfact #2626](https://github.com/counterfact/api-simulator/issues/2626)
-contains a public synthetic shared-schema graph reproducer: depth 5 reaches its
-handler and returns 200; depth 22 exhausts a 256 MB heap after document load and
-before handler entry. A bounded full-contract agent-create probe also exhausts
-512 MB. This is a remaining 0.4.1 limitation, not the old cycle traversal error.
+Multipart parsing/types, collection context bindings, version routing, malformed
+boolean rejection, nullable primitive conversion, array query normalization and
+optional-body runtime validation have upstream fixes in this pin. Tools, agent
+tests, conversation simulation and Flows request validation now work. The six
+shared-agent-schema exceptions and their exact operation set are recorded in
+[BLOCKED_OPERATIONS.md](BLOCKED_OPERATIONS.md).
 
-Exact-template probes on 0.4.1 return 200 for valid input and 400 for invalid
-controls for tools POST/PATCH, agent-test create/PUT, both conversation simulation
-routes and Flows template run creation. Agent create/PATCH, branch and draft
-creation, run-tests and resubmit abort before their handlers under the 256 MB
-probe limit. Keep these six operations generated pending an upstream fix; do not
-run them unbounded in the normal test suite or disable request validation.
+The original reports below describe 3.1.0 / 0.3.2 and are retained as historical
+context. Their old workarounds are not blanket instructions for this release.
 
-## Remaining scalar numeric coercion limitation — #2627
-
-[Counterfact #2627](https://github.com/counterfact/api-simulator/issues/2627)
-records remaining lossy scalar numeric parsing in runtime 0.4.1.
-For example, `aggregation_bucket_size=3600junk` arrives as 3600. Nullable numeric
-conversion is fixed, but strict lexical rejection is not promised here. The old
-nullable-string workaround could reject those spellings before conversion; it
-cannot do so after conversion. Simulator tests cover valid decimal queries and
-invalid business values directly; they do not duplicate transport parsing.
-
-# Historical issue evidence
+## Historical issue evidence
 
 Observed with Counterfact 3.1.0 and `@counterfact/runtime` 0.3.2.
 New reports were filed using `pmcelhaney-codex`; existing reports were reused.

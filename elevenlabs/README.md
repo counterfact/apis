@@ -1,16 +1,27 @@
-# Current runtime
-
-This branch uses Counterfact 3.2.1. Earlier notes below describing multipart,
-recursive-schema, version-routing, query-conversion or optional-body runtime
-failures are historical. Most fixes are installed; six agent-configuration operations still have the
-shared-schema memory blocker reported in Counterfact #2626. Generated operations
-are being implemented in separate slices. See COUNTERFACT_ISSUES.md for upgrade
-status and run `npm run audit:operations` for current operation counts.
-
 # ElevenLabs API simulator
 
 Multi-version Counterfact simulator generated from the official
 [ElevenLabs OpenAPI spec](https://api.elevenlabs.io/openapi.json).
+
+## Current implementation
+
+This checkout pins Counterfact 3.2.1 / runtime 0.4.1. There are **431 authored
+operations out of 437**, with six shared-agent-schema requests blocked before
+handler entry by #2626. The source fix is merged but absent from the pinned
+release. All 30 formerly blocked multipart operations and seven formerly blocked
+JSON operations now have tested behavior.
+
+[Implementation summary](IMPLEMENTATION_STATUS.md) maps the 37 newly authored
+operations to their slice documentation. [Current blockers](BLOCKED_OPERATIONS.md)
+and `npm run audit:operations -- --check-blockers` provide the exact remaining set.
+[Runtime observations](COUNTERFACT_ISSUES.md) distinguish current bugs from old
+reports. Collection casts, obsolete query coercions, blanket multipart rejection
+and optional-body restrictions have been removed where the upstream fixes apply.
+
+Outputs and completion workflows are bounded synthetic fixtures. No provider
+inference, remote fetching or real billing occurs. Stream limitations and local
+format/size limits are documented per slice. Counterfact separately caps the
+complete multipart wire body at 10 MiB, including framing overhead.
 
 ## Bounded speech fixtures
 
@@ -166,14 +177,12 @@ per-file hashes, operation counts, and exclusion.
 
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
-and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 394 now have authored
-behavior. The remaining 43 operations retain their generated responses: 30 multipart-input
-operations blocked by #2607 and 13 recursive JSON request operations blocked by
-#2613. The [operation-by-operation blocker inventory](BLOCKED_OPERATIONS.md) and
-[machine-readable manifest](blocked-operations.json) record the exact remaining
-method/path set and evidence. No unclassified operations remain. This simulator
-does not synthesize speech.
+and combined route types. Of 437 operations, 431 have authored behavior. The six
+remaining generated operations share the runtime 0.4.1 schema-expansion blocker
+[#2626](https://github.com/counterfact/api-simulator/issues/2626). The exact set is
+in [the current inventory](BLOCKED_OPERATIONS.md) and
+[machine-readable manifest](blocked-operations.json). No operations are missing,
+empty or unclassified. No real speech synthesis or provider inference runs.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -290,10 +299,8 @@ Run `.scenario emptyModels` (or `app.scenario("emptyModels", "api")`) to return
 an empty catalog for model-picker testing. Run `reset` to restore both catalog
 and voice fixtures. Voice changes do not change the model catalog.
 
-Voice metadata editing remains generated. Its contract requires multipart form
-data, which the pinned Counterfact runtime's default body parser does not
-parse. That operation needs [runtime multipart support](https://github.com/counterfact/api-simulator/issues/2607)
-before it can be simulated faithfully.
+Voice creation, editing and similar-voice uploads now use parsed multipart
+requests and canonical copied sample storage. See [voice uploads](#voice-uploads-after-the-321-upgrade).
 
 ## Speech history
 
@@ -766,15 +773,12 @@ timestamps. IDs, defaults, merge/null rules, cursor ordering and errors are loca
 simulator conventions. No LLM, tool, audio, network, permission or reference
 resolution behavior is performed. Configured tool IDs need not exist.
 
-HTTP agent creation and PATCH remain generated and are not counted as authored
-behavior. Their recursive request schemas crash the installed runtime's AJV
-validation before the handler executes, even for finite minimal bodies
-([upstream #2613](https://github.com/counterfact/api-simulator/issues/2613)).
-Request validation stays enabled; contracts remain unchanged and bindings are
-regenerated normally.
-Use startup/reset fixtures and duplication for the supported HTTP lifecycle.
-Agent workflow generation and execution endpoints remain generated.
-Version reads and deployment metadata use the lifecycle subset described below.
+HTTP agent creation and PATCH remain generated and uncounted. Their shared
+configuration schema graphs exhaust memory before handler entry in runtime 0.4.1
+([#2626](https://github.com/counterfact/api-simulator/issues/2626)). Branch and draft
+creation plus test invocation execution/resubmission share the current blocker.
+Other authored agent lifecycle, procedures and simulation operations are described
+below. Contracts remain unchanged and validation stays enabled.
 
 ## Tool configuration and execution history
 
@@ -817,16 +821,13 @@ Authentication and permissions are not enforced.
 `emptyTools` clears this group's tool map and execution ledger; `reset` restores
 them. `toolDiscovery` adds a second client tool and assigns `sim-tool` to the
 existing baseline agent, without creating an agent. These scenarios own all
-fixtures and metadata; there are no creation or mutation counters in this read
-and delete slice. The nested context starts empty, returns defensive copies,
+fixtures and metadata; creation and replacement use scenario-owned counters and timestamps. The nested context starts empty, returns defensive copies,
 and uses a live scenario-wired accessor so agent map replacement is reflected.
 Instances isolate state. The small root context remains unchanged.
 
-Tool POST and PATCH retain generated behavior and are not counted as authored
-operations: their recursive request schemas share the installed validation
-blocker [#2613](https://github.com/counterfact/api-simulator/issues/2613).
-Validation remains enabled and bindings are generated normally. Use startup,
-reset and named fixtures for configuration setup.
+Tool POST and PATCH now persist client/webhook configurations with scenario-owned
+defaults, counters and timestamps. Replacement preserves identity, history and live
+agent dependencies. See [tool configuration limits](TOOL_CONFIGURATION.md).
 
 ## Workspace groups
 
@@ -916,9 +917,7 @@ without enforcing authentication, quotas, network access, expiry jobs or plan
 entitlements. Bare IPv4/IPv6 addresses get /32 or /128 suffixes; supplied valid
 CIDRs are preserved. Credit/concurrency limits must be nonnegative safe integers.
 
-The installed runtime rejects an absent PATCH body despite its optional contract
-([Counterfact #2614](https://github.com/counterfact/api-simulator/issues/2614));
-send `{}` for a no-op. Request validation remains enabled.
+An absent PATCH body and `{}` both perform a no-op. Request validation remains enabled.
 PATCH preserves omitted fields and `no_update` values. Null names and nullable
 numeric limits preserve their values; `clear` removes numeric limits, IP
 allowlists or expiry. `third_party_disable_allowed: "clear"` restores the local
@@ -953,8 +952,7 @@ including after PATCH replaces their metadata or reset replaces the account map.
 false forbids it with 403. Explicit null clears the override. With no override,
 the key's own setting wins; an absent/null key setting uses the scenario-owned
 plan default (true at startup). `{}` preserves the current override. Invalid
-bodies leave it unchanged. The installed optional-body limitation (#2614) means
-an absent policy body returns 400 before the handler; send `{}` for a no-op.
+bodies leave it unchanged. An absent body and `{}` both preserve the override.
 
 Startup/reset populate the synthetic caller binding, clear the override and
 restore the plan default in `api/scenarios/workspace-key-policy.ts`.
@@ -1087,7 +1085,7 @@ preserves transcript events, attachment metadata, audio and other files. Deletin
 the historical agent preserves conversation media/files. Deleting the conversation
 removes its retained audio and file metadata together with SIP/reference state.
 `emptyConversations` clears media/files, and full `reset` replaces and repopulates
-them. Instances isolate state. Multipart file upload remains generated under #2607.
+them. Instances isolate state. Multipart uploads now retain copied file payloads; see [ConvAI media uploads](CONVAI_MEDIA_UPLOADS.md).
 These availability, ownership, usage and error rules are local simulator conventions.
 
 ## Realtime conversation groups
@@ -1177,13 +1175,12 @@ main-branch metadata for dependency-picker setup; `reset` restores
 
 ## Knowledge base local records
 
-Eight operations now share local text/folder state: list documents, create text,
+Core operations share local text/folder state: list documents, create text,
 create folder, read/update/delete a document or folder, read document content,
 and fetch summary batches. Startup and `reset` populate `sim-kb-folder` and its
 `sim-kb-text` child in `api/scenarios/knowledge-base.ts`; `emptyKnowledgeBase`
 clears the collection and allocation counters. Contexts start empty and simulator
-instances isolate changes. Multipart upload/update operations remain generated
-because of [Counterfact #2607](https://github.com/counterfact/api-simulator/issues/2607).
+instances isolate changes. File creation/replacement and legacy uploads are authored; see [document ingestion](docs/slices/document-ingestion.md).
 
 Text input and PATCH content are treated as plain text and escaped for HTML,
 including ampersands, angle brackets and quotes. Detail returns that escaped
@@ -1192,8 +1189,7 @@ including ampersands, angle brackets and quotes. Detail returns that escaped
 requesting folder content returns 400. Text without a name uses `Untitled text document`.
 Created IDs are `sim-kb-created-N`; timestamps advance deterministically on creation
 or content/name changes. Null/omitted PATCH fields preserve values; `{}` is a no-op.
-Absent optional PATCH bodies remain subject to the installed runtime's
-[optional-body limitation #2614](https://github.com/counterfact/api-simulator/issues/2614).
+An absent optional PATCH body is also a no-op.
 
 All list filters combine before decimal-offset pagination: name prefix search
 (case-insensitive), creator (`@me` supported), deprecated ownership filtering,
@@ -1519,10 +1515,7 @@ IDs, preserve requested key insertion order, and accept an empty list.
 Reads return defensive copies; instances are isolated. IDs use
 `sim-test-folder-created-N`, and mutation times advance from the scenario clock.
 These IDs, ordering, filters, sharing, path and error rules are local conventions.
-Test create and PUT remain generated and uncounted because their recursive
-request schemas hit [Counterfact #2613](https://github.com/counterfact/api-simulator/issues/2613).
-Finite detail responses validate normally; the guarded request probe is recorded
-in `COUNTERFACT_ISSUES.md`. Request and response validation remain enabled.
+Test creation and replacement now persist LLM, tool and finite simulation definitions. Scenario-owned defaults and typed transcript normalization preserve folder projections and historical invocation records. No tests or models are executed by storing a definition.
 
 ## Studio project and chapter metadata
 
@@ -1637,7 +1630,7 @@ and language discovery. Startup/reset seed one open order
 restoration live in `api/scenarios/productions.ts`.
 
 Create accepts a JSON object (including `{}`) and returns a deterministic contract-shaped
-ID. An absent optional body is affected by Counterfact #2614. PATCH and item upsert
+ID. An absent optional body uses the same creation defaults as `{}`. PATCH and item upsert
 use the contract's `{ "request": ... }` wrapper. Items reference media belonging
 to that order; missing orders, media or items return 404. Empty orders cannot be
 submitted (400), and submitted orders cannot be edited or submitted again (409).
@@ -1653,8 +1646,7 @@ synthetic English-to-Spanish catalog, not the provider's current catalog.
 synthetic deliverable metadata record. Sandbox orders also progress only through
 this explicit scenario, keeping tests deterministic. Media and deliverable URLs
 use `simulator.invalid` and do not serve files. Reads return defensive copies;
-instances are isolated. Multipart media registration remains generated and is
-not counted, pending Counterfact #2607. No media is fetched, uploaded or processed.
+instances are isolated. Multipart media registration stores copied upload data and fixture URL sources; see [uploaded assets](UPLOADED_ASSETS.md). No remote media fetching or provider processing occurs.
 
 
 ## Flows generation records
@@ -1768,10 +1760,7 @@ PATCH requests and migrations to the same speaker. Adding an existing/source
 language and migrating an empty segment list preserve the version. Source and
 new-speaker media references are synthetic fixture metadata; URLs use
 `simulator.invalid` and serve no files. These timing, null, version, error and ID
-rules are local simulator conventions. Optional speaker bodies should be sent as
-`{}` because absent bodies remain affected by Counterfact #2614. Transcription,
-translation, dubbing, rendering and similar-voice routes remain generated and
-uncounted. No audio, cloning, provider request, billing or network fetch occurs.
+rules are local simulator conventions. Omitted speaker bodies select the same defaults as `{}`. Synthetic transcription, translation, dubbing, rendering and similar-voice workflows are described below. No inference, cloning, provider request, billing or network fetching occurs.
 
 
 ## Workspace resource administration and historical records
@@ -1839,7 +1828,7 @@ reflect duplication/deletion/reset, return defensive copies and isolate instance
 Run `agentWidgetConfiguration` to add fictional styling, a Spanish first-message
 preset and text-only/file-input metadata to `sim-agent`; reset restores the base
 agent configuration. Fixtures and this setup action live in `api/scenarios/agents.ts`.
-Agent create/PATCH remain generated due to Counterfact #2613. Contracts and request
+Agent create/PATCH remain blocked by shared-schema expansion in runtime 0.4.1 (#2626). Contracts and request
 and response validation remain unchanged.
 
 
@@ -2057,8 +2046,7 @@ with a null version. Explicit procedure-version reads require branch membership;
 combining agent/procedure versions requires matching references. Unknown or
 cross-branch records return 404. Reads return defensive copies.
 
-Creation accepts an object or explicit JSON null for defaults; absent optional
-bodies remain affected by Counterfact #2614. Draft PATCH requires name, content
+Creation accepts an omitted body, object or explicit JSON null for defaults. Draft PATCH requires name, content
 and type, matching the unchanged contract. Omitted/null triggers preserve the
 previous trigger; an empty trigger clears it. The documented `description` alias
 is accepted; conflicting nonnull trigger/description values return 400. All three
@@ -2258,11 +2246,11 @@ can be renamed after its live agent or test is deleted. Missing invocation IDs
 return 404; invalid requests return 400 without changes. Reset restores baseline
 names, and instances isolate edits.
 
-Run-tests and resubmit remain generated and uncounted because their recursive
-configuration-override request schemas trigger Counterfact #2613 before the
-handler runs, even when no override is supplied. A guarded exact-template public
-Dispatcher probe confirmed both failures; finite invocation PATCH controls pass
-and invalid name bodies return 400. Contracts and validation remain unchanged.
+Run-tests and resubmit remain generated and uncounted because their shared
+configuration-override schema graphs exhaust memory before handler entry in
+runtime 0.4.1 (#2626), even when the override is omitted. Finite invocation PATCH
+controls work, including invalid-name rejection. Contracts and validation remain
+unchanged; see the [current blocker inventory](BLOCKED_OPERATIONS.md).
 
 ## Local LLM usage estimates
 
@@ -2401,8 +2389,7 @@ then updates escaped HTML, UTF-8 size and timestamp and invalidates its indexes.
 Unchanged refreshes preserve timestamps/indexes; non-URL refreshes return 400.
 `knowledgeSourceFiles` adds `sim-kb-file` and its fixed synthetic download URL.
 `source-file-url` accepts file records only; its `simulator.invalid` URL is an
-opaque fixture and does not provide an actual signed download service. Multipart
-file creation/update remain generated under Counterfact #2607.
+opaque fixture and does not provide an actual signed download service. File creation and replacement now update canonical content, index state and source URL revisions; see [document ingestion](docs/slices/document-ingestion.md).
 
 `knowledgeSourceRetrieval` assigns the text fixture to the canonical main agent,
 enables its RAG settings and provides exact query `guide` with two fictional
@@ -2556,8 +2543,7 @@ local simulator conventions; time does not advance automatically.
 
 Single-use issuance supports `realtime_scribe`, `batch_scribe`, and `tts_websocket`.
 Client secrets accept an optional `expires_after` with anchor `created_at` and
-1–3600 whole seconds. Send JSON `{}` for the default client secret; absent optional
-bodies remain subject to Counterfact #2614. Supported session fields are type
+1–3600 whole seconds. An omitted body or JSON `{}` selects default client-secret settings. Supported session fields are type
 `realtime`, either current contract model ID, instructions, distinct text/audio
 output modalities, temperature 0–2, positive whole output-token limits or `inf`,
 and a whole duration of 1–3600 seconds. Explicit null session fields return 400;
@@ -2597,19 +2583,19 @@ verified archive integrity and the extracted fixture hash. Returned bytes and
 metadata are copies; startup/reset clear all jobs/snapshots and restore counters.
 
 Both stream paths return complete buffered `audio/mpeg`, with no incremental
-framing. Send JSON `{}` for default stream options under Counterfact #2614;
+framing. An omitted body or JSON `{}` selects default stream options;
 `convert_to_mpeg` false/true both select the fixture's existing MP3 format.
 Archive MIME follows the contract's `application/x-zip`. Podcast accepts standard
 quality, default duration metadata and auto normalization; nondefault generation
 controls, URL/multiple sources, conversation mode, language, callback, intro/outro,
 highlights and instructions return 400. It does not generate a podcast script.
 
-`POST /v1/studio/projects/{project_id}/content` with no body and no Content-Type
-clears live chapters/muted tracks, following its documented blank initialization
-case. Any content type or supplied body returns 400; multipart content imports
-remain blocked by Counterfact #2607. Historical snapshots are preserved. Unknown
-projects, chapters, snapshots or dependencies return 404; overlapping conversion
-or edits during a pending conversion return 409. These are local conventions.
+`POST /v1/studio/projects/{project_id}/content` supports blank initialization,
+bounded document imports and structured chapter content. Bodyless requests and
+empty multipart objects clear live chapters/muted tracks; snapshot history is
+retained. Imports validate in detached candidates before state changes. Remote
+sources and unsupported formats fail explicitly. Pending conversion guards remain
+in force. See [project ingestion](PROJECT_INGESTION.md).
 
 
 ## Bounded synthetic music
@@ -2636,8 +2622,7 @@ strength 1, detailed model style `music`, prompt-only generation mode `track`,
 and default respect-section-durations true are accepted. Enabling timestamps,
 waveform visuals, signing, inpainting, phonetic names or forced instrumentation,
 changing section-duration behavior, or selecting other modes/models returns 400
-before IDs or retained state change. Optional request bodies still need JSON
-input under #2614; send a prompt or plan rather than an absent body.
+before IDs or retained state change. A prompt or composition plan is still semantically required; an absent body cannot generate a song.
 
 Binary endpoints return ordinary `audio/mpeg` responses. Detailed responses use
 actual `multipart/mixed` boundary framing: a JSON composition plan/song metadata
@@ -2738,9 +2723,7 @@ metadata and audio are shared by regular and PVC endpoints. Sample deletion
 removes the canonical sample, its media and separation state through either path.
 
 Captcha GET returns a `text/plain` synthetic read-aloud challenge; the contract
-specifies no response content format. It does not mark a voice verified. Required
-multipart captcha submission, verification and sample upload remain generated
-under Counterfact #2607. Run `verifiedVoiceSampleFixtures` to explicitly allow
+specifies no response content format. It does not mark a voice verified. Multipart captcha submission, verification and sample uploads are authored; see [PVC uploads](PVC_UPLOADS.md). Run `verifiedVoiceSampleFixtures` to explicitly allow
 local training of the sample fixture and mark the existing synthetic multilingual
 model trainable. This scenario preserves current samples and edited metadata.
 
@@ -2802,7 +2785,7 @@ Startup/reset configure `sim-project` with an exact local article mapping at
 text; no URL fetching, HTML extraction, model or provider request occurs. Unknown
 URLs return 400, and missing canonical Studio projects return 404. Other existing
 Studio projects return disabled player settings until explicitly configured.
-Multipart player creation and file imports remain generated under #2607.
+Player creation and file content imports are now authored; see [project ingestion](PROJECT_INGESTION.md).
 
 URL updates replace live Studio chapters with one article chapter containing the
 title, author and fixture text, separated by newlines. Omitted/null title and
@@ -2873,8 +2856,7 @@ simulator conventions; no audio playback, call or provider request occurs.
 Run `agentHoldAudioFixture` to populate inert custom metadata on live and historical
 fixtures, including a live timeout that differs from its stored main version.
 Reset removes this optional setup and restores the baseline. Contexts start empty,
-scenarios own fixtures, and separate instances isolate changes. The multipart
-upload operation remains generated under Counterfact #2607.
+scenarios own fixtures, and separate instances isolate changes. Hold-audio uploads are now authored with measured WAV/MPEG duration; see [ConvAI media uploads](CONVAI_MEDIA_UPLOADS.md).
 
 ## Legacy procedure compile dry-run
 
