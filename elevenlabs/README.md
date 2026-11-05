@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 387 operations retain their
+the stateful voices implementation. The remaining 383 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -417,7 +417,7 @@ counters in `api/scenarios/tags.ts`. Run `.scenario emptyTags` (or
 `app.scenario("emptyTags", "api")`) to clear tags and reset creation numbering.
 Business rules live in `api/routes/convai/tags/_.context.ts`; the root context
 is unchanged. Conversation assignment, ownership checks, authentication, and
-permissions are not simulated. Stateful coverage is now 50 of 437 operations.
+permissions are not simulated. Stateful coverage is now 54 of 437 operations.
 
 ## Environment variable configuration
 
@@ -482,6 +482,35 @@ fictional `sim-user` creator and timestamps advancing one second from the fixed
 scenario baseline; production omits its creator. Instances isolate state.
 Business operations live in `api/routes/convai/environments/_.context.ts`;
 the root context is unchanged. Authentication and permissions are not simulated.
+
+## Conversation workspace settings
+
+Four operations persist settings: `GET`/`PATCH /v1/convai/settings` and
+`GET`/`PATCH /v1/convai/settings/dashboard`. PATCH preserves omitted fields;
+an empty object is a no-op. Explicit null clears the initiation webhook,
+embedding retention override, post-call webhook ID, or deprecated `send_audio`
+value where the contract allows null. Null embedding retention means use the
+system default of 30 days. Other fields reject null.
+
+Nested `webhooks` patches merge individual fields. A supplied initiation webhook
+replaces the whole object and requires both `url` and `request_headers`;
+headers are replaced rather than merged. Event and chart arrays replace their
+previous contents; empty arrays clear them. Charts accept the three contract
+variants with explicit `type` values and at most four entries. Retention limits,
+enums, and required nested fields follow the local contract. Invalid requests
+return HTTP 400 atomically. Unknown fields are rejected at every fixed object
+level. Merge, replacement, unknown-field, explicit chart-type, and error rules
+are local conventions because the snapshot does not fully specify PATCH behavior.
+
+Startup and `reset` populate both sections in `api/scenarios/settings.ts`.
+Run `.scenario alternateSettings` (or `app.scenario("alternateSettings", "api")`)
+for static LiveKit, alternate retention/webhook options, and no dashboard charts.
+Reads and update responses are defensive copies. Instances isolate state and
+each section changes independently. The context starts empty and lives in
+`api/routes/convai/settings/_.context.ts`; the root context is unchanged.
+This stores configuration only: no callbacks, network connections, webhook or
+secret reference resolution, MCP enablement, LiveKit connections, retention jobs,
+authentication, or permission checks occur.
 
 ## Development
 

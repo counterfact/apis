@@ -16,6 +16,8 @@ import { resetEnvironments } from "./environments.js";
 export { productionEnvironmentOnly } from "./environments.js";
 import { resetEnvironmentVariables } from "./environment-variables.js";
 export { emptyEnvironmentVariables } from "./environment-variables.js";
+import { resetSettings } from "./settings.js";
+export { alternateSettings } from "./settings.js";
 import { resetTags } from "./tags.js";
 export { emptyTags } from "./tags.js";
 import { resetUsage } from "./usage.js";
@@ -27,6 +29,7 @@ export const reset: Scenario = ($) => {
   resetEnvironments($);
   resetEnvironmentVariables($);
   resetTags($);
+  resetSettings($);
   resetAuthConnections($);
   resetWebhooks($);
   resetUsage($);
