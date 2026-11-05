@@ -15,5 +15,13 @@ export const GET: Route["GET"] = async ($) => {
   }
 };
 export const POST: Route["POST"] = async ($) => {
-  return $.response.status(200).random();
+  const c = $.context;
+  try { return $.response.status(200).json(c.createProject($.body)); }
+  catch (error) {
+    if (error instanceof Error && error.name === "StudioError") {
+      const e = error as Error & {status:number;code:string};
+      return $.x.response.status(e.status).json({detail:{status:e.code,message:e.message}});
+    }
+    throw error;
+  }
 };

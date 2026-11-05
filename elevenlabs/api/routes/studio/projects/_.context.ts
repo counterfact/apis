@@ -6,6 +6,8 @@ import type { PronunciationDictionaryVersionResponseModel as Version } from "../
 import type { ProjectSnapshotExtendedResponseModel as ProjectSnapshot } from "../../../types/v1/components/schemas/ProjectSnapshotExtendedResponseModel.js";
 import type { ChapterSnapshotExtendedResponseModel as ChapterSnapshot } from "../../../types/v1/components/schemas/ChapterSnapshotExtendedResponseModel.js";
 import { crc32 } from "node:zlib";
+import { SaxesParser } from "saxes";
+import { copyUpload } from "../../assets/_.context.js";
 export type StudioSnapshot = {
   projectwide: boolean;
   metadata: ProjectSnapshot;
@@ -57,6 +59,399 @@ export class Context {
   voiceExists: (id: string) => boolean = () => false;
   modelExists: (id: string) => boolean = () => false;
   podcastTemplate: StoredProject | undefined;
+  creationTemplate: StoredProject["metadata"] | undefined;
+  documentLimits:
+    | {
+        maxBytes: number;
+        maxName: number;
+        maxCharacters: number;
+        maxChapters: number;
+        maxDepth: number;
+      }
+    | undefined;
+  /** Decode a bounded local document. No remote lookup, OCR or office/PDF parsing. */
+  documentText(value: unknown, audioNative = false) {
+    const limits = this.documentLimits;
+    if (!limits) throw new Error("Run Studio initialization scenario first");
+    let file;
+    try {
+      file = copyUpload(value, limits.maxBytes, limits.maxName);
+    } catch {
+      return invalid();
+    }
+    const plain =
+      /\.(txt|md|markdown)$/i.test(file.filename) &&
+      ["text/plain", "text/markdown", "application/octet-stream"].includes(
+        file.contentType,
+      );
+    const html =
+      /\.(html|htm|xhtml)$/i.test(file.filename) &&
+      [
+        "text/html",
+        "application/xhtml+xml",
+        "application/octet-stream",
+      ].includes(file.contentType);
+    if (
+      (!plain && !html) ||
+      (audioNative && plain && !/\.txt$/i.test(file.filename))
+    )
+      throw new StudioError(
+        400,
+        "unsupported_studio_document",
+        "Only UTF-8 text, Markdown and a bounded well-formed HTML subset are supported; AudioNative accepts TXT or HTML",
+      );
+    let source: string;
+    try {
+      source = new TextDecoder("utf-8", { fatal: true }).decode(file.data);
+    } catch {
+      return invalid();
+    }
+    if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(source))
+      return invalid();
+    if (html) {
+      let depth = 0,
+        result = "";
+      const parser = new SaxesParser();
+      parser.on("error", () => invalid());
+      parser.on("doctype", () => invalid());
+      parser.on("processinginstruction", () => invalid());
+      parser.on("xmldecl", (decl) => {
+        if (decl.encoding && !/^utf-8$/i.test(decl.encoding)) return invalid();
+      });
+      parser.on("cdata", () => invalid());
+      parser.on("opentag", (tag) => {
+        if (
+          ++depth > limits.maxDepth ||
+          ![
+            "html",
+            "body",
+            "div",
+            "p",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "span",
+            "strong",
+            "em",
+            "b",
+            "i",
+            "br",
+          ].includes(tag.name) ||
+          Object.keys(tag.attributes).length
+        )
+          return invalid();
+        if (tag.name === "br") result += "\n";
+      });
+      parser.on("text", (text) => {
+        result += text;
+      });
+      parser.on("closetag", (tag) => {
+        depth--;
+        if (["p", "div", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag.name))
+          result += "\n";
+      });
+      try {
+        parser.write(source).close();
+      } catch {
+        return invalid();
+      }
+      source = result
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join("\n");
+    }
+    if (!source.trim() || source.length > limits.maxCharacters)
+      return invalid();
+    return source;
+  }
+  private validationContext() {
+    const c = new Context();
+    c.voiceExists = this.voiceExists;
+    c.modelExists = this.modelExists;
+    c.dictionaryVersion = this.dictionaryVersion;
+    c.nextChapterId = this.nextChapterId;
+    c.documentLimits = this.documentLimits;
+    return c;
+  }
+  /** Build and validate a detached project before publishing any state or counters. */
+  createProject(value: unknown) {
+    const b = input(value, [
+      "name",
+      "default_title_voice_id",
+      "default_paragraph_voice_id",
+      "default_model_id",
+      "from_url",
+      "from_document",
+      "from_content_json",
+      "quality_preset",
+      "title",
+      "author",
+      "description",
+      "genres",
+      "target_audience",
+      "language",
+      "content_type",
+      "original_publication_date",
+      "mature_content",
+      "isbn_number",
+      "acx_volume_normalization",
+      "volume_normalization",
+      "pronunciation_dictionary_locators",
+      "callback_url",
+      "fiction",
+      "apply_text_normalization",
+      "auto_convert",
+      "auto_assign_voices",
+      "source_type",
+      "voice_settings",
+      "create_publishing_read",
+    ]);
+    const template = this.creationTemplate,
+      limits = this.documentLimits;
+    if (!template || !limits)
+      throw new Error("Run Studio initialization scenario first");
+    if (
+      !text(b.name) ||
+      b.name.length > limits.maxName ||
+      [
+        "auto_convert",
+        "auto_assign_voices",
+        "create_publishing_read",
+        "mature_content",
+        "acx_volume_normalization",
+        "volume_normalization",
+      ].some((k) => b[k] != null && typeof b[k] !== "boolean")
+    )
+      return invalid();
+    if (
+      b.from_url != null ||
+      b.callback_url != null ||
+      b.auto_assign_voices === true ||
+      b.create_publishing_read === true ||
+      (b.voice_settings != null &&
+        (!Array.isArray(b.voice_settings) || b.voice_settings.length)) ||
+      (b.quality_preset != null && b.quality_preset !== "standard") ||
+      (b.apply_text_normalization != null &&
+        b.apply_text_normalization !== "auto") ||
+      b.acx_volume_normalization === true ||
+      b.volume_normalization === true
+    )
+      return invalid();
+    if (
+      Number(b.from_document != null) + Number(b.from_content_json != null) >
+      1
+    )
+      return invalid();
+    for (const k of [
+      "title",
+      "author",
+      "description",
+      "language",
+      "content_type",
+      "original_publication_date",
+      "isbn_number",
+    ])
+      if (
+        b[k] != null &&
+        (typeof b[k] !== "string" || b[k].length > limits.maxCharacters)
+      )
+        return invalid();
+    if (
+      b.genres != null &&
+      (!Array.isArray(b.genres) ||
+        b.genres.length > 20 ||
+        b.genres.some((v) => !text(v)))
+    )
+      return invalid();
+    if (
+      (b.target_audience != null &&
+        !["children", "young adult", "adult", "all ages"].includes(
+          b.target_audience as string,
+        )) ||
+      (b.fiction != null &&
+        !["fiction", "non-fiction"].includes(b.fiction as string)) ||
+      (b.source_type != null &&
+        !["blank", "book", "article"].includes(b.source_type as string))
+    )
+      return invalid();
+    const m = structuredClone(template);
+    let sequence = this.nextProject,
+      id: string;
+    do {
+      id = `sim-project-created-${sequence++}`;
+    } while (this.projects.has(id));
+    m.project_id = id;
+    m.name = b.name;
+    m.create_date_unix = this.time;
+    for (const key of [
+      "default_title_voice_id",
+      "default_paragraph_voice_id",
+      "default_model_id",
+    ]) {
+      if (b[key] != null) {
+        if (!text(b[key])) return invalid();
+        Object.assign(m, { [key]: b[key] });
+      }
+    }
+    m.default_title_voice_ref_id = m.default_title_voice_id;
+    m.default_paragraph_voice_ref_id = m.default_paragraph_voice_id;
+    if (
+      !this.voiceExists(m.default_title_voice_id) ||
+      !this.voiceExists(m.default_paragraph_voice_id) ||
+      !this.modelExists(m.default_model_id)
+    )
+      throw new StudioError(
+        404,
+        "studio_dependency_not_found",
+        "Voice or speech model not found",
+      );
+    for (const key of [
+      "title",
+      "author",
+      "description",
+      "genres",
+      "target_audience",
+      "language",
+      "content_type",
+      "original_publication_date",
+      "mature_content",
+      "isbn_number",
+      "fiction",
+      "source_type",
+    ])
+      if (b[key] !== undefined)
+        Object.assign(m, { [key]: structuredClone(b[key]) });
+    const c = this.validationContext(),
+      p: StoredProject = { metadata: m, chapters: new Map(), muted: new Set() };
+    c.projects.set(id, p);
+    let chapters: unknown;
+    if (b.from_document != null)
+      chapters = [
+        {
+          name: m.title || m.name,
+          blocks: [
+            {
+              nodes: [
+                {
+                  type: "tts_node",
+                  text: this.documentText(b.from_document),
+                  voice_id: m.default_paragraph_voice_id,
+                },
+              ],
+            },
+          ],
+        },
+      ];
+    else if (b.from_content_json != null) {
+      if (
+        typeof b.from_content_json !== "string" ||
+        b.from_content_json.length > limits.maxBytes
+      )
+        return invalid();
+      try {
+        chapters = JSON.parse(b.from_content_json);
+      } catch {
+        return invalid();
+      }
+    }
+    if (chapters !== undefined) {
+      if (
+        !Array.isArray(chapters) ||
+        !chapters.length ||
+        chapters.length > limits.maxChapters
+      )
+        return invalid();
+      for (const value of chapters) {
+        const ch = input(value, ["name", "blocks"]),
+          created = c.createChapter(id, { name: ch.name }).chapter;
+        c.updateChapter(id, created.chapter_id, {
+          content: { blocks: ch.blocks },
+        });
+        const stored = p.chapters.get(created.chapter_id)!;
+        if (
+          (stored.statistics?.characters_unconverted ?? 0) >
+          limits.maxCharacters
+        )
+          return invalid();
+        if ((stored.voice_ids ?? []).some((voice) => !this.voiceExists(voice)))
+          throw new StudioError(
+            404,
+            "studio_dependency_not_found",
+            "Voice or speech model not found",
+          );
+      }
+    }
+    if (b.pronunciation_dictionary_locators != null) {
+      if (!Array.isArray(b.pronunciation_dictionary_locators)) return invalid();
+      let locators;
+      try {
+        locators = b.pronunciation_dictionary_locators.map((v) =>
+          JSON.parse(v),
+        );
+      } catch {
+        return invalid();
+      }
+      c.attachDictionaries(id, { pronunciation_dictionary_locators: locators });
+    }
+    if (b.auto_convert === true) c.convert(id);
+    this.projects.set(id, p);
+    if (c.pending.has(id)) this.pending.set(id, c.pending.get(id)!);
+    this.nextProject = sequence;
+    this.nextChapterId = c.nextChapterId;
+    return { project: this.projectSummary(p) };
+  }
+  replaceDocumentText(id: string, text: string, autoConvert: boolean) {
+    const live = this.stored(id);
+    this.idle(id);
+    if (
+      typeof text !== "string" ||
+      !text.trim() ||
+      text.length > (this.documentLimits?.maxCharacters ?? 0)
+    )
+      return invalid();
+    const c = this.validationContext(),
+      p = structuredClone(live);
+    p.chapters = new Map();
+    p.muted = new Set();
+    p.metadata.can_be_downloaded = false;
+    p.metadata.state = "default";
+    c.projects.set(id, p);
+    const chapter = c.createChapter(id, {
+      name: p.metadata.title || p.metadata.name,
+    }).chapter;
+    c.updateChapter(id, chapter.chapter_id, {
+      content: {
+        blocks: [
+          {
+            nodes: [
+              {
+                type: "tts_node",
+                text,
+                voice_id: p.metadata.default_paragraph_voice_id,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    if (
+      !this.voiceExists(p.metadata.default_paragraph_voice_id) ||
+      !this.modelExists(p.metadata.default_model_id)
+    )
+      throw new StudioError(
+        404,
+        "studio_dependency_not_found",
+        "Voice or speech model not found",
+      );
+    if (autoConvert) c.convert(id);
+    this.projects.set(id, p);
+    this.nextChapterId = c.nextChapterId;
+    if (c.pending.has(id)) this.pending.set(id, c.pending.get(id)!);
+  }
   private idle(id: string) {
     if (this.pending.has(id))
       throw new StudioError(

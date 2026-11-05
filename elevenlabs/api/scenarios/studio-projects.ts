@@ -16,6 +16,38 @@ export const emptyStudioProjects: Scenario = ($) => {
   c.modelExists = (id) =>
     $.context.models.get(id)?.can_do_text_to_speech === true;
   c.podcastTemplate = undefined;
+  c.documentLimits = {
+    maxBytes: 16384,
+    maxName: 200,
+    maxCharacters: 2000,
+    maxChapters: 100,
+    maxDepth: 16,
+  };
+  c.creationTemplate = {
+    project_id: "sim-project",
+    name: "Simulator Studio Project",
+    create_date_unix: 1735689600,
+    created_by_user_id: "sim-member-narrator",
+    default_title_voice_ref_id: "sim-narrator",
+    default_paragraph_voice_ref_id: "sim-narrator",
+    default_title_voice_id: "sim-narrator",
+    default_paragraph_voice_id: "sim-narrator",
+    default_model_id: "eleven_multilingual_v2",
+    can_be_downloaded: false,
+    volume_normalization: false,
+    state: "default",
+    access_level: "admin",
+    quality_check_on: false,
+    quality_check_on_when_bulk_convert: false,
+    quality_preset: "standard",
+    pronunciation_dictionary_versions: [],
+    pronunciation_dictionary_locators: [],
+    apply_text_normalization: "auto",
+    assets: [],
+    voices: [],
+    base_voices: [],
+    source_type: "blank",
+  };
   c.dictionaryVersion = (id, version) => {
     const dictionary = $.loadContext(
       "/pronunciation-dictionaries",
@@ -45,31 +77,7 @@ export const resetStudioProjects: Scenario = ($) => {
     [
       "sim-project",
       {
-        metadata: {
-          project_id: "sim-project",
-          name: "Simulator Studio Project",
-          create_date_unix: 1735689600,
-          created_by_user_id: "sim-member-narrator",
-          default_title_voice_ref_id: "sim-narrator",
-          default_paragraph_voice_ref_id: "sim-narrator",
-          default_title_voice_id: "sim-narrator",
-          default_paragraph_voice_id: "sim-narrator",
-          default_model_id: "eleven_multilingual_v2",
-          can_be_downloaded: false,
-          volume_normalization: false,
-          state: "default",
-          access_level: "admin",
-          quality_check_on: false,
-          quality_check_on_when_bulk_convert: false,
-          quality_preset: "standard",
-          pronunciation_dictionary_versions: [],
-          pronunciation_dictionary_locators: [],
-          apply_text_normalization: "auto",
-          assets: [],
-          voices: [],
-          base_voices: [],
-          source_type: "blank",
-        },
+        metadata: structuredClone(c.creationTemplate!),
         chapters: new Map([
           [
             "sim-chapter",

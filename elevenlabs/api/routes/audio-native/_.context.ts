@@ -7,6 +7,48 @@ export type Article = { project: string; text: string };
 export type Publication = { title: string; author: string; previousSnapshots: string[] };
 const invalid = (): never => { throw new StudioError(400,"invalid_audio_native_request","Invalid local AudioNative request"); };
 export class Context {
+  playerDefaults: Settings | undefined;
+  createProject(value: unknown) {
+    const b = this.uploadInput(value,["name","image","author","title","small","text_color","background_color","sessionization","voice_id","model_id","file","auto_convert","apply_text_normalization","pronunciation_dictionary_locators"]);
+    const defaults = this.playerDefaults;
+    if (!defaults) throw new Error("Run AudioNative initialization scenario first");
+    for (const key of ["image","title","author","text_color","background_color","voice_id","model_id"])
+      if (b[key] != null && (typeof b[key] !== "string" || b[key].length > 2000)) return invalid();
+    if (b.small != null && typeof b.small !== "boolean" || b.sessionization != null && (typeof b.sessionization !== "number" || !Number.isInteger(b.sessionization) || b.sessionization < 0 || b.sessionization > 1440)) return invalid();
+    const settings = structuredClone(defaults);
+    for (const key of ["image","title","author","small","text_color","background_color","sessionization"]) if (b[key] != null) Object.assign(settings,{[key]:b[key]});
+    const studio = this.studio();
+    const text = b.file == null ? undefined : [settings.title,settings.author,studio.documentText(b.file,true)].join("\n");
+    const voice = b.voice_id ?? studio.creationTemplate?.default_paragraph_voice_id;
+    const created = studio.createProject({name:b.name, title:settings.title,author:settings.author,
+      default_title_voice_id:voice,default_paragraph_voice_id:voice,default_model_id:b.model_id,
+      source_type:"article",auto_convert:b.auto_convert,apply_text_normalization:b.apply_text_normalization,
+      pronunciation_dictionary_locators:b.pronunciation_dictionary_locators,
+      ...(text === undefined ? {} : {from_content_json:JSON.stringify([{name:settings.title || b.name,blocks:[{nodes:[{type:"tts_node",text,voice_id:voice}]}]}])}),
+    });
+    const id = created.project.project_id;
+    this.players.set(id,{defaults:settings,snapshot:null});
+    return {project_id:id,converting:b.auto_convert === true,html_snippet:"<div id='audio-native-player'></div>"};
+  }
+  private uploadInput(value: unknown, allowed: string[]) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return invalid();
+    const b = value as Record<string,unknown>;
+    if (Object.keys(b).some(k => !allowed.includes(k)) || ["auto_convert","auto_publish"].some(k => b[k] !== undefined && typeof b[k] !== "boolean")) return invalid();
+    return b;
+  }
+  replaceContent(id: string, value: unknown) {
+    const studio = this.studio(), project = studio.get(id), player = this.players.get(id);
+    if (!player) throw new StudioError(404,"audio_native_player_not_found","AudioNative player not found");
+    if (studio.pending.has(id) || this.pending.has(id)) throw new StudioError(409,"studio_conversion_pending","Conversion or publishing already pending");
+    const b = this.uploadInput(value,["file","auto_convert","auto_publish"]);
+    if (b.file == null || b.auto_publish === true && b.auto_convert !== true) return invalid();
+    const title = project.title ?? player.defaults.title, author = project.author ?? player.defaults.author;
+    const text = [title,author,studio.documentText(b.file,true)].join("\n");
+    const previousSnapshots = studio.listSnapshots(id).snapshots.map(s => s.project_snapshot_id);
+    studio.replaceDocumentText(id,text,b.auto_convert === true);
+    if (b.auto_publish === true) this.pending.set(id,{title,author,previousSnapshots});
+    return {project_id:id,converting:b.auto_convert === true,publishing:b.auto_publish === true,html_snippet:"<div id='audio-native-player'></div>"};
+  }
   players = new Map<string, Player>();
   articles = new Map<string, Article>();
   pending = new Map<string, Publication>();
