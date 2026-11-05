@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 408 operations retain their
+the stateful voices implementation. The remaining 404 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -329,6 +329,33 @@ curl -X POST http://localhost:3100/v1/workspace/analytics/query/usage-by-product
   -H 'Content-Type: application/json' \
   -d '{"start_time":1735689600000,"end_time":1735776000000,"interval_seconds":86400}'
 ```
+
+## Workspace webhook configuration
+
+Four operations persist webhook configuration: `GET`/`POST /v1/workspace/webhooks`
+and `PATCH`/`DELETE /v1/workspace/webhooks/{webhook_id}`. Creation accepts the
+contract's HMAC settings and returns a synthetic ID and secret. IDs start at
+`sim-webhook-created-1`; creation timestamps advance from the fixed scenario
+baseline by one second per allocated ID. Lists preserve insertion order and
+never expose secrets, request headers, or retry settings. `include_usages=true`
+adds usage and event arrays; otherwise both fields are omitted.
+
+PATCH requires `name` and `is_disabled`. Omitted/null optional fields preserve
+their values; empty `events` and `request_headers` clear those configurations.
+Event arrays replace previous subscriptions. Missing IDs return HTTP 404 with
+`detail.status: "webhook_not_found"`; malformed request bodies return HTTP 400
+without changing state. These null, ID, timestamp, ordering, and error rules are
+local conventions. Configuration reads return defensive copies.
+
+Startup and `reset` load one fictional `sim-webhook` from
+`api/scenarios/webhooks.ts` and restore the creation counter. Run
+`.scenario emptyWebhooks` (or `app.scenario("emptyWebhooks", "api")`) to clear
+webhooks and the counter. Instances have isolated state. Business operations
+live in `api/routes/workspace/webhooks/_.context.ts`; the root stays unchanged.
+The simulator stores configuration only: it makes no callback requests, checks
+no remote URLs, and simulates neither delivery, signing, retries, automatic
+disabling, authentication, nor admin permissions. Secrets are predictable test
+values. This brings stateful coverage to 33 of 437 operations.
 
 ## Development
 

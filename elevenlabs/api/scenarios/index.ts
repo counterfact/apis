@@ -8,12 +8,15 @@ import { resetHistory } from "./history.js";
 export { emptyHistory } from "./history.js";
 import { resetModels } from "./models.js";
 import { resetAccount } from "./account.js";
+import { resetWebhooks } from "./webhooks.js";
+export { emptyWebhooks } from "./webhooks.js";
 import { resetUsage } from "./usage.js";
 export { emptyUsage } from "./usage.js";
 export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetWebhooks($);
   resetUsage($);
   resetDictionaries($);
   resetModels($);
