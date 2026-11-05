@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 147 now have authored
-behavior. The remaining 290 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 149 now have authored
+behavior. The remaining 288 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -765,6 +765,36 @@ UTC), accepting 15 minutes through 90 days ahead inclusively. Omitted/null
 create expiry means never expires. Creation timestamps use this same clock.
 ID allocation, frozen time, limits, defaults, null handling and errors are local
 simulator conventions. Workspace downgrade and enterprise policy are not modeled.
+
+## Workspace key disabling policy
+
+`POST /v1/workspaces/api-keys/disable?api_key_name=self` disables the current
+synthetic holder's canonical service-account key. The fixture caller header
+`xi-api-key: sim-workspace-caller` selects `sim-service-key`; newly created
+`sim-not-a-real-key-...` tokens also resolve their live key by its synthetic hash.
+No real credentials are accepted or verified. Missing or unknown synthetic
+callers return 401, including keys removed by `emptyServiceAccounts`. A wrong
+or absent confirmation returns 400. Allowed repeated disabling returns 200
+with `{}`, stores `is_disabled: true` and `disable_reason: "self_disabled"`,
+and is visible through existing service-account reads. Keys are read live,
+including after PATCH replaces their metadata or reset replaces the account map.
+
+`POST /v1/workspaces/api-keys/third-party-disabling` stores a workspace override:
+`{"third_party_disable_allowed":true}` allows holder disabling for every key;
+false forbids it with 403. Explicit null clears the override. With no override,
+the key's own setting wins; an absent/null key setting uses the scenario-owned
+plan default (true at startup). `{}` preserves the current override. Invalid
+bodies leave it unchanged. The installed optional-body limitation (#2614) means
+an absent policy body returns 400 before the handler; send `{}` for a no-op.
+
+Startup/reset populate the synthetic caller binding, clear the override and
+restore the plan default in `api/scenarios/workspace-key-policy.ts`.
+`emptyWorkspaceKeyPolicy` clears bindings and the override, preserving canonical
+keys; created synthetic tokens still resolve live. These endpoints model local
+holder eligibility only. Admin authorization, public-leak detection and global
+authentication enforcement are not simulated; existing administrator key PATCH
+and disable operations remain independent of holder eligibility. Each instance
+is isolated. All caller strings, errors and defaults are local conventions.
 
 ## Phone-number configuration
 

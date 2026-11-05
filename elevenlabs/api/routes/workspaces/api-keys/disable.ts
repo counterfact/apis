@@ -1,5 +1,12 @@
 import type { Routes } from "../../../types/index.js";
 type Route = Routes["/workspaces"]["/api-keys"]["/disable"];
 export const POST: Route["POST"] = async ($) => {
-  return $.response.status(200).random();
+  try { return $.response.status(200).json($.context.disableSelf($.query.api_key_name,$.headers["xi-api-key"])); }
+  catch(error){
+    if(error instanceof Error&&error.name==="WorkspaceKeyError"){
+      const e=error as Error&{status:number;code:string};
+      return $.x.response.status(e.status).json({detail:{status:e.code,message:e.message}});
+    }
+    throw error;
+  }
 };

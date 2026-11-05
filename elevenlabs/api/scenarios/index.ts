@@ -1,4 +1,6 @@
 import { resetBatchCalls } from "./batch-calling.js";
+import { resetWorkspaceKeyPolicy } from "./workspace-key-policy.js";
+export { emptyWorkspaceKeyPolicy } from "./workspace-key-policy.js";
 export { emptyBatchCalls, completeBatchCalls } from "./batch-calling.js";
 import { resetKnowledgeBase } from "./knowledge-base.js";
 export { emptyKnowledgeBase, knowledgeBaseReferences } from "./knowledge-base.js";
@@ -54,6 +56,7 @@ export const reset: Scenario = ($) => {
   resetGroups($);
   resetWorkspaceMembers($);
   resetServiceAccounts($);
+  resetWorkspaceKeyPolicy($);
   resetAgents($);
   resetAnalysisItems($);
   resetKnowledgeBase($);
