@@ -1,5 +1,7 @@
 import type { Scenario } from "../types/index.js";
 import { defaultSettings } from "../routes/_.context.js";
+import { resetCollections } from "./collections.js";
+export { emptyCollections } from "./collections.js";
 import { resetDictionaries } from "./dictionaries.js";
 export { emptyDictionaries } from "./dictionaries.js";
 import { resetHistory } from "./history.js";
@@ -41,6 +43,7 @@ export const reset: Scenario = ($) => {
       },
     ]),
   );
+  resetCollections($);
 };
 export const startup: Scenario = reset;
 

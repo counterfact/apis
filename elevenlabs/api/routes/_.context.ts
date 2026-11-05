@@ -67,6 +67,7 @@ export class Context {
       "language",
       "use_cases",
       "voice_ids",
+      "collection_id",
     ]);
     for (const [key, value] of Object.entries(query)) {
       if (value !== null && value !== undefined && !supported.has(key)) {
@@ -98,6 +99,7 @@ export class Context {
     let voices = this.listVoices().filter(
       (voice) =>
         (!query.category || voice.category === query.category) &&
+        (query.collection_id == null || (voice.collection_ids ?? []).includes(query.collection_id)) &&
         (query.gender == null || voice.labels.gender === query.gender) &&
         (query.age == null || voice.labels.age === query.age) &&
         (query.accent == null || voice.labels.accent === query.accent) &&

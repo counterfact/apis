@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 415 operations retain their
+the stateful voices implementation. The remaining 408 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -66,7 +66,7 @@ curl 'http://localhost:3100/v2/voices?page_size=1&search=narration'
 
 V2 supports `search` (name, description, category, and labels), `category`,
 `sort` (`name` or `created_at_unix`), `sort_direction`, `page_size` (1–100),
-`next_page_token`, `gender`, `age`, `accent`, `language`, `use_cases`, and
+`next_page_token`, `gender`, `age`, `accent`, `language`, `use_cases`, `collection_id`, and
 `voice_ids` (at most 100 IDs). Tokens are local integer offsets. Other V2 filters
 return HTTP 400 rather than being silently ignored. `total_count` is always
 returned, as required by the snapshot's response schema; `include_total_count`
@@ -102,6 +102,35 @@ rules are not implemented.
 
 Restart or run `.scenario reset` to restore the fixtures. In programmatic use,
 call `app.scenario("reset", "api")`. All callers share state; it is not persisted.
+
+## Voice collections
+
+Seven collection operations now persist state: `GET`/`POST /v1/voices/collections`,
+`GET`/`PATCH`/`DELETE /v1/voices/collections/{collection_id}`, and
+`POST`/`DELETE /v1/voices/collections/{collection_id}/voice/{voice_id}`.
+Lists sort by title with collection ID as a tie-breaker. Creation returns admin
+metadata with IDs `sim-collection-created-1`, then increasing suffixes.
+PATCH preserves omitted/null fields; an empty object is a no-op.
+
+Membership is stored on the canonical voice's `collection_ids`, visible through
+V1 voice list/detail and V2 voice reads. V2 `collection_id` filtering combines
+with other supported filters before sorting and pagination; an unknown collection
+matches no voices. Adding a member twice succeeds without duplicates. Removing a
+nonmember succeeds without changes. Deleting a collection clears its memberships
+and preserves voices. Deleting a voice preserves collection metadata.
+Missing collections or voices return HTTP 404 with `detail.status` set to
+`collection_not_found` or `voice_not_found`; collection lookup takes precedence.
+Malformed bodies return HTTP 400 without changing state.
+
+Startup and `reset` populate `sim-collection` (Simulator Favorites) with
+`sim-narrator` and restore the creation counter in `api/scenarios/collections.ts`.
+Run `.scenario emptyCollections` (or `app.scenario("emptyCollections", "api")`)
+to clear collections, memberships, and the counter. Each simulator instance is
+isolated. Metadata reads return defensive copies. Collection business logic
+lives in `api/routes/voices/collections/_.context.ts`; scenarios wire a live
+root-voice accessor so replacing the voice map during reset is safe.
+These null-update, sorting, ID, error, and nonmember-removal rules are local
+conventions. Authentication and permission enforcement are not simulated.
 
 ## Model discovery
 
