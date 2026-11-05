@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 424 operations retain their
+the stateful voices implementation. The remaining 422 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -173,6 +173,29 @@ The shared runtime currently dispatches V1-only handlers through the V2 prefix
 too (for example, `/v2/user`), even though those paths are absent from the V2
 contract. Use the documented V1 paths for account and model discovery; contract
 selection does not currently enforce route availability by version.
+
+## Pronunciation dictionary browsing
+
+`GET /v1/pronunciation-dictionaries` lists stable synthetic dictionary metadata.
+`GET /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}` returns the
+metadata and latest alias/phoneme rules. The baseline contains `sim-dictionary`
+and `sim-dictionary-archived`; each retains a separate rules snapshot per version.
+Responses are defensive copies. These rules are fixtures, not speech processing.
+
+The list supports `page_size` (1–100, default 30), `cursor`, `sort` (`name` or
+`creation_time_unix`), `sort_direction` (`ascending` or `descending`, case
+insensitive), and `include_archived` (default true). Numeric offset cursors and
+ID tie-breaking are local conventions. Filtering and sorting precede pagination.
+An offset beyond the end returns an empty page. Invalid cursors or sort options
+return HTTP 400; unknown dictionary IDs return HTTP 404 with
+`detail.status: "pronunciation_dictionary_not_found"`.
+
+Fixtures live in `api/scenarios/dictionaries.ts`, and state/business operations
+live in `api/routes/pronunciation-dictionaries/_.context.ts`. Startup and `reset`
+populate this context. Run `.scenario emptyDictionaries` (or
+`app.scenario("emptyDictionaries", "api")`) to clear it; `reset` restores it.
+Other simulator instances and voice/model/history state remain isolated.
+The collection handler uses the same documented context assertion as history.
 
 ## Development
 

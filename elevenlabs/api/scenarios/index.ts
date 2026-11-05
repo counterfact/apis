@@ -1,5 +1,7 @@
 import type { Scenario } from "../types/index.js";
 import { defaultSettings } from "../routes/_.context.js";
+import { resetDictionaries } from "./dictionaries.js";
+export { emptyDictionaries } from "./dictionaries.js";
 import { resetHistory } from "./history.js";
 export { emptyHistory } from "./history.js";
 import { resetModels } from "./models.js";
@@ -8,6 +10,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetDictionaries($);
   resetModels($);
   resetHistory($);
   resetAccount($);
