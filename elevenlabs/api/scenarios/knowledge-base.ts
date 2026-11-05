@@ -1,6 +1,6 @@
 import type { Scenario } from "../types/index.js";
 export const emptyKnowledgeBase:Scenario=($)=>{
-  const c=$.loadContext("/convai/knowledge-base");c.documents=new Map();c.sourcePages=new Map();c.sourceFileUrls=new Map();c.crawls=new Map();c.ragQueries=new Map();c.nextCrawl=1;c.retrievalDefaults={model:"e5_mistral_7b_instruct",maxLength:50000,maxChunks:20,maxDistance:0.6};c.nextId=1;c.nextMutation=0;c.indexes=new Map();c.nextIndexId=1;c.maxIndexBytes=1_000_000;
+  const c=$.loadContext("/convai/knowledge-base");c.uploadSettings={maxBytes:1_048_576,maxName:255,sourceUrlPrefix:"https://simulator.invalid/knowledge-base/source"};c.documents=new Map();c.sourcePages=new Map();c.sourceFileUrls=new Map();c.crawls=new Map();c.ragQueries=new Map();c.nextCrawl=1;c.retrievalDefaults={model:"e5_mistral_7b_instruct",maxLength:50000,maxChunks:20,maxDistance:0.6};c.nextId=1;c.nextMutation=0;c.indexes=new Map();c.nextIndexId=1;c.maxIndexBytes=1_000_000;
   c.defaults={userId:"sim-user",time:1_735_689_602,accessInfo:{is_creator:true,creator_name:"Simulator",creator_email:"sim@example.invalid",role:"admin",access_source:"creator"}};
   c.agents=()=>$.loadContext("/convai/agents").agents;
   c.selectAgent=(id,branchId)=>{const agents=$.loadContext("/convai/agents");if(agents.lifecycle)return agents.lifecycle.select(id,{branch_id:branchId});const agent=agents.getAgent(id);if(!agent)throw Object.assign(new Error("Agent not found"),{name:"KnowledgeBaseError",status:404,code:"agent_not_found"});return agent;};

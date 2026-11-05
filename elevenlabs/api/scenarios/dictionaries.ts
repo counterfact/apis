@@ -24,6 +24,7 @@ export const resetDictionaries: Scenario = ($) => {
     }];
   });
   $.loadContext("/pronunciation-dictionaries").dictionaries = new Map(records);
+  $.loadContext("/pronunciation-dictionaries").uploadLimits = { maxBytes: 1_048_576, maxName: 255, maxRules: 10000 };
   $.loadContext("/pronunciation-dictionaries").nextDictionaryNumber = 0;
   $.loadContext("/pronunciation-dictionaries").creationDefaults = { createdBy: "sim-user", timeUnix: 1_735_689_800 };
   $.loadContext("/pronunciation-dictionaries").archiveTimeUnix = 1_735_689_900;

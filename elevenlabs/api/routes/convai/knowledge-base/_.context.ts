@@ -1,3 +1,4 @@
+import { copyUpload } from "../../assets/_.context.js";
 import type { RAGDocumentIndexResponseModel as Index } from "../../../types/v1/components/schemas/RAGDocumentIndexResponseModel.js";
 import type { KnowledgeBaseDocumentChunkResponseModel as Chunk } from "../../../types/v1/components/schemas/KnowledgeBaseDocumentChunkResponseModel.js";
 import type { GetKnowledgeBaseTextResponseModel as Text } from "../../../types/v1/components/schemas/GetKnowledgeBaseTextResponseModel.js";
@@ -25,6 +26,7 @@ export class KnowledgeBaseError extends Error {
 }
 const invalid=():never=>{throw new KnowledgeBaseError(400,"invalid_knowledge_base_request","Invalid knowledge base request");};
 export class Context {
+  uploadSettings?: {maxBytes:number;maxName:number;sourceUrlPrefix:string};
   documents=new Map<string,StoredDocument>();
   sourcePages=new Map<string,SourcePage>();
   sourceFileUrls=new Map<string,string>();
@@ -71,6 +73,33 @@ export class Context {
     const common={id,name,metadata:{created_at_unix_secs:time,last_updated_at_unix_secs:time,size_bytes:kind==="text"?Buffer.byteLength(input.text as string,"utf8"):0},supported_usages:kind==="text"?["prompt" as const,"auto" as const]:[],access_info:structuredClone(settings.accessInfo),folder_parent_id:parent,folder_path:[]};
     const document:Document=kind==="text"?{...common,type:"text",extracted_inner_html:html(input.text as string),content_format:"html"}:{...common,type:"folder",children_count:0,document_count:0,auto_sync_info:null};
     this.documents.set(id,{document,creatorUserId:settings.userId});return {id,name,folder_path:this.folderPath(id)};
+  }
+  private readFile(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["file","name","parent_folder_id"].includes(k)))return invalid();
+    const settings=this.uploadSettings;if(!settings)throw new Error("Run knowledge base initialization scenario first");
+    let file;try{file=copyUpload(input.file,settings.maxBytes,settings.maxName);}catch{return invalid();}
+    if(!/\.(txt|md|markdown)$/i.test(file.filename)||!["text/plain","text/markdown","application/octet-stream"].includes(file.contentType))throw new KnowledgeBaseError(400,"knowledge_base_file_format_unsupported","Only UTF-8 text and Markdown files are supported; PDF, office documents and OCR are unsupported");
+    let content:string;try{content=new TextDecoder("utf-8",{fatal:true}).decode(file.data);}catch{return invalid();}
+    if(!content.trim()||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(content))return invalid();
+    return {file,content,input,settings};
+  }
+  private setSourceFileUrl(id:string,time:number){this.sourceFileUrls.set(id,`${this.uploadSettings!.sourceUrlPrefix}/${encodeURIComponent(id)}?revision=${time}`);}
+  createFile(input:unknown){
+    const {file,content,input:body}=this.readFile(input),parent=this.parent(body.parent_folder_id),name=body.name==null?file.filename:this.name(body.name),settings=this.settings();
+    let id:string;do{id=`sim-kb-created-${this.nextId++}`;}while(this.documents.has(id));const time=settings.time+ ++this.nextMutation;
+    this.documents.set(id,{creatorUserId:settings.userId,document:{id,name,type:"file",filename:file.filename,extracted_inner_html:html(content),content_format:"html",metadata:{created_at_unix_secs:time,last_updated_at_unix_secs:time,size_bytes:file.size},supported_usages:["prompt","auto"],access_info:structuredClone(settings.accessInfo),folder_parent_id:parent}});
+    this.setSourceFileUrl(id,time);return {id,name,folder_path:this.folderPath(id)};
+  }
+  updateFile(id:string,input:unknown){
+    const document=this.stored(id).document;if(document.type!=="file"||!object(input)||Object.keys(input).some(k=>k!=="file"))return invalid();
+    const {file,content}=this.readFile(input),settings=this.settings();const time=settings.time+ ++this.nextMutation;
+    document.filename=file.filename;document.name=file.filename;document.extracted_inner_html=html(content);document.content_format="html";document.metadata.size_bytes=file.size;document.metadata.last_updated_at_unix_secs=time;
+    this.indexes.delete(id);this.setSourceFileUrl(id,time);return this.getDocument(id);
+  }
+  createLegacy(input:unknown,agentId?:unknown){
+    if(agentId!=null)throw new KnowledgeBaseError(400,"knowledge_base_legacy_agent_unsupported","Legacy agent-scoped ingestion is unsupported; use shared documents and explicit agent configuration");
+    if(!object(input)||Object.keys(input).some(k=>!["name","url","file"].includes(k))||Number(input.file!=null)+Number(input.url!=null)!==1)return invalid();
+    return input.file!=null?this.createFile({name:input.name,file:input.file}):this.createUrl({name:input.name,url:input.url});
   }
   createText(input:unknown){return this.create(input,"text");}
   createFolder(input:unknown){return this.create(input,"folder");}

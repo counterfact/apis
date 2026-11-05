@@ -1,3 +1,5 @@
+import { SaxesParser, type SaxesTagNS } from "saxes";
+import { copyUpload } from "../assets/_.context.js";
 import type { GetPronunciationDictionaryMetadataResponseModel as Metadata } from "../../types/v1/components/schemas/GetPronunciationDictionaryMetadataResponseModel.js";
 import type { GetPronunciationDictionariesMetadataResponseModel as DictionaryPage } from "../../types/v1/components/schemas/GetPronunciationDictionariesMetadataResponseModel.js";
 import type { PronunciationDictionaryAliasRuleRequestModel } from "../../types/v1/components/schemas/PronunciationDictionaryAliasRuleRequestModel.js";
@@ -31,10 +33,58 @@ const escapeXml = (value: string) => value.replace(/[&<>"'\r\n\t]/g, (character)
 })[character]!);
 
 export class Context {
+  uploadLimits?: { maxBytes: number; maxName: number; maxRules: number };
   dictionaries = new Map<string, DictionaryRecord>();
   nextDictionaryNumber = 0;
   creationDefaults?: { createdBy: string; timeUnix: number };
   archiveTimeUnix?: number;
+
+  createFromFile(input: { name: string; file?: unknown; description?: string | null; workspace_access?: string | null }): CreateResult {
+    try {
+      const limits = this.uploadLimits;
+      if (!limits || typeof input.name !== "string" || !input.name.trim() || input.name.length > limits.maxName
+        || input.description != null && typeof input.description !== "string"
+        || input.workspace_access != null && !["admin", "editor", "commenter", "viewer"].includes(input.workspace_access)) throw new Error("Invalid dictionary metadata");
+      const file = copyUpload(input.file, limits.maxBytes, limits.maxName);
+      if (!/\.(pls|xml)$/i.test(file.filename) || !["application/pls+xml", "application/xml", "text/xml", "application/octet-stream"].includes(file.contentType)) throw new Error("Upload a UTF-8 PLS lexicon");
+      const xml = new TextDecoder("utf-8", { fatal: true }).decode(file.data);
+      type Node = { tag: SaxesTagNS; text: string; children: Node[] };
+      const stack: Node[] = [];
+      let root: Node | undefined;
+      const parser = new SaxesParser({ xmlns: true });
+      parser.on("error", (error) => { throw error; });
+      parser.on("doctype", () => { throw new Error("DTDs and custom entities are unsupported"); });
+      parser.on("processinginstruction", () => { throw new Error("Processing instructions are unsupported"); });
+      parser.on("xmldecl", (decl) => { if (decl.encoding && !/^utf-8$/i.test(decl.encoding)) throw new Error("Only UTF-8 XML is supported"); });
+      parser.on("opentag", (tag) => {
+        if (stack.length >= 3 || tag.uri !== "http://www.w3.org/2005/01/pronunciation-lexicon") throw new Error("Unsupported PLS element");
+        const node: Node = { tag, text: "", children: [] };
+        if (stack.length) stack.at(-1)!.children.push(node); else root = node;
+        stack.push(node);
+      });
+      const text = (value: string) => { if (stack.length) stack.at(-1)!.text += value; };
+      parser.on("text", text); parser.on("cdata", text); parser.on("closetag", () => { stack.pop(); });
+      parser.write(xml).close();
+      if (!root) throw new Error("Missing lexicon");
+      const attributes = (node: Node, allowed: string[]) => {
+        for (const attr of Object.values(node.tag.attributes)) if (attr.uri !== "http://www.w3.org/2000/xmlns/" && !allowed.includes(attr.name)) throw new Error("Unsupported PLS attribute");
+      };
+      attributes(root, ["version", "alphabet", "xml:lang"]);
+      if (root.tag.local !== "lexicon" || root.tag.attributes.version?.value !== "1.0" || root.text.trim() || root.children.length > limits.maxRules) throw new Error("Invalid PLS lexicon");
+      const rules: DictionaryRule[] = root.children.map((lexeme) => {
+        attributes(lexeme, []);
+        if (lexeme.tag.local !== "lexeme" || lexeme.text.trim() || lexeme.children.length !== 2) throw new Error("Each lexeme requires one grapheme and pronunciation");
+        const [grapheme, pronunciation] = lexeme.children;
+        attributes(grapheme, []); attributes(pronunciation, pronunciation.tag.local === "phoneme" ? ["alphabet"] : []);
+        if (grapheme.tag.local !== "grapheme" || !grapheme.text || grapheme.children.length || pronunciation.children.length) throw new Error("Invalid PLS rule");
+        if (pronunciation.tag.local === "alias") return { type: "alias", string_to_replace: grapheme.text, alias: pronunciation.text };
+        const alphabet = pronunciation.tag.attributes.alphabet?.value ?? root!.tag.attributes.alphabet?.value;
+        if (pronunciation.tag.local !== "phoneme" || alphabet === undefined) throw new Error("Invalid PLS pronunciation");
+        return { type: "phoneme", string_to_replace: grapheme.text, phoneme: pronunciation.text, alphabet };
+      });
+      return this.createDictionary({ name: input.name, description: input.description, rules, workspace_access: input.workspace_access as CreateDictionary["workspace_access"] });
+    } catch { return { error: "Invalid or unsupported UTF-8 PLS upload; DTDs and complex lexemes are unsupported" }; }
+  }
 
   downloadDictionary(id: string, versionId: string): DownloadResult {
     const dictionary = this.dictionaries.get(id);
