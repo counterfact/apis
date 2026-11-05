@@ -25,6 +25,7 @@ import type { Context as ConvaiUsersContext } from "../routes/convai/users/_.con
 import type { Context as ConvaiV2Context } from "../routes/convai/v2/_.context";
 import type { Context as DubbingProjectContext } from "../routes/dubbing/project/_.context";
 import type { Context as DubbingResourceContext } from "../routes/dubbing/resource/_.context";
+import type { Context as FlowsTemplatesContext } from "../routes/flows/templates/_.context";
 import type { Context as MusicFinetunesContext } from "../routes/music/finetunes/_.context";
 import type { Context as ProductionsOrdersContext } from "../routes/productions/orders/_.context";
 import type { Context as StudioProjectsContext } from "../routes/studio/projects/_.context";
@@ -120,6 +121,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/dubbing/resource" | `/dubbing/resource/${string}`,
   ): DubbingResourceContext;
+  loadContext(
+    path: "/flows/templates" | `/flows/templates/${string}`,
+  ): FlowsTemplatesContext;
   loadContext(
     path: "/music/finetunes" | `/music/finetunes/${string}`,
   ): MusicFinetunesContext;

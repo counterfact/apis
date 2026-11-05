@@ -16,6 +16,8 @@ import {resetDubbingResources} from "./dubbing-resources.js";
 export {emptyDubbingResources} from "./dubbing-resources.js";
 import {resetDubbingProjects} from "./dubbing-projects.js";
 export {emptyDubbingProjects,completeDubbingLanguages,pendingDubbingProject} from "./dubbing-projects.js";
+import { resetFlowTemplates } from "./flow-templates.js";
+export { emptyFlowTemplates } from "./flow-templates.js";
 import {resetFlowGenerations} from "./flows.js";
 export {emptyFlowGenerations,startFlowGenerations,completeFlowGenerations,failFlowGenerations} from "./flows.js";
 import {resetProductionOrders} from "./productions.js";
@@ -93,6 +95,7 @@ export const reset: Scenario = ($) => {
   resetDubbingProjects($);
   resetDubbingResources($);
   resetFlowGenerations($);
+  resetFlowTemplates($);
   resetProductionOrders($);
   resetStudioProjects($);
   resetAgentTests($);

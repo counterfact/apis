@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 282 now have authored
-behavior. The remaining 155 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 286 now have authored
+behavior. The remaining 151 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1871,3 +1871,33 @@ and working-set removals through context-owned business logic. Archived branches
 reject procedure mutations. IDs, ordering by procedure ID, errors, draft/publication separation
 and reference safety rules are local simulator conventions. No provider, network,
 credential resolution, billing or tool execution occurs; validation stays enabled.
+
+## Flow template and historical run discovery
+
+Four read operations now expose local template catalogs and saved run metadata:
+`GET /v1/flows/templates`, template detail, run list and run detail. Startup/reset
+populate `sim-template-text`, an unavailable-model template and a shared template
+in `api/scenarios/flow-templates.ts`. Contexts start empty; `emptyFlowTemplates`
+clears only this catalog and its historical runs, preserving other flow records.
+No template execution, text/media generation, webhook, network request or billing
+occurs. Run creation remains generated and uncounted as unfinished implementation.
+
+Workspace-listed templates sort by update time descending with ascending ID ties;
+shared templates are omitted from that list but readable by ID. Search matches
+name/description without case sensitivity before decimal-offset pagination.
+Catalog pages hold 1–25 templates (default 10). Runnable versions sort newest first
+with ascending version-ID ties before limiting to 1–10 (default 3 in lists, 10 in
+detail). Unavailable versions are omitted, and an unavailable-only template returns
+an empty versions array. `has_more_versions` counts further runnable versions.
+Availability and shared visibility are explicit synthetic fixture metadata, with
+no provider model/permission lookup or authentication enforcement.
+
+Saved runs sort newest first with ascending ID ties; exact version filtering
+precedes pagination (1–100 records, default 30). A missing version matches no runs.
+Completed/failed fixtures contain synthetic saved text/failure metadata and keep
+the concrete template version ID. Missing templates or wrong-template run IDs
+return 404. Invalid supported query values return 400. Reads return defensive copies,
+instances isolate state and reset restores all records. These cursor, ordering,
+availability and error rules are local conventions; contracts and request/response
+validation remain unchanged. Finite template/run responses passed a guarded public
+Dispatcher validation probe despite recursive schema families in the snapshot.
