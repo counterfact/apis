@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 109 now have authored
-behavior. The remaining 328 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 118 now have authored
+behavior. The remaining 319 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -900,6 +900,46 @@ references added by configuration operations. The copied configuration is indepe
 its ID, timestamps and creator metadata are allocated for the new agent. The
 `agentAnalysisReferences` scenario adds a fictional evaluation reference for testing
 configuration preservation without running an evaluation.
+
+## Analysis item configuration
+
+Nine analysis-item operations now store evaluation criteria and data-collection
+configuration: list/create, read/replace/delete, version history, copy, attachment
+updates and dependent-agent discovery. No evaluations, extraction, model calls or
+other AI work run. Definitions are local configuration only. Startup and `reset`
+populate `sim-analysis-evaluation` and `sim-analysis-data` in
+`api/scenarios/analysis-items.ts`; contexts start empty. `emptyAnalysisItems` clears
+items, versions and their user references from live agents, preserving other refs.
+
+Creation returns `sim-analysis-created-N` IDs and publishes a first version.
+PATCH replaces the complete definition, preserves the item's kind, and publishes
+a version only when normalized content changes; object key order has no effect.
+Omitted kind is inferred from `value_schema`, otherwise evaluation. User source,
+binary scoring and `use_knowledge_base=false` defaults are made explicit for
+evaluations. Copy creates an independent item and first version without copying
+attachments. Snapshots and responses are defensive copies. IDs, fixed timestamps,
+400/404 errors, kind immutability and defaults are local simulator conventions.
+
+Lists support name-prefix search (case-insensitive), kind, IDs, creator (`@me` is
+`sim-user`), creation-time sort direction and decimal-offset cursors. Search sorts
+by name; otherwise creation time sorts descending by default. IDs break ties.
+Pages contain 1–100 items, default 30. Versions sort newest first. Nullable numeric
+page size and single ID arrays are strictly normalized for the installed runtime
+limitations already recorded in #2612 and #2615; validation stays enabled.
+
+Attachment updates support user items and the scenario-known main branch
+`sim-main-branch` on `sim-agent`. Unknown agents or branches produce per-destination
+404 failures, while other destinations continue. System-source requests return
+400. Attach is idempotent, detach of an absent reference succeeds without changes,
+and attach destinations run before detach destinations. State projects directly
+into the canonical agent's `platform_settings.analysis_items`. No branch creation,
+version pinning, branch execution or permissions are simulated. The dependent-agent
+list derives from live agent configuration, including duplicated agents; branch
+metadata is included only for scenario-known branches. Non-main branch references
+are outside this slice. Deletion returns 409 when referenced unless `force=true`,
+which removes every user reference from current agents before deleting versions.
+Reset restores both agent and analysis-item baselines. Simulator instances isolate
+state. `agentAnalysisReferences` can add a seeded reference for testing discovery.
 
 ## Development
 

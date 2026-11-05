@@ -1,3 +1,5 @@
+import { resetAnalysisItems } from "./analysis-items.js";
+export { emptyAnalysisItems } from "./analysis-items.js";
 import { resetWorkspaceMembers } from "./workspace-members.js";
 export { emptyWorkspaceMembers } from "./workspace-members.js";
 import { resetRealtimeGroups } from "./realtime-groups.js";
@@ -49,6 +51,7 @@ export const reset: Scenario = ($) => {
   resetWorkspaceMembers($);
   resetServiceAccounts($);
   resetAgents($);
+  resetAnalysisItems($);
   resetPhoneNumbers($);
   resetTools($);
   resetSecrets($);
