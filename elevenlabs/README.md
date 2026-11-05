@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 383 operations retain their
-generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 60 now have authored
+behavior. The remaining 377 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -511,6 +511,41 @@ each section changes independently. The context starts empty and lives in
 This stores configuration only: no callbacks, network connections, webhook or
 secret reference resolution, MCP enablement, LiveKit connections, retention jobs,
 authentication, or permission checks occur.
+
+## Workspace secrets
+
+Six `/v1/convai/secrets` operations store synthetic configuration: POST/GET the
+collection, GET/PATCH/DELETE a secret, and GET its dependencies by resource type.
+POST requires `type: "new"`, a nonblank name, and a nonempty value. PATCH requires
+`type: "update"`, name, and value; it replaces both fields atomically. Unknown
+fields, including permission changes, return 400. Names need not be unique.
+POST/PATCH return only `type`, `secret_id`, and `name`; GET/list add `used_by`.
+Secret values stay in local memory and never appear in response projections.
+No encryption, credential validation, permission enforcement, or external calls
+are simulated. Use fictional values only.
+
+Listing uses case-sensitive name prefixes, insertion order, and local integer
+offset cursors. Without `page_size`, it returns all matches; explicit page sizes
+and `dependency_limit` must be integers from 1–100. Dependency lists paginate
+`tools`, `agents`, or `phone_numbers`, defaulting to 100 per page. Previews expose
+per-type `*_has_more` flags. Missing secrets return 404; deletion returns 409
+while dependency configuration or canonical secret environment-variable values
+reference the secret, otherwise 204. Invalid inputs return 400 without mutation.
+
+Startup/reset seed one fictional secret and one `unknown` tool reference in
+`api/scenarios/secrets.ts`. This is a scenario-owned dependency configuration,
+not a claim that a tool exists or a permission lookup succeeded. Agent and phone
+dependencies start empty; their domain endpoints are still generated. Canonical
+environment-variable references protect deletion but cannot appear in dependency
+responses because the contract has no environment-variable identifier variant.
+Run `.scenario emptySecrets` to clear this group's records and counters; `reset`
+restores the baseline. Contexts start empty and isolate instances. A new nested
+secrets context holds this bounded slice; no root-context refactor was needed.
+
+The installed Dispatcher leaves nullable `anyOf(integer, null)` query values as
+text ([upstream #2612](https://github.com/counterfact/api-simulator/issues/2612)). The collection route converts only decimal integer text before applying
+range checks. This narrow boundary conversion targets the installed runtime;
+contracts and generated bindings remain unchanged.
 
 ## Development
 
