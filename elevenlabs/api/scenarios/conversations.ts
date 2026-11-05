@@ -4,6 +4,7 @@ export const emptyConversations: Scenario = ($) => {
   context.conversations = new Map();
   context.audio = new Map();
   context.files = new Map();
+  context.nextFile=0;context.uploadDefaults={maxBytes:1024*1024,maxName:255};
   context.smartMatches=new Map();context.analysisFixtures=new Map();context.analysisFixtureVersions=new Map();context.analysisDefinitions=()=>new Map([...$.loadContext("/convai/analysis-items").items].map(([id,r])=>[id,r.item.current_version_id]));context.agents=()=>$.loadContext("/convai/agents").agents;
   $.loadContext("/convai/analytics").conversations=()=>context;
   $.loadContext("/convai/users").conversations = () => context.conversations;

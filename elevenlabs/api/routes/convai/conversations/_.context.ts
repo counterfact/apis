@@ -1,3 +1,5 @@
+import type {MultipartFile} from "../../../counterfact-types/index.js";
+import {convaiUpload} from "../agents/_.context.js";
 import type { GetConversationResponseModel as Conversation } from "../../../types/v1/components/schemas/GetConversationResponseModel.js";
 import type { ConversationSummaryResponseModel as Summary } from "../../../types/v1/components/schemas/ConversationSummaryResponseModel.js";
 import type { ConversationTagResponseModel as Tag } from "../../../types/v1/components/schemas/ConversationTagResponseModel.js";
@@ -93,7 +95,54 @@ export class Context {
 
   conversations = new Map<string, Conversation>();
   audio = new Map<string, Uint8Array>();
-  files = new Map<string, Map<string, import("../../../types/v1/components/schemas/ConversationHistoryTranscriptFileInputResponseModel.js").ConversationHistoryTranscriptFileInputResponseModel>>();
+  files = new Map<
+    string,
+    Map<
+      string,
+      import("../../../types/v1/components/schemas/ConversationHistoryTranscriptFileInputResponseModel.js").ConversationHistoryTranscriptFileInputResponseModel & {
+        upload?: MultipartFile;
+      }
+    >
+  >();
+  nextFile = 0;
+  uploadDefaults?: { maxBytes: number; maxName: number };
+  uploadFile(id: string, input: unknown) {
+    this.stored(id);
+    if (!this.uploadDefaults) throw new Error("Run startup or reset");
+    const upload = convaiUpload(input, this.uploadDefaults, [
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "text/plain",
+    ]);
+    let next = this.nextFile;
+    while (this.files.get(id)?.has(`sim-conversation-upload-${next}`)) next++;
+    const file_id = `sim-conversation-upload-${next}`;
+    const files = this.files.get(id) ?? new Map();
+    files.set(file_id, {
+      file_id,
+      original_filename: upload.filename,
+      mime_type: upload.contentType,
+      file_url: `https://simulator.invalid/convai/files/${id}/${file_id}`,
+      upload,
+    });
+    this.files.set(id, files);
+    this.nextFile = next + 1;
+    return { file_id };
+  }
+  getFileUpload(id: string, fileId: string) {
+    this.stored(id);
+    const f = this.files.get(id)?.get(fileId);
+    if (!f)
+      throw new ConversationError(
+        404,
+        "conversation_file_not_found",
+        "Conversation file not found",
+      );
+    return f.upload ? structuredClone(f.upload) : undefined;
+  }
   sipMessages = new Map<string, SIPLogMessage[]>();
   references = new Map<string, string>();
   workspaceId = "";

@@ -3,6 +3,7 @@ import type { Scenario } from "../types/index.js";
 export const emptyAgents: Scenario = ($) => {
   const context = $.loadContext("/convai/agents");
   context.agents = new Map();
+  context.nextMedia=0;context.mediaDefaults={maxBytes:1024*1024,maxName:255,maxDuration:180};
   context.nextAgentNumber = 0;
   context.nextMutationNumber = 0;
   context.defaults = { name: "New agent", voiceId: "sim-narrator", userId: "sim-user", timeUnix: 1_735_689_600,

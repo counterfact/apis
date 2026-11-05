@@ -1,3 +1,5 @@
+import type { MultipartFile } from "../../../counterfact-types/index.js";
+import {copyUpload} from "../../assets/_.context.js";
 import type { Body_Simulates_a_conversation_v1_convai_agents__agent_id__simulate_conversation_post as SimulationRequest } from "../../../types/v1/components/schemas/Body_Simulates_a_conversation_v1_convai_agents__agent_id__simulate_conversation_post.js";
 import type { AgentSimulatedChatTestResponseModel as SimulationResponse } from "../../../types/v1/components/schemas/AgentSimulatedChatTestResponseModel.js";
 import type { GetAgentEmbedResponseModel as Embed } from "../../../types/v1/components/schemas/GetAgentEmbedResponseModel.js";
@@ -17,6 +19,7 @@ export type StoredAgent = {
   configuration: Agent;
   creatorUserId: string;
   mainBranch?: MainBranch;
+  media?: Map<string, MultipartFile>;
 };
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): value is ObjectValue => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -62,6 +65,61 @@ function merge(base: ObjectValue, patch: ObjectValue): ObjectValue {
   return result;
 }
 export class Context {
+  nextMedia = 0;
+  mediaDefaults?: { maxBytes: number; maxName: number; maxDuration: number };
+  getMedia(id: string, path: string) {
+    const record = this.agents.get(id);
+    if (!record) throw new MediaError(404, "agent_not_found");
+    const upload = record.media?.get(path);
+    return upload ? structuredClone(upload) : undefined;
+  }
+  private mediaUpload(id: string, input: unknown, audio: boolean) {
+    const record = this.agents.get(id);
+    if (!record) throw new MediaError(404, "agent_not_found");
+    if (!this.mediaDefaults) throw new Error("Run startup or reset");
+    const file = convaiUpload(
+      input,
+      this.mediaDefaults,
+      audio ? ["audio/mpeg", "audio/wav", "audio/x-wav"] : imageTypes,
+    );
+    const duration = audio ? audioDuration(file) : undefined;
+    if (
+      duration !== undefined &&
+      (duration <= 0 || duration > this.mediaDefaults.maxDuration)
+    )
+      throw new MediaError(400, "invalid_hold_audio");
+    const path = `https://simulator.invalid/convai/media/${id}/${this.nextMedia}`;
+    record.media ??= new Map();
+    record.media.set(path, file);
+    this.nextMedia++;
+    return { record, file, path, duration };
+  }
+  uploadAvatar(id: string, input: unknown) {
+    const { record, path } = this.mediaUpload(id, input, false);
+    record.configuration.platform_settings ??= {};
+    record.configuration.platform_settings.widget ??= {};
+    record.configuration.platform_settings.widget.custom_avatar_path = path;
+    record.configuration.platform_settings.widget.avatar = {
+      type: "image",
+      url: path,
+    };
+    return { agent_id: id, avatar_url: path };
+  }
+  uploadHoldAudio(id: string, input: unknown) {
+    const { record, file, path, duration } = this.mediaUpload(id, input, true);
+    const hold_audio = {
+      audio_path: path,
+      audio_url: path,
+      original_filename: file.filename,
+      duration_secs: duration!,
+      size_bytes: file.size,
+    };
+    record.configuration.platform_settings ??= {};
+    record.configuration.platform_settings.queueing_config ??= {};
+    record.configuration.platform_settings.queueing_config.hold_audio =
+      hold_audio;
+    return structuredClone({ agent_id: id, hold_audio });
+  }
   topicRuns = new Map<
     string,
     {
@@ -490,7 +548,7 @@ export class Context {
     const {branch_id: _branch, version_id: _version, main_branch_id: _main, ...copied} = original;
     const configuration: Agent = { ...copied, agent_id, name: input.name as string ?? `${original.name} (copy)`,
       metadata: { created_at_unix_secs: time, updated_at_unix_secs: time }, access_info: structuredClone(defaults.accessInfo) };
-    this.agents.set(agent_id, { configuration, creatorUserId: defaults.userId });
+    this.agents.set(agent_id, { configuration, creatorUserId: defaults.userId, media: structuredClone(this.agents.get(id)!.media) });
     return { value: { agent_id } };
   }
   deleteAgent(id: string) { return this.agents.delete(id); }
@@ -520,4 +578,134 @@ export class Context {
       return [id, record ? { status: "success", data: this.summary(record) } : { status: "failure", error_code: 404, error_status: "agent_not_found", error_message: "Agent not found" }];
     })) };
   }
+}
+
+export class MediaError extends Error {
+  override name = "MediaError";
+  constructor(
+    public status: number,
+    public code: string,
+  ) {
+    super(code);
+  }
+}
+const imageTypes = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+export function convaiUpload(
+  input: unknown,
+  defaults: { maxBytes: number; maxName: number },
+  types: string[],
+) {
+  let file: MultipartFile;
+  try {
+    file = copyUpload(input, defaults.maxBytes, defaults.maxName);
+  } catch {
+    throw new MediaError(400, "invalid_convai_upload");
+  }
+  if (!types.includes(file.contentType.toLowerCase()))
+    throw new MediaError(400, "unsupported_convai_media_type");
+  file.contentType = file.contentType.toLowerCase();
+  return file;
+}
+// Metadata parsing only: bounded PCM WAV or complete Layer III frame streams.
+export function audioDuration(file: MultipartFile): number {
+  const b = file.data;
+  const bad = (): never => {
+    throw new MediaError(400, "invalid_hold_audio");
+  };
+  if (file.contentType !== "audio/mpeg") {
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength),
+      tag = (n: number) => Buffer.from(b.subarray(n, n + 4)).toString("ascii");
+    if (
+      b.length < 44 ||
+      tag(0) !== "RIFF" ||
+      tag(8) !== "WAVE" ||
+      v.getUint32(4, true) + 8 !== b.length
+    )
+      return bad();
+    let rate = 0,
+      align = 0,
+      bytes = 0,
+      fmt = false,
+      seen = false;
+    for (let at = 12; at < b.length;) {
+      if (at + 8 > b.length) return bad();
+      const size = v.getUint32(at + 4, true),
+        end = at + 8 + size;
+      if (end > b.length) return bad();
+      if (tag(at) === "fmt ") {
+        if (fmt || size < 16) return bad();
+        fmt = true;
+        const channels = v.getUint16(at + 10, true),
+          sampleRate = v.getUint32(at + 12, true),
+          bits = v.getUint16(at + 22, true);
+        rate = v.getUint32(at + 16, true);
+        align = v.getUint16(at + 20, true);
+        if (
+          v.getUint16(at + 8, true) !== 1 ||
+          ![1, 2].includes(channels) ||
+          ![8, 16, 24, 32].includes(bits) ||
+          !sampleRate ||
+          align !== (channels * bits) / 8 ||
+          rate !== sampleRate * align
+        )
+          return bad();
+      }
+      if (tag(at) === "data") {
+        if (seen) return bad();
+        seen = true;
+        bytes = size;
+      }
+      at = end + (size % 2);
+      if (at > b.length) return bad();
+    }
+    if (!fmt || !seen || !bytes || bytes % align) return bad();
+    return bytes / rate;
+  }
+  let at = 0,
+    duration = 0,
+    frames = 0;
+  if (b.length >= 10 && Buffer.from(b.subarray(0, 3)).toString() === "ID3") {
+    if (
+      b[3] < 2 ||
+      b[3] > 4 ||
+      b[5] & 0x10 ||
+      b.subarray(6, 10).some((x) => x & 128)
+    )
+      return bad();
+    at = 10 + ((b[6] << 21) | (b[7] << 14) | (b[8] << 7) | b[9]);
+  }
+  while (at < b.length) {
+    if (at + 4 > b.length) return bad();
+    const a = b[at + 1],
+      c = b[at + 2],
+      version = (a >> 3) & 3,
+      index = c >> 4,
+      sample = (c >> 2) & 3;
+    if (
+      b[at] !== 255 ||
+      (a & 224) !== 224 ||
+      version === 1 ||
+      ((a >> 1) & 3) !== 1 ||
+      index === 0 ||
+      index === 15 ||
+      sample === 3
+    )
+      return bad();
+    const hz =
+        [44100, 48000, 32000][sample] /
+        (version === 3 ? 1 : version === 2 ? 2 : 4),
+      kbps = (
+        version === 3
+          ? [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320]
+          : [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+      )[index];
+    const length =
+      Math.floor(((version === 3 ? 144 : 72) * kbps * 1000) / hz) +
+      ((c >> 1) & 1);
+    if (at + length > b.length) return bad();
+    duration += (version === 3 ? 1152 : 576) / hz;
+    at += length;
+    frames++;
+  }
+  return frames ? duration : bad();
 }
