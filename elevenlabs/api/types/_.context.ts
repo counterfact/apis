@@ -14,6 +14,7 @@ import type { Context as ConvaiEnvironmentVariablesContext } from "../routes/con
 import type { Context as ConvaiEnvironmentsContext } from "../routes/convai/environments/_.context";
 import type { Context as ConvaiKnowledgeBaseContext } from "../routes/convai/knowledge-base/_.context";
 import type { Context as ConvaiLlmContext } from "../routes/convai/llm/_.context";
+import type { Context as ConvaiLlmUsageContext } from "../routes/convai/llm-usage/_.context";
 import type { Context as ConvaiMcpServersContext } from "../routes/convai/mcp-servers/_.context";
 import type { Context as ConvaiPhoneNumbersContext } from "../routes/convai/phone-numbers/_.context";
 import type { Context as ConvaiRealtimeContext } from "../routes/convai/realtime/_.context";
@@ -95,6 +96,9 @@ interface LoadContextDefinitions {
     path: "/convai/knowledge-base" | `/convai/knowledge-base/${string}`,
   ): ConvaiKnowledgeBaseContext;
   loadContext(path: "/convai/llm" | `/convai/llm/${string}`): ConvaiLlmContext;
+  loadContext(
+    path: "/convai/llm-usage" | `/convai/llm-usage/${string}`,
+  ): ConvaiLlmUsageContext;
   loadContext(
     path: "/convai/mcp-servers" | `/convai/mcp-servers/${string}`,
   ): ConvaiMcpServersContext;

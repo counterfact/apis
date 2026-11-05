@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 297 now have authored
-behavior. The remaining 140 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 299 now have authored
+behavior. The remaining 138 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2037,3 +2037,41 @@ not inferred from partial provider charging components. No billing occurs.
 Reset restores baseline. These ordering, matching, cost and cancellation rules are
 local simulator conventions. Invocation PATCH/resubmit and test execution remain
 generated and uncounted; contracts and validation are unchanged.
+
+## Local LLM usage estimates
+
+`POST /v1/convai/llm-usage/calculate` and
+`POST /v1/convai/agent/{agent_id}/llm-usage/calculate` return deterministic local
+estimates for every model currently in the canonical LLM catalog, in catalog order.
+These are fictional USD values for UI testing, not ElevenLabs or provider prices.
+No tokenizer, inference, retrieval, provider request, billing or usage mutation runs.
+
+The synthetic formula uses `ceil(prompt_length / 4)` input-token units plus 1,000
+units per page. RAG caps the page contribution at two pages. Every message adds
+128 output units; a minute means three such messages. For each model, message
+cost is `(input_units * input_rate + 128 * output_rate) / 1,000,000`; minute cost
+uses the same unrounded cost times three. Both round to nine decimal places.
+Rates and assumptions are populated in `api/scenarios/llm-usage.ts`; contexts
+initialize empty. Baseline input/output rates are 1/2, 2/4, 3/6 and 4/8 for
+`gemini-3.5-flash`, `gemini-2.5-flash`, `gpt-4o` and `gpt-4o-mini`, respectively.
+
+The public calculator requires nonnegative safe-integer character/page counts
+and a boolean RAG flag. The agent calculator defaults omitted/null fields to the
+current canonical prompt's Unicode code-point length, existing agent knowledge-size
+projection, RAG setting (false when absent), and service tier (standard when absent).
+The knowledge-size projection counts each distinct stored text document as one
+local page, including folder descendants; it does not inspect PDF or URL content.
+Explicit nonnull overrides, including zero and false, take precedence. No branch
+or version selector is accepted by these contracts; agent defaults use canonical
+main configuration. Reads of archived agents are allowed. Unknown/deleted agents
+return 404. Invalid bodies or unknown options return 400 without changing state.
+
+Fast tier uses the model's synthetic multiplier only when the live catalog lists
+that tier; otherwise it falls back to standard as the contract describes. Baseline
+models list only standard. Run `llmUsageFastTier` to enable fast on `gpt-4o` with
+multiplier two and give `sim-agent` fast/RAG defaults. Other models retain standard
+prices. Run `emptyLlmUsage` to clear rate metadata (live models then return 400
+`llm_rate_unavailable`); `reset` restores rates, catalog and agent configuration.
+An empty canonical model catalog returns an empty price list. Responses are fresh
+copies, and instances isolate all scenario changes. These formula, rounding,
+page-count and error conventions are local simulator behavior.

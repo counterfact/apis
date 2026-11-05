@@ -1,3 +1,5 @@
+import { resetLlmUsage } from "./llm-usage.js";
+export { emptyLlmUsage, llmUsageFastTier } from "./llm-usage.js";
 import { resetTestInvocations } from "./test-invocations.js";
 export { emptyTestInvocations, testInvocationUsage } from "./test-invocations.js";
 import { resetStoredTranscripts } from "./stored-transcripts.js";
@@ -128,6 +130,7 @@ export const reset: Scenario = ($) => {
   resetAgentMergeProposals($);
   resetAnalysisItems($);
   resetKnowledgeBase($);
+  resetLlmUsage($);
   resetPhoneNumbers($);
   resetBatchCalls($);
   resetTools($);

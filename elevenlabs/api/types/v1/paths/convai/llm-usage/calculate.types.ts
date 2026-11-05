@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/convai/llm-usage/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { LLMUsageCalculatorPublicRequestModel } from "../../../components/schemas/LLMUsageCalculatorPublicRequestModel.js";
 import type { LLMUsageCalculatorResponseModel } from "../../../components/schemas/LLMUsageCalculatorResponseModel.js";
