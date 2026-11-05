@@ -1,3 +1,5 @@
+import type { Body_Simulates_a_conversation_v1_convai_agents__agent_id__simulate_conversation_post as SimulationRequest } from "../../../types/v1/components/schemas/Body_Simulates_a_conversation_v1_convai_agents__agent_id__simulate_conversation_post.js";
+import type { AgentSimulatedChatTestResponseModel as SimulationResponse } from "../../../types/v1/components/schemas/AgentSimulatedChatTestResponseModel.js";
 import type { GetAgentEmbedResponseModel as Embed } from "../../../types/v1/components/schemas/GetAgentEmbedResponseModel.js";
 import type { GetAgentLinkResponseModel as Link } from "../../../types/v1/components/schemas/GetAgentLinkResponseModel.js";
 import type { WidgetLanguagePresetResponse } from "../../../types/v1/components/schemas/WidgetLanguagePresetResponse.js";
@@ -180,6 +182,180 @@ export class Context {
       for (const topic of result.topics)
         if (topic.metrics) delete topic.metrics.evaluation_criteria;
     return { value: result };
+  }
+  simulationDefaults?: {
+    maxNewTurns: number;
+    maxHistoryTurns: number;
+    userMessage: string;
+    agentReply: string;
+    analysis: SimulationResponse["analysis"];
+    rationale: string;
+  };
+  simulateConversation(
+    id: string,
+    request: SimulationRequest,
+  ):
+    | { value: SimulationResponse; error?: never }
+    | { error: "agent_not_found" | "invalid_simulation"; value?: never } {
+    const agent = this.getAgent(id);
+    if (!agent) return { error: "agent_not_found" };
+    const defaults = this.simulationDefaults;
+    if (!defaults) throw new Error("Run simulation startup or reset first");
+    const invalid = { error: "invalid_simulation" } as const;
+    if (
+      !object(request) ||
+      !keys(request, [
+        "simulation_specification",
+        "extra_evaluation_criteria",
+        "new_turns_limit",
+      ])
+    )
+      return invalid;
+    const spec = request.simulation_specification;
+    if (
+      !object(spec) ||
+      !keys(spec, [
+        "simulated_user_config",
+        "tool_mock_config",
+        "partial_conversation_history",
+        "dynamic_variables",
+      ]) ||
+      !object(spec.simulated_user_config)
+    )
+      return invalid;
+    if (
+      spec.simulated_user_config.first_message !== undefined &&
+      typeof spec.simulated_user_config.first_message !== "string"
+    )
+      return invalid;
+    const limit = request.new_turns_limit ?? 100;
+    if (!Number.isSafeInteger(limit) || limit < 0) return invalid;
+    if (
+      spec.tool_mock_config !== undefined &&
+      (!object(spec.tool_mock_config) ||
+        Object.keys(spec.tool_mock_config).length)
+    )
+      return invalid;
+    if (spec.dynamic_variables !== undefined && !object(spec.dynamic_variables))
+      return invalid;
+    const history = spec.partial_conversation_history ?? [];
+    if (
+      !Array.isArray(history) ||
+      history.length > defaults.maxHistoryTurns ||
+      history.some(
+        (turn) =>
+          !object(turn) ||
+          !keys(turn, [
+            "role",
+            "message",
+            "time_in_call_secs",
+            "tool_calls",
+            "tool_results",
+          ]) ||
+          !["agent", "user"].includes(turn.role) ||
+          (turn.message != null && typeof turn.message !== "string") ||
+          !Number.isFinite(turn.time_in_call_secs) ||
+          turn.time_in_call_secs < 0 ||
+          (turn.tool_calls !== undefined &&
+            (!Array.isArray(turn.tool_calls) || turn.tool_calls.length > 0)) ||
+          (turn.tool_results !== undefined &&
+            (!Array.isArray(turn.tool_results) ||
+              turn.tool_results.length > 0)),
+      )
+    )
+      return invalid;
+    if (
+      history.some(
+        (turn, index) =>
+          index > 0 &&
+          turn.time_in_call_secs < history[index - 1].time_in_call_secs,
+      )
+    )
+      return invalid;
+    const criteria = request.extra_evaluation_criteria ?? [];
+    if (
+      !Array.isArray(criteria) ||
+      criteria.some(
+        (item) =>
+          !object(item) ||
+          !text(item.id) ||
+          !text(item.name) ||
+          !text(item.conversation_goal_prompt),
+      ) ||
+      new Set(criteria.map((item) => item.id)).size !== criteria.length
+    )
+      return invalid;
+    const interpolate = (message: string) =>
+      message.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (token, name: string) => {
+        const value = Object.hasOwn(spec.dynamic_variables ?? {}, name)
+          ? spec.dynamic_variables![name]
+          : undefined;
+        return ["string", "number", "boolean"].includes(typeof value)
+          ? String(value)
+          : token;
+      });
+    const turns: SimulationResponse["simulated_conversation"] = history.map(
+      (turn) => ({
+        role: turn.role,
+        message: turn.message,
+        time_in_call_secs: turn.time_in_call_secs,
+      }),
+    );
+    for (
+      let index = 0;
+      index < Math.min(limit, defaults.maxNewTurns);
+      index++
+    ) {
+      const previous = turns.at(-1);
+      const firstMessage = agent.conversation_config.agent?.first_message ?? "";
+      const role = previous
+        ? previous.role === "agent"
+          ? "user"
+          : "agent"
+        : firstMessage
+          ? "agent"
+          : "user";
+      const message =
+        role === "agent"
+          ? !previous
+            ? (agent.conversation_config.agent?.first_message ??
+              defaults.agentReply)
+            : defaults.agentReply
+          : spec.simulated_user_config.first_message || defaults.userMessage;
+      turns.push({
+        role,
+        message: interpolate(message),
+        time_in_call_secs: previous ? previous.time_in_call_secs + 1 : 0,
+      });
+    }
+    const analysis = structuredClone(defaults.analysis);
+    const results = criteria.map((item) => ({
+      criteria_id: item.id,
+      result: "unknown" as const,
+      rationale: defaults.rationale,
+      scoring_mode: item.scoring_mode ?? "binary",
+      score: null,
+      max_score:
+        item.scoring_mode === "numeric_uniform"
+          ? (item.max_score ?? 100)
+          : null,
+    }));
+    analysis.evaluation_criteria_results = Object.fromEntries(
+      results.map((result) => [result.criteria_id, result]),
+    );
+    analysis.evaluation_criteria_results_list = results;
+    return { value: { simulated_conversation: turns, analysis } };
+  }
+  simulationEvents(result: SimulationResponse): string {
+    // Buffered local SSE convention: message lists concatenate, final data carries analysis.
+    return [
+      ...result.simulated_conversation.map((turn) => ({
+        simulated_conversation: [turn],
+      })),
+      { analysis: result.analysis },
+    ]
+      .map((data) => `data: ${JSON.stringify(data)}\n\n`)
+      .join("");
   }
   knowledgeBase?:()=>import("../knowledge-base/_.context.js").Context;
   queryKnowledgeBase(id:string,input:unknown,branchId?:string|null){if(!this.knowledgeBase)throw new Error("Run startup or reset");return this.knowledgeBase().queryAgent(id,input,branchId);}

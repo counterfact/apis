@@ -1,3 +1,4 @@
+import { resetConversationSimulation } from "./conversation-simulation.js";
 import { resetVoiceUploads } from "./voice-uploads.js";
 import { resetAgentTopics } from "./agent-topics.js";
 export { emptyAgentTopics } from "./agent-topics.js";
@@ -146,6 +147,7 @@ export const reset: Scenario = ($) => {
   resetServiceAccounts($);
   resetWorkspaceKeyPolicy($);
   resetAgents($);
+  resetConversationSimulation($);
   resetAgentTopics($);
   resetAgentLifecycle($);
   resetAgentProcedures($);
