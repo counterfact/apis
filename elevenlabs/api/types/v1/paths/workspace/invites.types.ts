@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../routes/_.context.ts";
+import type { Context } from "../../../../routes/workspace/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
 import type { Body_Delete_existing_invitation_v1_workspace_invites_delete } from "../../components/schemas/Body_Delete_existing_invitation_v1_workspace_invites_delete.js";
 import type { DeleteWorkspaceInviteResponseModel } from "../../components/schemas/DeleteWorkspaceInviteResponseModel.js";

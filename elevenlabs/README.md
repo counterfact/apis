@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 104 now have authored
-behavior. The remaining 333 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 109 now have authored
+behavior. The remaining 328 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -680,6 +680,47 @@ conventions; authentication, authorization and external SCIM calls are not run.
 `emptyGroups` clears groups and the member directory; `reset` restores both.
 The nested context starts empty and returns defensive read copies. Each simulator
 instance owns independent state. Group creation and deletion remain generated.
+
+## Workspace members and invitations
+
+Five operations now use local state: `GET`/`POST /v1/workspace/members`,
+`POST /v1/workspace/invites/add`, `POST /v1/workspace/invites/add-bulk`, and
+`DELETE /v1/workspace/invites`. Member reads include locked members and exclude
+service accounts. The canonical email-to-member-ID directory remains the one
+used by workspace groups; profile metadata and invitation records live in
+`api/routes/workspace/_.context.ts`. Scenario-wired live accessors keep group and
+member lookups consistent when the directory is replaced. Profiles absent from
+the current directory are omitted. The two fictional members are distinct from
+the account profile's `sim-user`; account quotas and billing do not change.
+
+Member updates preserve omitted/null lock and role fields. The new
+`workspace_seat_type` takes precedence over deprecated `workspace_role` when both
+are nonnull. The downgrade flag is accepted, but no seat availability or quota
+enforcement is simulated. Role and lock changes are metadata only; permissions
+and authentication are not enforced. Reads sort by exact email and return
+defensive copies. Missing members return 404; invalid bodies return 400 without
+partial changes. Email matching is exact and case-sensitive.
+
+Invitations store seat type, group IDs, and optional nonnegative usage limit.
+They send no email, create no accounts, and add no members or group memberships.
+All requested groups must exist. The new `seat_type` takes precedence over the
+deprecated `workspace_permission`; omitted/null role defaults to workspace member.
+Omitted/null groups become empty, and omitted/null usage limit means no custom cap.
+Repeated invitations replace their stored metadata; duplicate addresses in a batch
+produce one invitation. Bulk creation validates every address before mutation and
+requires domains in the scenario-owned verified-domain set (baseline:
+`example.invalid`, matched case-insensitively). Single invitations do not require
+a verified domain. An existing member returns 400; unknown groups and missing
+invitations return 404. Empty batches are rejected. These validation, ordering,
+replacement, alias, and error rules are local conventions.
+
+Startup/reset populate profiles and verified domains and clear invitations in
+`api/scenarios/workspace-members.ts`, after group scenarios restore the canonical
+roster. `emptyWorkspaceMembers` clears profiles, invitations, the canonical roster,
+and memberships in existing groups. `emptyGroups` also empties member reads by
+replacing the canonical roster; reset restores both domains. Instances isolate
+state. No external domain verification, invite acceptance, billing, or seat
+allocation occurs.
 
 ## Service accounts and API keys
 

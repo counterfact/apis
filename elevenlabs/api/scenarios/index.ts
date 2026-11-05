@@ -1,3 +1,5 @@
+import { resetWorkspaceMembers } from "./workspace-members.js";
+export { emptyWorkspaceMembers } from "./workspace-members.js";
 import { resetRealtimeGroups } from "./realtime-groups.js";
 export { emptyRealtimeGroups } from "./realtime-groups.js";
 import { resetConversations } from "./conversations.js";
@@ -44,6 +46,7 @@ export { quotaExhausted } from "./account.js";
 export const reset: Scenario = ($) => {
   resetRealtimeGroups($);
   resetGroups($);
+  resetWorkspaceMembers($);
   resetServiceAccounts($);
   resetAgents($);
   resetPhoneNumbers($);
