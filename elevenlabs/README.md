@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 420 operations retain their
+the stateful voices implementation. The remaining 419 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -222,6 +222,15 @@ the last rule wins; an empty rule list still creates a new version with the
 current rules. These are local simulator conventions. Empty replacement strings
 and malformed bodies return HTTP 400 without changing state; unknown IDs return
 HTTP 404. `reset` restores the original versions and rules.
+
+`POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/remove-rules`
+removes rules whose `string_to_replace` exactly matches a supplied `rule_strings`
+value. Matching is case-sensitive; repeated and unknown strings have no extra
+effect. Each successful request creates a version, including an empty list or a
+request that removes nothing. Removing every rule leaves an empty dictionary.
+Latest metadata and detail responses reflect the resulting count; earlier
+snapshots remain unchanged. Malformed bodies return HTTP 400 without changing
+state, and unknown dictionary IDs return HTTP 404. `reset` restores the baseline.
 
 ## Development
 

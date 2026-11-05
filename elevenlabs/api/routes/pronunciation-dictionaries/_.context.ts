@@ -37,6 +37,14 @@ export class Context {
     return { value: this.saveRules(dictionary, [...combined.values()]) };
   }
 
+  removeRules(id: string, ruleStrings: string[]): RulesResult {
+    const dictionary = this.dictionaries.get(id);
+    if (!dictionary) return { missing: true };
+    const removed = new Set(ruleStrings);
+    const current = dictionary.versions.get(dictionary.metadata.latest_version_id)!;
+    return { value: this.saveRules(dictionary, current.filter((rule) => !removed.has(rule.string_to_replace))) };
+  }
+
   private saveRules(dictionary: DictionaryRecord, rules: readonly DictionaryRule[]): RulesVersion {
     const id = dictionary.metadata.id;
     let number = dictionary.versions.size + 1;
