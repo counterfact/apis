@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/dubbing/resource/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Move_segments_between_speakers_v1_dubbing_resource__dubbing_id__migrate_segments_post } from "../../../../components/schemas/Body_Move_segments_between_speakers_v1_dubbing_resource__dubbing_id__migrate_segments_post.js";
 import type { SegmentMigrationResponse } from "../../../../components/schemas/SegmentMigrationResponse.js";

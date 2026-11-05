@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../../routes/dubbing/resource/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../../counterfact-types/index.ts";
 import type { Body_Update_metadata_for_a_speaker_v1_dubbing_resource__dubbing_id__speaker__speaker_id__patch } from "../../../../../components/schemas/Body_Update_metadata_for_a_speaker_v1_dubbing_resource__dubbing_id__speaker__speaker_id__patch.js";
 import type { SpeakerUpdatedResponse } from "../../../../../components/schemas/SpeakerUpdatedResponse.js";

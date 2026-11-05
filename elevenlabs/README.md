@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 234 now have authored
-behavior. The remaining 203 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 242 now have authored
+behavior. The remaining 195 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1526,3 +1526,41 @@ no files and do not expire. `pendingDubbingProject` adds a queued fixture for
 readiness/list flows; `emptyDubbingProjects` clears records and resets counters.
 Reset restores baseline. Multipart project creation and transcript regeneration
 remain generated and uncounted. Contracts and validation remain unchanged.
+
+
+## Dubbing resource metadata
+
+Eight resource operations now share local speaker tracks, segments and per-language
+metadata. Startup/reset seed `sim-dubbing-resource`, `sim-dubbing-speaker` and
+`sim-dubbing-segment` in `api/scenarios/dubbing-resources.ts`. This resource model
+is independent of the newer dubbing-project records. Contexts start empty;
+`emptyDubbingResources` clears records and ID counters, and reset restores them.
+Responses are defensive copies and simulator instances isolate state.
+
+Adding a language creates empty translated segment records and default track-clone
+voice references without translating or cloning. Adding a speaker creates a track
+in every language. Segment creation adds one membership and per-target metadata;
+deleting a segment removes its membership from every track. Migration validates
+all segment IDs and its destination before moving memberships, deduplicating IDs.
+Unknown resources, speakers, segments and languages return 404. Invalid requests
+return 400 without changing records or allocating IDs.
+
+Segment updates affect only the requested language; source changes stale every
+translated audio record, while target changes stale that target only. Edits clear
+that language's subtitles and retain historical media references. Timing is finite,
+nonnegative, increasing and within the source duration. Null update fields preserve
+existing values. Speaker names are shared across languages; voice references and
+settings apply only to selected languages. Omitted/null/empty language selections
+apply to all languages. Voice settings must be between zero and one, are stored as
+inert metadata, and are not exposed by this snapshot's resource response schema.
+Voice IDs, including track-clone/clip-clone, are never resolved or processed.
+
+Successful mutation requests increment the resource version once, including no-op
+PATCH requests and migrations to the same speaker. Adding an existing/source
+language and migrating an empty segment list preserve the version. Source and
+new-speaker media references are synthetic fixture metadata; URLs use
+`simulator.invalid` and serve no files. These timing, null, version, error and ID
+rules are local simulator conventions. Optional speaker bodies should be sent as
+`{}` because absent bodies remain affected by Counterfact #2614. Transcription,
+translation, dubbing, rendering and similar-voice routes remain generated and
+uncounted. No audio, cloning, provider request, billing or network fetch occurs.
