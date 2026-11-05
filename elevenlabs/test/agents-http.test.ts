@@ -82,3 +82,17 @@ test("agent Dispatcher rejects unsupported selectors and invalid queries without
   assert.equal(id, "sim-agent-created-1");
   assert.equal((await (await app.request(`${path}/${id}`)).json()).name, "Simulator Support (copy)");
 });
+
+test("agent Dispatcher duplication preserves persisted analysis configuration", async () => {
+  const app = await createDispatcherHarness();
+  await app.scenario("agentAnalysisReferences");
+  const original = await (await app.request(`${path}/sim-agent`)).json();
+  const response = await app.request(`${path}/sim-agent/duplicate`, {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+  assert.equal(response.status,200);
+  const {agent_id} = await response.json();
+  const copy = await app.request(`${path}/${agent_id}`);
+  assert.equal(copy.status,200);
+  assert.deepEqual((await copy.json()).platform_settings.analysis_items,original.platform_settings.analysis_items);
+  assert.equal((await app.request(`${path}/${agent_id}`,{method:"DELETE"})).status,204);
+  assert.deepEqual((await (await app.request(`${path}/sim-agent`)).json()).platform_settings.analysis_items,original.platform_settings.analysis_items);
+});

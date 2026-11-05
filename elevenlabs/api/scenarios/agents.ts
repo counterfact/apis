@@ -20,3 +20,13 @@ export const resetAgents: Scenario = ($) => {
     access_info: structuredClone(context.defaults!.accessInfo),
   } });
 };
+
+/** Seed a persisted analysis reference without running an evaluation. */
+export const agentAnalysisReferences: Scenario = ($) => {
+  const agent = $.loadContext("/convai/agents").agents.get("sim-agent");
+  if (!agent) throw new Error("Run reset before agentAnalysisReferences");
+  agent.configuration.platform_settings!.analysis_items = {
+    evaluation_criteria: [{ source: "user", analysis_item_id: "sim-analysis-evaluation" }],
+    data_collection: [],
+  };
+};

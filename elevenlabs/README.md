@@ -895,6 +895,12 @@ realtime identities; reset restores both and the creation counter. State is isol
 per simulator instance. Fixtures live in `api/scenarios/realtime-groups.ts` and
 business logic in `api/routes/convai/realtime/_.context.ts`.
 
+Agent duplication copies the complete stored configuration, including analysis-item
+references added by configuration operations. The copied configuration is independent;
+its ID, timestamps and creator metadata are allocated for the new agent. The
+`agentAnalysisReferences` scenario adds a fictional evaluation reference for testing
+configuration preservation without running an evaluation.
+
 ## Development
 
 ```sh

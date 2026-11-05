@@ -101,7 +101,16 @@ export class Context {
     const original = this.getAgent(id);
     if (!original) return { error: "agent_not_found" };
     if (!object(input) || !keys(input, ["name"]) || input.name != null && !text(input.name)) return { error: "invalid_agent" };
-    return this.createAgent({ name: input.name ?? `${original.name} (copy)`, conversation_config: original.conversation_config, platform_settings: original.platform_settings, tags: original.tags });
+    // Stored configuration has already been validated by its owning operation.
+    // Copy it directly so references added by other domains are preserved.
+    const defaults = this.settings();
+    let agent_id: string;
+    do { agent_id = `sim-agent-created-${++this.nextAgentNumber}`; } while (this.agents.has(agent_id));
+    const time = defaults.timeUnix + ++this.nextMutationNumber;
+    const configuration: Agent = { ...original, agent_id, name: input.name as string ?? `${original.name} (copy)`,
+      metadata: { created_at_unix_secs: time, updated_at_unix_secs: time }, access_info: structuredClone(defaults.accessInfo) };
+    this.agents.set(agent_id, { configuration, creatorUserId: defaults.userId });
+    return { value: { agent_id } };
   }
   deleteAgent(id: string) { return this.agents.delete(id); }
   listAgents(query: Query = {}): Result<Page> {

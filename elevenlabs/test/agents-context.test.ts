@@ -100,3 +100,17 @@ test("agent scenarios own baseline defaults, emptying, reset and instance isolat
   c.deleteAgent("sim-agent");
   assert.ok(other.loadContext("/convai/agents").getAgent("sim-agent"));
 });
+
+test("agent duplication preserves canonical analysis references independently", async () => {
+  const runner = await createScenarioRunner();
+  await runner.run(scenarios.startup);
+  await runner.run(scenarios.agentAnalysisReferences);
+  const c = runner.loadContext("/convai/agents");
+  const result = c.duplicateAgent("sim-agent", {});
+  assert.equal(result.error, undefined);
+  const id = result.value!.agent_id;
+  const original = c.getAgent("sim-agent")!;
+  assert.deepEqual(c.getAgent(id)!.platform_settings!.analysis_items, original.platform_settings!.analysis_items);
+  c.agents.get(id)!.configuration.platform_settings!.analysis_items!.evaluation_criteria = [];
+  assert.equal(c.getAgent("sim-agent")!.platform_settings!.analysis_items!.evaluation_criteria!.length, 1);
+});
