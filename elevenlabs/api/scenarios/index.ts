@@ -1,3 +1,5 @@
+import { resetStoredTranscripts } from "./stored-transcripts.js";
+export { emptyStoredTranscripts } from "./stored-transcripts.js";
 import { resetIsolationHistory } from "./isolation-history.js";
 export { emptyIsolationHistory } from "./isolation-history.js";
 import { resetPvcVoices } from "./pvc-voices.js";
@@ -94,6 +96,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetStoredTranscripts($);
   resetIsolationHistory($);
   resetVoiceLibrary($);
   resetAssets($);

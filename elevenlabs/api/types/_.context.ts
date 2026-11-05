@@ -29,6 +29,7 @@ import type { Context as DubbingResourceContext } from "../routes/dubbing/resour
 import type { Context as FlowsTemplatesContext } from "../routes/flows/templates/_.context";
 import type { Context as MusicFinetunesContext } from "../routes/music/finetunes/_.context";
 import type { Context as ProductionsOrdersContext } from "../routes/productions/orders/_.context";
+import type { Context as SpeechToTextTranscriptsContext } from "../routes/speech-to-text/transcripts/_.context";
 import type { Context as StudioProjectsContext } from "../routes/studio/projects/_.context";
 import type { Context as VoicesCollectionsContext } from "../routes/voices/collections/_.context";
 import type { Context as VoicesPvcContext } from "../routes/voices/pvc/_.context";
@@ -136,6 +137,10 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/productions/orders" | `/productions/orders/${string}`,
   ): ProductionsOrdersContext;
+  loadContext(
+    path:
+      "/speech-to-text/transcripts" | `/speech-to-text/transcripts/${string}`,
+  ): SpeechToTextTranscriptsContext;
   loadContext(
     path: "/studio/projects" | `/studio/projects/${string}`,
   ): StudioProjectsContext;

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 292 now have authored
-behavior. The remaining 145 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 294 now have authored
+behavior. The remaining 143 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1984,3 +1984,24 @@ error choices are local simulator conventions; contracts and validation stay unc
 Contexts start empty. Startup/reset populate `api/scenarios/isolation-history.ts`;
 `emptyIsolationHistory` clears only these records. Reads return defensive copies,
 instances isolate state and reset restores deleted records.
+
+
+## Stored speech transcripts
+
+`GET /v1/speech-to-text/transcripts/{transcription_id}` reads saved single-channel
+or multichannel transcript metadata. `DELETE` removes the whole saved transcript,
+including every channel. The two baseline records, `sim-transcript-single` and
+`sim-transcript-multichannel`, contain fictional text and timing data; the single
+record includes character timings and a saved plain-text additional format. Reads
+return nested defensive copies. No speech recognition, transcript editing,
+audio download, format conversion, model inference or provider request runs.
+Creation remains generated and uncounted as unfinished implementation.
+
+Contexts initialize empty. Startup/reset populate `api/scenarios/stored-transcripts.ts`;
+`emptyStoredTranscripts` clears only these saved transcripts. Deletion preserves
+voices, speech history and other records. Missing or already deleted IDs return
+404 with `detail.status: "transcript_not_found"`; deletion returns 200 with
+`{"status":"ok"}`. These response/error choices are local simulator conventions.
+The retrieval contract has no job-status field, so only completed saved results
+are modeled. Authentication is not enforced. Instances isolate state and reset
+restores both records; contracts and request/response validation remain unchanged.
