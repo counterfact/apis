@@ -28,13 +28,12 @@ const pick = (v: unknown, allowed: string[], fallback: string) => {
 };
 const array = (v: unknown, allowed?: string[]) => {
   if (v == null) return undefined;
-  const a = typeof v === "string" ? [v] : v;
   if (
-    !Array.isArray(a) ||
-    a.some((x) => typeof x !== "string" || (allowed && !allowed.includes(x)))
+    !Array.isArray(v) ||
+    v.some((x) => typeof x !== "string" || (allowed && !allowed.includes(x)))
   )
     return invalid();
-  return a as string[];
+  return v as string[];
 };
 const stamp = (seconds: number, separator: string) => {
   const ms = Math.round(seconds * 1000);

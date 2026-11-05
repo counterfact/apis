@@ -100,12 +100,7 @@ export class Context {
       Number(offset) < 0
     )
       return invalid();
-    const status =
-      q.status == null
-        ? null
-        : typeof q.status === "string"
-          ? [q.status]
-          : q.status;
+    const status = q.status ?? null;
     if (
       status !== null &&
       (!Array.isArray(status) || status.some((s) => !states.includes(s)))

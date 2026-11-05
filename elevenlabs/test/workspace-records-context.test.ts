@@ -90,3 +90,12 @@ test("Request records support typed predicates without mutation", () => {
   );
   assert.equal(c.requests.length, 2);
 });
+
+
+test("Audit records require numeric time bounds and preserve string cursors", () => {
+  const c = new Context();
+  assert.deepEqual(c.listAudit({ time_from_unix_ms: 1, time_to_unix_ms: 2, cursor: "0" }).entries, []);
+  for (const q of [{ time_from_unix_ms: "1" }, { time_to_unix_ms: "2" }, { time_from_unix_ms: -1 }, { time_from_unix_ms: 3, time_to_unix_ms: 2 }, { cursor: "9007199254740992" }]) {
+    assert.throws(() => c.listAudit(q), { code: "invalid_workspace_member_request" });
+  }
+});

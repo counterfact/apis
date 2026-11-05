@@ -9,6 +9,9 @@ test("conversation insights search canonical messages and filter before paginati
  assert.equal(c.searchMessages({text_query:"support",page_size:1}).results[0].chunk_highlights!.filter(x=>x.is_hit)[0].value,"support");
  assert.equal(c.searchMessages({text_query:"support",agent_id:"missing"}).results.length,0);
  assert.throws(()=>c.searchMessages({text_query:"x",page_size:51}),{status:400});
+ assert.throws(()=>c.searchMessages({text_query:"x",page_size:"1"}),{status:400});
+ assert.throws(()=>c.liveCount({agent_ids:"sim-agent"}),{status:400});
+ assert.deepEqual(c.liveCount({agent_ids:["sim-agent"]}),{count:0});
  await r.run(scenarios.conversationInsights);
  assert.equal(c.searchMessages({text_query:"assistance"},true).results[0].transcript_index,1);
  c.conversations.get("sim-conversation")!.transcript[1].message="replaced";

@@ -179,11 +179,7 @@ export class Context {
         ? null
         : typeof v === "number" && Number.isSafeInteger(v) && v >= 0
           ? v
-          : typeof v === "string" &&
-              /^\d+$/.test(v) &&
-              Number.isSafeInteger(Number(v))
-            ? Number(v)
-            : invalid();
+          : invalid();
     const from = number(q.time_from_unix_ms),
       to = number(q.time_to_unix_ms);
     if (from !== null && to !== null && from > to) return invalid();

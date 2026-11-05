@@ -22,6 +22,9 @@ test("conversation-user aggregation filters before grouping, copies results and 
   );
   for (const q of [
     { page_size: 101 },
+    { page_size: "1" },
+    { call_start_before_unix: "1735689602" },
+    { call_start_after_unix: "1735689602" },
     { cursor: "9007199254740992" },
     { call_start_before_unix: "1.5" },
     { call_start_before_unix: NaN },

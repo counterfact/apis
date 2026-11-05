@@ -120,3 +120,20 @@ test("conversation Context starts empty, copies data and validates state transit
   await runner.run(scenarios.reset);
   assert.deepEqual(seeded.getConversation(id), baseline);
 });
+
+
+test("conversation Context requires typed filters and preserves string cursor pagination", async () => {
+  const runner = await createScenarioRunner();
+  await runner.run(scenarios.startup);
+  const c = runner.loadContext("/convai/conversations");
+  for (const key of ["call_start_before_unix", "call_start_after_unix", "call_duration_min_secs", "call_duration_max_secs", "rating_min", "rating_max", "page_size"]) {
+    assert.throws(() => c.listConversations({ [key]: "1" } as never), { code: "invalid_conversation_request" });
+  }
+  for (const key of ["text_only", "has_feedback_comment"]) {
+    for (const value of ["true", "false"]) assert.throws(() => c.listConversations({ [key]: value } as never), { code: "invalid_conversation_request" });
+  }
+  const first = c.listConversations({ page_size: 1 });
+  assert.equal(first.next_cursor, "1");
+  assert.equal(c.listConversations({ cursor: first.next_cursor }).conversations.length, 1);
+  assert.throws(() => c.listConversations({ cursor: "9007199254740992" }), { code: "invalid_conversation_request" });
+});

@@ -16,10 +16,9 @@ const invalid = (): never => {
 };
 const strings = (v: unknown): string[] | undefined => {
   if (v == null) return undefined;
-  const result = typeof v === "string" ? [v] : v;
-  if (!Array.isArray(result) || result.some((x) => typeof x !== "string"))
+  if (!Array.isArray(v) || v.some((x) => typeof x !== "string"))
     return invalid();
-  return result;
+  return v;
 };
 export class Context {
   canonicalVoices?: () => ReadonlyMap<string, import("../../types/v1/components/schemas/VoiceResponseModel.js").VoiceResponseModel>;

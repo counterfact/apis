@@ -16,7 +16,7 @@ test("voice library context filters shared metadata and accents independently of
     "sim-library-spanish",
   );
   assert.equal(
-    c.list({ use_cases: "narration", descriptives: ["calm"] }).total_count,
+    c.list({ use_cases: ["narration"], descriptives: ["calm"] }).total_count,
     1,
   );
   assert.equal(
@@ -59,7 +59,7 @@ test("voice library context filters shared metadata and accents independently of
     2,
   );
   assert.equal(c.list({ use_cases: [] }).total_count, 0);
-  assert.equal(c.list({ descriptives: "calm" }).total_count, 1);
+  assert.equal(c.list({ descriptives: ["calm"] }).total_count, 1);
   assert.deepEqual(
     c.list({ sort: "cloned_by_count" }).voices.map((v) => v.voice_id),
     ["sim-library-american", "sim-library-british", "sim-library-spanish"],
@@ -103,6 +103,8 @@ test("voice library context filters shared metadata and accents independently of
     { min_notice_period_days: -1 },
     { include_custom_rates: "false" },
     { use_cases: [1] },
+    { use_cases: "narration" },
+    { descriptives: "calm" },
   ])
     assert.throws(() => c.list(q));
   assert.throws(() => c.accents({ model_id: "missing" }));

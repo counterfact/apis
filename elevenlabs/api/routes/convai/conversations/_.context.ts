@@ -13,21 +13,19 @@ export class ConversationError extends Error {
 const invalid = (): never => { throw new ConversationError(400, "invalid_conversation_request", "Invalid or unsupported conversation request"); };
 const integer = (value: unknown, min = 0, max = Number.MAX_SAFE_INTEGER): number | undefined => {
   if (value == null) return undefined;
-  const number = typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
-  if (typeof number !== "number" || !Number.isSafeInteger(number) || number < min || number > max) return invalid();
-  return number;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) return invalid();
+  return value;
 };
 const bool = (value: unknown): boolean | undefined => {
   if (value == null) return undefined;
   if (typeof value === "boolean") return value;
-  if (value === "true" || value === "false") return value === "true";
   return invalid();
 };
 const matches = (values: string[] | null | undefined, candidate: string | null | undefined) => values == null || values.includes(candidate ?? "");
 const page = <T>(values: T[], size: number, cursor: unknown, max: number) => {
   integer(size, 1, max);
   if (cursor != null && (typeof cursor !== "string" || !/^\d+$/.test(cursor))) return invalid();
-  const offset = integer(cursor) ?? 0;
+  const offset = cursor == null ? 0 : integer(Number(cursor))!;
   const has_more = offset + size < values.length;
   return { items: structuredClone(values.slice(offset, offset + size)), next_cursor: has_more ? String(offset + size) : null, has_more };
 };
@@ -38,7 +36,7 @@ export class Context {
   analysisFixtureVersions=new Map<string,string>();
   analysisFixtures = new Map<string, NonNullable<Conversation["analysis"]>>();
   liveCount(query:Record<string,unknown>={}) {
-    const ids=query.agent_ids==null?null:typeof query.agent_ids==="string"?[query.agent_ids]:query.agent_ids;
+    const ids=query.agent_ids??null;
     if(ids!==null&&(!Array.isArray(ids)||ids.some(x=>typeof x!=="string"))||query.agent_id!=null&&typeof query.agent_id!=="string")return invalid();
     return {count:[...this.conversations.values()].filter(c=>["initiated","in-progress"].includes(c.status)&&(ids?ids.includes(c.agent_id):query.agent_id==null||c.agent_id===query.agent_id)).length};
   }

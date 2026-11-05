@@ -9,7 +9,7 @@ test("legacy context filters copies exports and deletion", async () => {
   const c = r.loadContext("/dubbing");
   assert.equal(c.list({}).dubs.length, 2);
   assert.equal(
-    c.list({ dubbing_statuses: "dubbed" }).dubs[0].dubbing_id,
+    c.list({ dubbing_statuses: ["dubbed"] }).dubs[0].dubbing_id,
     "sim-legacy-dub",
   );
   assert.equal(c.list({ filter_by_creator: "others" }).dubs.length, 1);
@@ -17,7 +17,7 @@ test("legacy context filters copies exports and deletion", async () => {
   assert.equal(page.next_cursor, "1");
   assert.equal(c.list({ cursor: page.next_cursor }).dubs.length, 1);
   assert.equal(
-    c.list({ dubbing_status: "dubbed", dubbing_statuses: "dubbing" }).dubs
+    c.list({ dubbing_status: "dubbed", dubbing_statuses: ["dubbing"] }).dubs
       .length,
     0,
   );
@@ -56,7 +56,11 @@ test("legacy context filters copies exports and deletion", async () => {
     { cursor: "bad" },
     { page_size: 201 },
     { order_by: "bad" },
-    { dubbing_models: "bad" },
+    { dubbing_models: ["bad"] },
+    { dubbing_statuses: "dubbed" },
+    { dubbing_models: "dubbing_v1" },
+    { target_language_codes: "es" },
+    { creation_sources: "dubbing_api" },
   ])
     assert.throws(() => c.list(query));
   c.delete("sim-legacy-dub");

@@ -85,10 +85,11 @@ test("Production context owns item transitions, media scoping, copies and filter
   assert.throws(() => c.remove(id, c.get(id).items[0].item_id));
   assert.throws(() => c.submit(id));
   assert.throws(() => c.upsert(id, { request: { item } }));
-  assert.equal(c.list({ status: "submitted" }).orders.length, 1);
+  assert.equal(c.list({ status: ["submitted"] }).orders.length, 1);
   assert.equal(c.list({ status: ["open", "submitted"] }).orders.length, 2);
   assert.equal(c.list({ offset: 2 }).orders.length, 0);
   assert.throws(() => c.list({ status: ["invalid"] }));
+  assert.throws(() => c.list({ status: "submitted" }));
   assert.throws(() =>
     c.list({ start_date: "2026-01-01", end_date: "2024-01-01" }),
   );

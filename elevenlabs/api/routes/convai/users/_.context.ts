@@ -17,10 +17,9 @@ const integer = (
   max = Number.MAX_SAFE_INTEGER,
 ): number | undefined => {
   if (v == null) return undefined;
-  const n = typeof v === "string" && /^\d+$/.test(v) ? Number(v) : v;
-  if (typeof n !== "number" || !Number.isSafeInteger(n) || n < min || n > max)
+  if (typeof v !== "number" || !Number.isSafeInteger(v) || v < min || v > max)
     return invalid();
-  return n;
+  return v;
 };
 export class Context {
   conversations: () => Map<string, Conversation> = () => new Map();
@@ -28,7 +27,7 @@ export class Context {
     const size = integer(q.page_size, 1, 100) ?? 30,
       cursor = q.cursor ?? "0";
     if (typeof cursor !== "string" || !/^\d+$/.test(cursor)) return invalid();
-    const offset = integer(cursor)!;
+    const offset = integer(Number(cursor))!;
     for (const key of ["agent_id", "branch_id", "search"])
       if (q[key] != null && typeof q[key] !== "string") return invalid();
     if (typeof q.agent_id === "string" && q.agent_id.startsWith("seng_"))
