@@ -1,8 +1,23 @@
+import type { Context } from "./_.context.js";
 import type { Routes } from "../../../types/index.js";
 type Route = Routes["/convai"]["/realtime"]["/conversation-groups"];
 export const GET: Route["GET"] = async ($) => {
-  return $.response.status(200).random();
+  try { return $.response.status(200).json(($.x.context as Context).listGroups($.query)); }
+  catch (error) {
+    if (error instanceof Error && error.name === "RealtimeGroupError") {
+      const failure = error as Error & {status:number; code:string};
+      return $.x.response.status(failure.status).json({detail:{status:failure.code,message:failure.message}});
+    }
+    throw error;
+  }
 };
 export const POST: Route["POST"] = async ($) => {
-  return $.response.status(200).random();
+  try { return $.response.status(200).json(($.x.context as Context).createGroup($.body)); }
+  catch (error) {
+    if (error instanceof Error && error.name === "RealtimeGroupError") {
+      const failure = error as Error & {status:number; code:string};
+      return $.x.response.status(failure.status).json({detail:{status:failure.code,message:failure.message}});
+    }
+    throw error;
+  }
 };

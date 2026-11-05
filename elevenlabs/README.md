@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 97 now have authored
-behavior. The remaining 340 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 104 now have authored
+behavior. The remaining 333 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -822,6 +822,37 @@ return 204 without a body. Deleting a conversation removes its SIP logs and
 reference mappings, and subsequent operations return 404. Errors, pagination,
 filter bounds, current-vote semantics, reference mappings and ordering are local
 simulator conventions. Authentication/permissions are not enforced.
+
+## Realtime conversation groups
+
+Seven operations manage fictional realtime group metadata: GET/POST
+`/v1/convai/realtime/conversation-groups`, GET/PATCH/DELETE on
+`/{conversation_group_id}`, and PUT/DELETE
+`/v1/convai/realtime/conversations/{conversation_id}/conversation-group`.
+Titles are trimmed and repeated whitespace collapsed; names are unique ignoring
+case and whitespace, with a 64-character limit. Descriptions allow 500 characters.
+PATCH preserves omitted fields, preserves a null title, and clears a null description.
+Conflicting titles return 409; invalid input returns 400 without mutation.
+Missing groups or realtime conversation identities return 404.
+
+Lists search title/description case-insensitively, sort newest first with ascending
+ID ties, and paginate using decimal-offset cursors (1–100 records, default 100).
+Responses are defensive copies. Creation uses `sim-realtime-group-created-N` IDs
+and fixed synthetic timestamps. These ordering, ID, error and null-title rules are
+local conventions. Authentication, permissions and sharing changes are not simulated;
+new groups have creator/admin metadata and no additional sharing.
+
+Startup/reset seed `sim-realtime-group`, `sim-realtime-group-old`, and two separate
+known realtime identities: `sim-realtime-conversation` (initially in the first group)
+and `sim-realtime-conversation-ungrouped`. These are synthetic identity fixtures,
+separate from historical agent conversation records; no live realtime session is
+started. Assignment replaces the previous group; clearing is idempotent. Deleting
+a group clears all of its memberships while preserving conversation identities.
+The contract exposes no realtime membership-read endpoint; internal state tests
+verify these transitions directly. `emptyRealtimeGroups` clears groups and known
+realtime identities; reset restores both and the creation counter. State is isolated
+per simulator instance. Fixtures live in `api/scenarios/realtime-groups.ts` and
+business logic in `api/routes/convai/realtime/_.context.ts`.
 
 ## Development
 
