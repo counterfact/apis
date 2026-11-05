@@ -15,13 +15,13 @@ test("speech context starts empty and applies bounded fixtures with canonical qu
  const dlg=c.dialogue({inputs:[{text:"Hi",voice_id:"sim-narrator"},{text:"😀",voice_id:"sim-assistant"}]},{});
  assert.deepEqual(dlg.payload.voice_segments.map(x=>[x.voice_id,x.character_start_index,x.character_end_index]),[["sim-narrator",0,2],["sim-assistant",2,3]]);
  assert.equal(h.getHistoryItem(dlg.historyId!)?.dialogue?.length,2);assert.equal(h.getHistoryItem(dlg.historyId!)?.text,null);
- h.deleteHistoryItem(dlg.historyId!);assert.equal(h.audio.has(dlg.historyId!),false);await r.run(scenarios.reset);assert.equal(c.nextRender,0);assert.equal(h.audio.size,0);
+ h.deleteHistoryItem(dlg.historyId!);assert.equal(h.audio.has(dlg.historyId!),false);await r.run(scenarios.reset);assert.equal(c.nextRender,0);assert.equal(h.audio.size,2);
 });
 test("speech validation and quota failures are atomic, retention is explicit",async()=>{
  const r=await createScenarioRunner();await r.run(scenarios.startup);const c=r.loadContext("/text-to-speech"),root=r.loadContext("/"),history=r.loadContext("/history");const before=structuredClone([...history.history]);
  for(const [voice,body,q,status]of [["missing",{text:"Hi"},{},404],["sim-narrator",{text:""},{},400],["sim-narrator",{text:"Hi",model_id:"missing"},{},404],["sim-narrator",{text:"Hi",seed:1},{},400],["sim-narrator",{text:"Hi"},{output_format:"wav_44100"},400]]as const)assert.throws(()=>c.speech(voice,body,q),{status});
  assert.throws(()=>c.dialogue({inputs:[{text:"Hi",voice_id:"sim-narrator"},{text:"Hi",voice_id:"missing"}]},{}),{status:404});assert.equal(c.nextRender,0);assert.deepEqual([...history.history],before);
- const count=root.getSubscription().character_count;c.speech("sim-narrator",{text:"Hi"},{enable_logging:false});assert.equal(history.history.size,2);assert.equal(history.audio.size,0);assert.equal(root.getSubscription().character_count,count+2);
+ const count=root.getSubscription().character_count;c.speech("sim-narrator",{text:"Hi"},{enable_logging:false});assert.equal(history.history.size,2);assert.equal(history.audio.size,2);assert.equal(root.getSubscription().character_count,count+2);
  await r.run(scenarios.quotaExhausted);const n=c.nextRender;assert.throws(()=>c.speech("sim-narrator",{text:"Hi"},{}),{status:429});assert.equal(c.nextRender,n);
 });
 test("Dispatcher serves all eight bounded speech endpoints with exact media, state, reset and isolation",async()=>{

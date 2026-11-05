@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 348 now have authored
-behavior. The remaining 89 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 350 now have authored
+behavior. The remaining 87 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -290,7 +290,8 @@ items return HTTP 404 with `detail.status: "history_item_not_found"`, a local
 simulator convention. Deleting history does not change voices, models, or quota.
 Deleting a voice leaves its historical metadata intact. Run `reset` to restore
 deleted history items.
-These fixtures do not represent generated audio; audio retrieval remains generated.
+The historical texts do not represent spoken recordings. Startup/reset attach
+copies of the bounded synthetic silence fixture described above to both records.
 Startup and `reset` populate `api/scenarios/history.ts`. Run `.scenario emptyHistory`
 (or `app.scenario("emptyHistory", "api")`) to exercise an empty collection.
 
@@ -304,6 +305,29 @@ The cursor identifies a record in the complete sorted collection before filterin
 unknown cursors return HTTP 400. Invalid page sizes also return HTTP 400.
 The final returned item's ID and timestamp populate `last_history_item_id` and
 `scanned_until`; empty pages return null for both. Responses are defensive copies.
+
+`GET /v1/history/{history_item_id}/audio` returns the retained MP3 bytes with
+`audio/mpeg` and an attachment filename. `POST /v1/history/download` returns a
+valid `application/zip` attachment containing the selected MP3 files. The upstream
+prose describes a direct audio response for a single ID, but its response schema
+declares only ZIP; this simulator returns ZIP for both one and multiple IDs.
+Use the GET audio endpoint for a direct single file.
+
+Downloads accept 1–100 IDs, preserve first-request order and omit repeated IDs.
+Every requested item and its retained audio must exist before an archive is built;
+a missing member returns 404 without a partial archive. Retained payloads total at
+most 16 MiB per archive. Entry names percent-encode IDs, and ZIP members use the
+STORE method with CRC-32 checksums and fixed 1980-01-01 timestamps. Only omitted,
+null or `default` output format is supported; WAV transcoding returns 400.
+Reads do not consume quota or change metadata/audio. Deleting history removes
+its retained audio; deleting voices preserves historical media. Both startup
+fixtures and new retained speech/dialogue requests can be read or downloaded.
+
+Contexts start with empty media maps. The `historyAudioFixtures` scenario explicitly
+populates the baseline media after speech-fixture setup during startup/reset.
+Run `historyWithoutAudio` to preserve metadata while making audio unavailable
+(404); `reset` restores baseline bytes. These names, bounds, ZIP and error choices
+are local conventions. No synthesis, transcoding or provider request occurs.
 
 ## Account and subscription discovery
 

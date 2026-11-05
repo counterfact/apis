@@ -81,8 +81,8 @@ import { resetCollections } from "./collections.js";
 export { emptyCollections } from "./collections.js";
 import { resetDictionaries } from "./dictionaries.js";
 export { emptyDictionaries } from "./dictionaries.js";
-import { resetHistory } from "./history.js";
-export { emptyHistory } from "./history.js";
+import { resetHistory, historyAudioFixtures } from "./history.js";
+export { emptyHistory, historyAudioFixtures, historyWithoutAudio } from "./history.js";
 import { resetModels } from "./models.js";
 import { resetAccount } from "./account.js";
 import { resetAuthConnections } from "./auth-connections.js";
@@ -160,6 +160,7 @@ export const reset: Scenario = ($) => {
   resetHistory($);
   resetAccount($);
   resetBoundedSpeech($);
+  historyAudioFixtures($);
   resetBoundedSound($);
   resetVoicePreviews($);
   $.context.voices = new Map(

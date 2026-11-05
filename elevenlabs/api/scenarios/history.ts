@@ -31,3 +31,15 @@ export const emptyHistory: Scenario = ($) => {
   $.loadContext("/history").audio = new Map();
   $.loadContext("/history").history = new Map();
 };
+
+/** Attach bounded synthetic silence to the two historical baseline records. */
+export const historyAudioFixtures: Scenario = ($) => {
+  const history = $.loadContext("/history"), speech = $.loadContext("/text-to-speech");
+  for (const id of ["sim-history-1", "sim-history-2"])
+    if (history.history.has(id)) history.audio.set(id, new Uint8Array(speech.audio));
+};
+
+/** Keep historical metadata while making retained audio unavailable. */
+export const historyWithoutAudio: Scenario = ($) => {
+  $.loadContext("/history").audio = new Map();
+};
