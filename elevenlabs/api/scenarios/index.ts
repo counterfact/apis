@@ -1,3 +1,5 @@
+import { resetTestInvocations } from "./test-invocations.js";
+export { emptyTestInvocations, testInvocationUsage } from "./test-invocations.js";
 import { resetStoredTranscripts } from "./stored-transcripts.js";
 export { emptyStoredTranscripts } from "./stored-transcripts.js";
 import { resetIsolationHistory } from "./isolation-history.js";
@@ -96,6 +98,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetTestInvocations($);
   resetStoredTranscripts($);
   resetIsolationHistory($);
   resetVoiceLibrary($);

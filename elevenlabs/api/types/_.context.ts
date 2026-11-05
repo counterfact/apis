@@ -20,6 +20,7 @@ import type { Context as ConvaiRealtimeContext } from "../routes/convai/realtime
 import type { Context as ConvaiSecretsContext } from "../routes/convai/secrets/_.context";
 import type { Context as ConvaiSettingsContext } from "../routes/convai/settings/_.context";
 import type { Context as ConvaiTagsContext } from "../routes/convai/tags/_.context";
+import type { Context as ConvaiTestInvocationsContext } from "../routes/convai/test-invocations/_.context";
 import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.context";
 import type { Context as ConvaiTriageTicketsContext } from "../routes/convai/triage-tickets/_.context";
 import type { Context as ConvaiUsersContext } from "../routes/convai/users/_.context";
@@ -112,6 +113,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/tags" | `/convai/tags/${string}`,
   ): ConvaiTagsContext;
+  loadContext(
+    path: "/convai/test-invocations" | `/convai/test-invocations/${string}`,
+  ): ConvaiTestInvocationsContext;
   loadContext(
     path: "/convai/tools" | `/convai/tools/${string}`,
   ): ConvaiToolsContext;

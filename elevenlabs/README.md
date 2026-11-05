@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 294 now have authored
-behavior. The remaining 143 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 297 now have authored
+behavior. The remaining 140 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2005,3 +2005,35 @@ voices, speech history and other records. Missing or already deleted IDs return
 The retrieval contract has no job-status field, so only completed saved results
 are modeled. Authentication is not enforced. Instances isolate state and reset
 restores both records; contracts and request/response validation remain unchanged.
+
+
+## Historical agent test invocations
+
+Three `/v1/convai/test-invocations` operations now list/read historical invocations
+and cancel their pending runs. Startup/reset seed two fictional invocations in
+`api/scenarios/test-invocations.ts`; `emptyTestInvocations` clears them. Context
+containers start empty. No tests, models, conversations, tools or providers run.
+
+Lists filter exact historical agent, branch, version, creator and test IDs, plus
+inclusive unix-second creation bounds. Test filtering retains the complete
+invocation and its counts. Case-insensitive search checks invocation titles and
+stored test names. Deleted live agents/tests do not remove or rename history.
+Results sort newest first with ascending ID ties; decimal-offset cursors paginate
+after filtering, with size 1–100/default 30. Bounds must be nonnegative safe integers
+and start must not exceed end. Unknown filters yield empty pages; invalid queries
+return 400. Nullable time query text is normalized narrowly for Counterfact #2612.
+
+Cancellation changes only pending runs to cancelled and marks the invocation
+cancelled. Passed/failed/cancelled runs retain their timestamps and results.
+Repeated cancellation and terminal-only invocations are no-ops. Missing IDs
+return 404; cancellation returns empty 204. List counts derive from the same runs
+as detail reads. Reads return nested defensive copies; instances isolate state.
+
+Baseline cost fields are null because no historical cost data is recorded. The
+`testInvocationUsage` setup stores fictional credits and finalized per-run USD
+prices and a historical mixed-version run; summary totals sum recorded values,
+with null when none are known. Final USD totals are separate historical metadata,
+not inferred from partial provider charging components. No billing occurs.
+Reset restores baseline. These ordering, matching, cost and cancellation rules are
+local simulator conventions. Invocation PATCH/resubmit and test execution remain
+generated and uncounted; contracts and validation are unchanged.
