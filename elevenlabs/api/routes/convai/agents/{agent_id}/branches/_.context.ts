@@ -151,7 +151,7 @@ export class Context {
       main_branch_id: mainId,
     });
   }
-  update(id: string, branchId: string, input: unknown) {
+  update(id: string, branchId: string, input: unknown = {}) {
     const b = this.branch(id, branchId),
       a = this.agent(id);
     if (
@@ -409,11 +409,11 @@ export class Context {
     if (archive) plan.source.metadata.is_archived = true;
     return { version_id: versionId, branch_id: branchId };
   }
-  merge(id: string, sourceId: string, targetId: string, input: unknown) {
+  merge(id: string, sourceId: string, targetId: string, input: unknown = {}) {
     if (!object(input) || Object.keys(input).some(key => !["force", "archive_source_branch"].includes(key)) || Object.values(input).some(value => typeof value !== "boolean")) return invalid();
     return this.commitPlan(id, this.plan(id, sourceId, targetId, input.force === true, false), false, input.archive_source_branch !== false);
   }
-  rebase(id: string, targetId: string, sourceId: string | null | undefined, input: unknown) {
+  rebase(id: string, targetId: string, sourceId: string | null | undefined, input: unknown = {}) {
     if (!object(input) || Object.keys(input).length) return invalid();
     const from = sourceId ?? this.agent(id).mainBranch?.id;
     if (!from) return fail(404, "branch_not_found");

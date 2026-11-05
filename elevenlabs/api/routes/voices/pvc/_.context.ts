@@ -132,7 +132,7 @@ export class Context {
     if(!captured) return fail(404,"speaker_audio_not_found");
     return {audio_base_64:Buffer.from(captured.audio).toString("base64"),media_type:"audio/mpeg",duration_secs:captured.duration};
   }
-  updateSample(id: string,sid: string,input: unknown) {
+  updateSample(id: string,sid: string,input: unknown = {}) {
     this.idle(id); const sample=this.sample(id,sid);
     if(sample.speaker_separation?.status==="pending") return fail(409,"sample_busy");
     if(!object(input) || Object.keys(input).some(k=>!["file_name","remove_background_noise","selected_speaker_ids","trim_start_time","trim_end_time"].includes(k))) return fail(400,"unsupported_sample_options");
@@ -157,7 +157,7 @@ export class Context {
     return {status:"ok"};
   }
   captcha(id: string) {this.voice(id); if(!this.challenge) throw new Error("Run startup or reset"); return this.challenge;}
-  train(id: string,input: unknown) {
+  train(id: string,input: unknown = {}) {
     const voice=this.voice(id); this.idle(id);
     if(!object(input) || Object.keys(input).some(k=>k!=="model_id") || input.model_id!=null && input.model_id!=="eleven_multilingual_v2") return fail(400,"unsupported_training_model");
     if(!voice.samples?.length) return fail(409,"voice_has_no_samples");
@@ -250,7 +250,7 @@ export class Context {
     root.voices.set(id, value);
     return { voice_id: id };
   }
-  update(id: string, input: unknown) {
+  update(id: string, input: unknown = {}) {
     const root = this.owner(),
       previous = root.voices.get(id);
     if (!previous) return fail(404, "voice_not_found");

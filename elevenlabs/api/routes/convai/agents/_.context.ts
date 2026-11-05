@@ -540,7 +540,7 @@ export class Context {
     this.agents.set(id, { ...record, configuration: candidate });
     return { value: structuredClone(candidate) };
   }
-  duplicateAgent(id: string, input: unknown): Result<{ agent_id: string }> {
+  duplicateAgent(id: string, input: unknown = {}): Result<{ agent_id: string }> {
     const original = this.getAgent(id);
     if (!original) return { error: "agent_not_found" };
     if (!object(input) || !keys(input, ["name"]) || input.name != null && !text(input.name)) return { error: "invalid_agent" };

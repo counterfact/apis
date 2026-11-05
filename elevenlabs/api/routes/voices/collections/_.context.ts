@@ -32,7 +32,7 @@ export class Context {
     return structuredClone(collection);
   }
 
-  updateCollection(id: string, input: UpdateCollection) {
+  updateCollection(id: string, input: UpdateCollection = {}) {
     const collection = this.collections.get(id);
     if (!collection) return undefined;
     if (input.title != null) collection.title = input.title;

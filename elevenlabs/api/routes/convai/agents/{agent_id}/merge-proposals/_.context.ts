@@ -51,7 +51,7 @@ export class Context {
   get(agentId: string, id: string) {
     return structuredClone(this.record(agentId, id));
   }
-  merge(agentId: string, id: string, input: unknown) {
+  merge(agentId: string, id: string, input: unknown = {}) {
     const proposal = this.record(agentId, id);
     this.open(proposal);
     if (
@@ -190,7 +190,7 @@ export class Context {
       has_more,
     };
   }
-  update(agentId: string, id: string, input: unknown) {
+  update(agentId: string, id: string, input: unknown = {}) {
     const p = this.record(agentId, id);
     this.open(p);
     if (

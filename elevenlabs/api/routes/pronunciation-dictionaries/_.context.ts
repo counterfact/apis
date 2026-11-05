@@ -108,7 +108,7 @@ export class Context {
       + lexemes + '</lexicon>\n' };
   }
 
-  updateDictionary(id: string, input: UpdateDictionary) {
+  updateDictionary(id: string, input: UpdateDictionary = {}) {
     const dictionary = this.dictionaries.get(id);
     if (!dictionary) return undefined;
     const metadata = dictionary.metadata;

@@ -103,7 +103,7 @@ export class Context {
   }
   createText(input:unknown){return this.create(input,"text");}
   createFolder(input:unknown){return this.create(input,"folder");}
-  updateDocument(id:string,input:unknown){
+  updateDocument(id:string,input:unknown={}){
     const d=this.stored(id).document;if(!object(input)||Object.keys(input).some(k=>!["name","content","enable_auto_sync","auto_remove","minimum_frequency_days","tighten_only"].includes(k)))return invalid();
     this.unsupportedSync(input);const name=input.name==null?d.name:this.name(input.name);
     if(input.content!=null&&(typeof input.content!=="string"||d.type!=="text"))return invalid();
@@ -125,7 +125,7 @@ export class Context {
     if(!Array.isArray(value)||value.length<1||value.length>20||value.some(id=>typeof id!=="string")||new Set(value).size!==value.length)return invalid();
     return value as string[];
   }
-  moveDocument(id:string,input:unknown){
+  moveDocument(id:string,input:unknown={}){
     if(!object(input)||Object.keys(input).some(k=>k!=="move_to"))return invalid();
     this.moveDocuments({document_ids:[id],move_to:input.move_to});
   }
