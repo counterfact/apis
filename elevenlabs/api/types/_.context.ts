@@ -10,6 +10,7 @@ import type { Context as ConvaiAgentsContext } from "../routes/convai/agents/_.c
 import type { Context as ConvaiAnalysisItemsContext } from "../routes/convai/analysis-items/_.context";
 import type { Context as ConvaiAnalyticsContext } from "../routes/convai/analytics/_.context";
 import type { Context as ConvaiBatchCallingContext } from "../routes/convai/batch-calling/_.context";
+import type { Context as ConvaiConversationContext } from "../routes/convai/conversation/_.context";
 import type { Context as ConvaiConversationsContext } from "../routes/convai/conversations/_.context";
 import type { Context as ConvaiEnvironmentVariablesContext } from "../routes/convai/environment-variables/_.context";
 import type { Context as ConvaiEnvironmentsContext } from "../routes/convai/environments/_.context";
@@ -54,6 +55,7 @@ import type { Context as HistoryContext } from "../routes/history/_.context";
 import type { Context as PronunciationDictionariesContext } from "../routes/pronunciation-dictionaries/_.context";
 import type { Context as ServiceAccountsContext } from "../routes/service-accounts/_.context";
 import type { Context as SharedVoicesContext } from "../routes/shared-voices/_.context";
+import type { Context as SingleUseTokenContext } from "../routes/single-use-token/_.context";
 import type { Context as SpeechEngineContext } from "../routes/speech-engine/_.context";
 import type { Context as WorkspaceContext } from "../routes/workspace/_.context";
 import type { Context } from "../routes/_.context";
@@ -91,6 +93,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/batch-calling" | `/convai/batch-calling/${string}`,
   ): ConvaiBatchCallingContext;
+  loadContext(
+    path: "/convai/conversation" | `/convai/conversation/${string}`,
+  ): ConvaiConversationContext;
   loadContext(
     path: "/convai/conversations" | `/convai/conversations/${string}`,
   ): ConvaiConversationsContext;
@@ -214,6 +219,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/shared-voices" | `/shared-voices/${string}`,
   ): SharedVoicesContext;
+  loadContext(
+    path: "/single-use-token" | `/single-use-token/${string}`,
+  ): SingleUseTokenContext;
   loadContext(
     path: "/speech-engine" | `/speech-engine/${string}`,
   ): SpeechEngineContext;

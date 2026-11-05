@@ -1,5 +1,6 @@
 import type { Routes } from "../../../types/index.js";
 type Route = Routes["/convai"]["/conversation"]["/token"];
 export const GET: Route["GET"] = async ($) => {
-  return $.response.status(200).random();
+  try {return $.response.status(200).json($.context.conversationToken($.query));}
+  catch(error){if(error instanceof Error && ["CredentialError","LifecycleError"].includes(error.name)){const e=error as Error & {status:number;code:string};return $.x.response.status(e.status).json({detail:{status:e.code,message:e.code}});}throw error;}
 };

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 328 now have authored
-behavior. The remaining 109 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 333 now have authored
+behavior. The remaining 104 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2309,3 +2309,47 @@ request metadata without deleting canonical conversation history; `reset` restor
 the full baseline and counters. Instances isolate all changes. All six request
 contracts passed guarded finite Dispatcher probes against the unchanged V1 spec
 before implementation; no additional recursive-schema blocker was observed.
+
+
+## Synthetic client credentials
+
+Five credential operations issue deterministic local placeholders: both signed-URL
+spellings under `/v1/convai/conversation`, its `/token` endpoint,
+`POST /v1/convai/realtime/client_secrets`, and
+`POST /v1/single-use-token/{token_type}`. The signed-URL alias uses the same issuer
+and options. URLs point to `wss://simulator.invalid`; tokens begin with `sim-`.
+These values authenticate no service, create no session or conversation, and run
+no provider request. Conversation IDs are reserved identifiers only; conversation
+reads and live counts stay unchanged. There is no redemption endpoint or simulated
+consumption, and no cryptographic signing or authentication enforcement.
+
+Conversation credentials require an existing unarchived agent. Branch selection
+uses current canonical main configuration or the selected branch tip; explicit
+version selection keeps its immutable snapshot. Branch and version cannot be
+combined, and archived selected branches are rejected even through a version ID.
+Unknown agents, branches or versions return 404; archived resources return 409.
+Only production environment and disabled debug events are supported. Unknown
+speech-engine external IDs have no local agent mapping and return 404. Signed URLs
+include the selected branch/version IDs and may reserve a conversation ID with
+`include_conversation_id=true`. WebRTC tokens always reserve an ID and preserve an
+optional nonblank participant name in issuance metadata. Invalid and unsupported
+requests return 400 before allocating identifiers.
+
+The shared issuer records copies of selected configurations and session metadata.
+Contexts start empty. Startup/reset use `api/scenarios/synthetic-credentials.ts`
+to clear issuance records and counters, wire accessors, and set the fixed issuance
+time to unix second 1735689600. Signed URLs and single-use tokens expire 900 seconds
+later; WebRTC tokens and client secrets default to 600 seconds. Each simulator
+instance has its own monotonic shared sequence. All these clocks, IDs and TTLs are
+local simulator conventions; time does not advance automatically.
+
+Single-use issuance supports `realtime_scribe`, `batch_scribe`, and `tts_websocket`.
+Client secrets accept an optional `expires_after` with anchor `created_at` and
+1–3600 whole seconds. Send JSON `{}` for the default client secret; absent optional
+bodies remain subject to Counterfact #2614. Supported session fields are type
+`realtime`, either current contract model ID, instructions, distinct text/audio
+output modalities, temperature 0–2, positive whole output-token limits or `inf`,
+and a whole duration of 1–3600 seconds. Explicit null session fields return 400;
+null top-level session/expiry preserves defaults. Audio, tools, tracing, prompt,
+turn-detection and other session options return 400 rather than claiming to run
+them. Issuance does not change realtime groups or their existing conversations.

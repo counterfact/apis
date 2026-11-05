@@ -1,3 +1,5 @@
+import {emptySyntheticCredentials} from "./synthetic-credentials.js";
+export {emptySyntheticCredentials} from "./synthetic-credentials.js";
 import {resetSyntheticOutbound} from "./synthetic-outbound.js";
 export {emptySyntheticOutbound,syntheticOutboundProviders,completeSyntheticOutbound} from "./synthetic-outbound.js";
 import { resetAudioEffects } from "./audio-effects.js";
@@ -104,6 +106,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  emptySyntheticCredentials($);
   resetTestInvocations($);
   resetStoredTranscripts($);
   resetIsolationHistory($);

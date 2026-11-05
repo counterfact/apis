@@ -6,6 +6,8 @@ export class RealtimeGroupError extends Error {
 const invalid = (): never => { throw new RealtimeGroupError(400,"invalid_realtime_group_request","Invalid realtime group request"); };
 const object = (v:unknown): v is Record<string,unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 export class Context {
+  credentials?:()=>import("../conversation/_.context.js").Context;
+  clientSecret(input:unknown){if(!this.credentials)throw new Error("Run startup or reset");return this.credentials().clientSecret(input);}
   groups = new Map<string,Group>();
   /** Known synthetic realtime conversations and their current group, if any. */
   conversations = new Map<string,string|null>();

@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../routes/_.context.ts";
+import type { Context } from "../../../../routes/single-use-token/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
 import type { SingleUseTokenType } from "../../components/schemas/SingleUseTokenType.js";
 import type { SingleUseTokenResponseModel } from "../../components/schemas/SingleUseTokenResponseModel.js";
