@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/convai/agents/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Duplicate_Agent_v1_convai_agents__agent_id__duplicate_post } from "../../../../components/schemas/Body_Duplicate_Agent_v1_convai_agents__agent_id__duplicate_post.js";
 import type { CreateAgentResponseModel } from "../../../../components/schemas/CreateAgentResponseModel.js";

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 60 now have authored
-behavior. The remaining 377 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 65 now have authored
+behavior. The remaining 372 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -535,7 +535,8 @@ reference the secret, otherwise 204. Invalid inputs return 400 without mutation.
 Startup/reset seed one fictional secret and one `unknown` tool reference in
 `api/scenarios/secrets.ts`. This is a scenario-owned dependency configuration,
 not a claim that a tool exists or a permission lookup succeeded. Agent and phone
-dependencies start empty; their domain endpoints are still generated. Canonical
+secret dependencies start empty and remain scenario-owned; phone endpoints are
+still generated. Agent configuration storage is described below. Canonical
 environment-variable references protect deletion but cannot appear in dependency
 responses because the contract has no environment-variable identifier variant.
 Run `.scenario emptySecrets` to clear this group's records and counters; `reset`
@@ -546,6 +547,65 @@ The installed Dispatcher leaves nullable `anyOf(integer, null)` query values as
 text ([upstream #2612](https://github.com/counterfact/api-simulator/issues/2612)). The collection route converts only decimal integer text before applying
 range checks. This narrow boundary conversion targets the installed runtime;
 contracts and generated bindings remain unchanged.
+
+## Agent configuration discovery and duplication
+
+Five operations maintain a bounded agent configuration registry: `GET
+/v1/convai/agents`, `GET`/`DELETE /v1/convai/agents/{agent_id}`, `GET
+/v1/convai/agents/summaries`, and `POST /v1/convai/agents/{agent_id}/duplicate`.
+Startup and `reset` restore fictional `sim-agent` in `api/scenarios/agents.ts`.
+`emptyAgents` clears agents, allocation counters and mutation timestamps while
+restoring scenario-owned defaults. Contexts start empty and isolate instances.
+Reads return defensive copies. The canonical `agents` map stores each
+`configuration` and `creatorUserId`, so later domains can derive actual references.
+The small root context remains unchanged; a nested agents context owns this slice.
+
+Lists support case-insensitive name substring search, exact archived status,
+creator IDs (`@me` means the fictional `sim-user`), ownership, and matching any
+supplied tag. A creator filter takes precedence over ownership. Omitted archived
+status includes both states. Sorting supports `name`, `created_at` (default), and
+`updated_at`, descending by default with ascending agent-ID ties. `call_count_7d`
+is unsupported (400). Filtering precedes pagination; page size defaults to 30
+and accepts 1–100. Cursors are decimal nonnegative integer offsets; offsets beyond
+the end yield empty pages. Invalid queries return 400. The route normalizes the
+installed runtime's nullable boolean text and singleton query array values.
+
+Summaries derive names, voice IDs, tags, archive status, access info and timestamps
+from current stored configuration. Supply 1–100 agent IDs; missing IDs return a
+per-ID failure with `error_code: 404`, alongside successful summaries. No calls
+have occurred, so `last_call_time_unix_secs` is null. Duplicate copies the entire
+supported configuration and tags independently, defaults its name to the source
+name plus ` (copy)`, and assigns a fresh ID, creator/access metadata and time.
+New IDs are `sim-agent-created-N`; timestamps advance one second per successful
+creation or effective internal update from the fixed scenario baseline. Invalid
+duplicate names do not allocate IDs. Deletion returns empty 204; missing agents
+return 404. `force=true`, branch/version selectors, and requests for generated
+workflow elements return 400. There are no subagent cleanup or branch semantics.
+
+The directly tested context helpers also support bounded configuration creation
+and partial updates for duplication and REPL use. Supported fields are name,
+tags, `conversation_config.agent.first_message`, `language`, and prompt fields
+`prompt`, `llm`, `temperature`, `max_tokens`, `tool_ids`, `tools`; TTS accepts
+`voice_id`, and platform settings accept `archived`. The supported LLM names are
+`gemini-3.5-flash`, `gemini-2.5-flash`, `gpt-4o`, and `gpt-4o-mini`. Inline tools
+accept only client configuration with explicit `type: "client"`, name,
+description, optional `expects_response`, and `response_timeout_secs` (1–120,
+or -1 when expecting a response). Other fields, workflow and procedures are
+rejected. Partial updates merge nested fixed objects; arrays replace, including
+empty arrays. Top-level null name/tags/config/platform fields preserve existing
+values; nested temperature null is stored. Empty or unchanged updates preserve
+timestamps. IDs, defaults, merge/null rules, cursor ordering and errors are local
+simulator conventions. No LLM, tool, audio, network, permission or reference
+resolution behavior is performed. Configured tool IDs need not exist.
+
+HTTP agent creation and PATCH remain generated and are not counted as authored
+behavior. Their recursive request schemas crash the installed runtime's AJV
+validation before the handler executes, even for finite minimal bodies
+([upstream #2613](https://github.com/counterfact/api-simulator/issues/2613)).
+Request validation stays enabled; contracts remain unchanged and bindings are
+regenerated normally.
+Use startup/reset fixtures and duplication for the supported HTTP lifecycle.
+Agent workflows, versions, deployment and execution endpoints remain generated.
 
 ## Development
 

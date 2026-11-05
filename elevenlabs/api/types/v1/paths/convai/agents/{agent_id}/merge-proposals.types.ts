@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/convai/agents/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Create_a_merge_proposal_v1_convai_agents__agent_id__merge_proposals_post } from "../../../../components/schemas/Body_Create_a_merge_proposal_v1_convai_agents__agent_id__merge_proposals_post.js";
 import type { CreateAgentMergeProposalResponseModel } from "../../../../components/schemas/CreateAgentMergeProposalResponseModel.js";
