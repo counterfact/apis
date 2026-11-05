@@ -47,6 +47,7 @@ test("account endpoints share quota state, reset fixtures, and isolate simulator
   };
   const user = await read("/v1/user");
   const subscription = await read("/v1/user/subscription");
+  const initialModels = await read("/v1/models");
   assert.equal(user.user_id, "sim-user");
   assert.equal(user.created_at, 1735689600);
   assert.deepEqual(await read("/v1/user"), user);
@@ -70,5 +71,5 @@ test("account endpoints share quota state, reset fixtures, and isolate simulator
   assert.deepEqual(await read("/v1/user"), user);
   assert.deepEqual(await read("/v1/user/subscription"), subscription);
   assert.equal((await read("/v1/voices")).voices.length, 2);
-  assert.equal((await read("/v1/models")).length, 8);
+  assert.deepEqual(await read("/v1/models"), initialModels);
 });

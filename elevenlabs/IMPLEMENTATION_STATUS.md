@@ -1,6 +1,6 @@
-# ElevenLabs implementation after Counterfact 3.2.1
+# ElevenLabs implementation status
 
-437 canonical operations: 431 authored, six generated. The pinned contracts and
+Counterfact 3.2.2 / runtime 0.4.2. 437 canonical operations: 431 authored, six generated. The pinned contracts and
 provenance hashes are unchanged. No request validation bypass or manual generated
 schema edits were introduced. V2 voice discovery shares the existing V1 voice
 store; all 37 newly authored operations below are V1 operations.
@@ -51,8 +51,8 @@ limits are explicit per slice rather than silently pretending to execute them.
 
 ## Remaining runtime issues and verification
 
-[Six generated operations](BLOCKED_OPERATIONS.md) still abort in the pinned
-runtime due to #2626. The other reproduced observations (#2627, #2631, #2632)
+[Six generated operations](BLOCKED_OPERATIONS.md) are now unblocked by 0.4.2 and
+await implementation. #2626 and #2627 have published fixes. The remaining observations (#2631, #2632)
 are recorded in [the issue index](COUNTERFACT_ISSUES.md). Error tags and explicit
 optional-body defaults keep supported simulator behavior usable without altering
 contracts or disabling validators.

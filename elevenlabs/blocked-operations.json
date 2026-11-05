@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "runtime": {
-    "counterfact": "3.2.1",
-    "@counterfact/runtime": "0.4.1"
+    "counterfact": "3.2.2",
+    "@counterfact/runtime": "0.4.2"
   },
   "coverage": {
     "contractOperations": 437,
@@ -11,7 +11,7 @@
     "multipartBlocked": 0,
     "multipartRequiredBody": 0,
     "multipartOptionalBody": 0,
-    "recursiveJsonBlocked": 6,
+    "recursiveJsonBlocked": 0,
     "unclassified": 0,
     "versions": {
       "v1": 436,
@@ -30,7 +30,7 @@
       "operationId": "patch_agent_settings_route",
       "routeFile": "api/routes/convai/agents/{agent_id}.ts",
       "generatedKind": "random",
-      "blocker": "recursive-json-request",
+      "blocker": "implementation-backlog",
       "issue": 2626,
       "requestMedia": [
         "application/json"
@@ -39,8 +39,8 @@
       "requestSchemaRefs": {
         "application/json": "#/components/schemas/Body_Patches_an_Agent_settings_v1_convai_agents__agent_id__patch"
       },
-      "evidence": "shared-schema-expansion-runtime-0.4.1",
-      "reason": "Exact-template full-contract probes abort before handler entry under the bounded heap in runtime 0.4.1; shared schema expansion also has an independent synthetic reproducer. The upstream fix is merged but absent from this pinned release."
+      "evidence": "runtime-0.4.2-bounded-probes",
+      "reason": "Counterfact 3.2.2/runtime 0.4.2 accepts the finite valid exact-template request and rejects its invalid control; runtime blocker resolved, simulator behavior pending implementation."
     },
     {
       "version": "v1",
@@ -49,7 +49,7 @@
       "operationId": "create_branch_route",
       "routeFile": "api/routes/convai/agents/{agent_id}/branches.ts",
       "generatedKind": "random",
-      "blocker": "recursive-json-request",
+      "blocker": "implementation-backlog",
       "issue": 2626,
       "requestMedia": [
         "application/json"
@@ -58,8 +58,8 @@
       "requestSchemaRefs": {
         "application/json": "#/components/schemas/Body_Create_a_new_branch_v1_convai_agents__agent_id__branches_post"
       },
-      "evidence": "shared-schema-expansion-runtime-0.4.1",
-      "reason": "Exact-template full-contract probes abort before handler entry under the bounded heap in runtime 0.4.1; shared schema expansion also has an independent synthetic reproducer. The upstream fix is merged but absent from this pinned release.",
+      "evidence": "runtime-0.4.2-bounded-probes",
+      "reason": "Counterfact 3.2.2/runtime 0.4.2 accepts the finite valid exact-template request and rejects its invalid control; runtime blocker resolved, simulator behavior pending implementation.",
       "syntheticProbeBody": {
         "parent_version_id": "probe",
         "name": "Probe",
@@ -73,7 +73,7 @@
       "operationId": "create_agent_draft_route",
       "routeFile": "api/routes/convai/agents/{agent_id}/drafts.ts",
       "generatedKind": "random",
-      "blocker": "recursive-json-request",
+      "blocker": "implementation-backlog",
       "issue": 2626,
       "requestMedia": [
         "application/json"
@@ -82,8 +82,8 @@
       "requestSchemaRefs": {
         "application/json": "#/components/schemas/Body_Create_agent_draft_v1_convai_agents__agent_id__drafts_post"
       },
-      "evidence": "shared-schema-expansion-runtime-0.4.1",
-      "reason": "Exact-template full-contract probes abort before handler entry under the bounded heap in runtime 0.4.1; shared schema expansion also has an independent synthetic reproducer. The upstream fix is merged but absent from this pinned release.",
+      "evidence": "runtime-0.4.2-bounded-probes",
+      "reason": "Counterfact 3.2.2/runtime 0.4.2 accepts the finite valid exact-template request and rejects its invalid control; runtime blocker resolved, simulator behavior pending implementation.",
       "syntheticProbeBody": {
         "conversation_config": {},
         "platform_settings": {},
@@ -105,7 +105,7 @@
       "operationId": "run_agent_test_suite_route",
       "routeFile": "api/routes/convai/agents/{agent_id}/run-tests.ts",
       "generatedKind": "random",
-      "blocker": "recursive-json-request",
+      "blocker": "implementation-backlog",
       "issue": 2626,
       "requestMedia": [
         "application/json"
@@ -114,8 +114,8 @@
       "requestSchemaRefs": {
         "application/json": "#/components/schemas/RunAgentTestsRequestModel"
       },
-      "evidence": "shared-schema-expansion-runtime-0.4.1",
-      "reason": "Exact-template full-contract probes abort before handler entry under the bounded heap in runtime 0.4.1; shared schema expansion also has an independent synthetic reproducer. The upstream fix is merged but absent from this pinned release."
+      "evidence": "runtime-0.4.2-bounded-probes",
+      "reason": "Counterfact 3.2.2/runtime 0.4.2 accepts the finite valid exact-template request and rejects its invalid control; runtime blocker resolved, simulator behavior pending implementation."
     },
     {
       "version": "v1",
@@ -124,7 +124,7 @@
       "operationId": "create_agent_route",
       "routeFile": "api/routes/convai/agents/create.ts",
       "generatedKind": "random",
-      "blocker": "recursive-json-request",
+      "blocker": "implementation-backlog",
       "issue": 2626,
       "requestMedia": [
         "application/json"
@@ -133,8 +133,8 @@
       "requestSchemaRefs": {
         "application/json": "#/components/schemas/Body_Create_Agent_v1_convai_agents_create_post"
       },
-      "evidence": "shared-schema-expansion-runtime-0.4.1",
-      "reason": "Exact-template full-contract probes abort before handler entry under the bounded heap in runtime 0.4.1; shared schema expansion also has an independent synthetic reproducer. The upstream fix is merged but absent from this pinned release."
+      "evidence": "runtime-0.4.2-bounded-probes",
+      "reason": "Counterfact 3.2.2/runtime 0.4.2 accepts the finite valid exact-template request and rejects its invalid control; runtime blocker resolved, simulator behavior pending implementation."
     },
     {
       "version": "v1",
@@ -143,7 +143,7 @@
       "operationId": "resubmit_tests_route",
       "routeFile": "api/routes/convai/test-invocations/{test_invocation_id}/resubmit.ts",
       "generatedKind": "random",
-      "blocker": "recursive-json-request",
+      "blocker": "implementation-backlog",
       "issue": 2626,
       "requestMedia": [
         "application/json"
@@ -152,8 +152,8 @@
       "requestSchemaRefs": {
         "application/json": "#/components/schemas/ResubmitTestsRequestModel"
       },
-      "evidence": "shared-schema-expansion-runtime-0.4.1",
-      "reason": "Exact-template full-contract probes abort before handler entry under the bounded heap in runtime 0.4.1; shared schema expansion also has an independent synthetic reproducer. The upstream fix is merged but absent from this pinned release."
+      "evidence": "runtime-0.4.2-bounded-probes",
+      "reason": "Counterfact 3.2.2/runtime 0.4.2 accepts the finite valid exact-template request and rejects its invalid control; runtime blocker resolved, simulator behavior pending implementation."
     }
   ]
 }

@@ -5,10 +5,9 @@ Multi-version Counterfact simulator generated from the official
 
 ## Current implementation
 
-This checkout pins Counterfact 3.2.1 / runtime 0.4.1. There are **431 authored
-operations out of 437**, with six shared-agent-schema requests blocked before
-handler entry by #2626. The source fix is merged but absent from the pinned
-release. All 30 formerly blocked multipart operations and seven formerly blocked
+This checkout pins Counterfact 3.2.2 / runtime 0.4.2. There are **431 authored
+operations out of 437**. The six remaining operations are now unblocked by the
+published schema-memory fix and await their final behavior slices. All 30 formerly blocked multipart operations and seven formerly blocked
 JSON operations now have tested behavior.
 
 [Implementation summary](IMPLEMENTATION_STATUS.md) maps the 37 newly authored
@@ -149,7 +148,7 @@ and restores quota. Instances isolate state and responses return copies.
 
 ## Run
 
-Requires Node.js 22.22 or newer. Counterfact is pinned to 3.2.1 (runtime 0.4.1).
+Requires Node.js 22.22 or newer. Counterfact is pinned to 3.2.2 (runtime 0.4.2).
 
 ```sh
 cd elevenlabs
@@ -177,12 +176,10 @@ per-file hashes, operation counts, and exclusion.
 
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
-and combined route types. Of 437 operations, 431 have authored behavior. The six
-remaining generated operations share the runtime 0.4.1 schema-expansion blocker
-[#2626](https://github.com/counterfact/api-simulator/issues/2626). The exact set is
-in [the current inventory](BLOCKED_OPERATIONS.md) and
-[machine-readable manifest](blocked-operations.json). No operations are missing,
-empty or unclassified. No real speech synthesis or provider inference runs.
+and combined route types. Of 437 operations, 431 have authored behavior. Six
+newly unblocked JSON mutations await implementation. The exact backlog is in
+[the inventory](BLOCKED_OPERATIONS.md) and [manifest](blocked-operations.json).
+No operations are missing, empty or unclassified. No real provider inference runs.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -773,12 +770,10 @@ timestamps. IDs, defaults, merge/null rules, cursor ordering and errors are loca
 simulator conventions. No LLM, tool, audio, network, permission or reference
 resolution behavior is performed. Configured tool IDs need not exist.
 
-HTTP agent creation and PATCH remain generated and uncounted. Their shared
-configuration schema graphs exhaust memory before handler entry in runtime 0.4.1
-([#2626](https://github.com/counterfact/api-simulator/issues/2626)). Branch and draft
-creation plus test invocation execution/resubmission share the current blocker.
-Other authored agent lifecycle, procedures and simulation operations are described
-below. Contracts remain unchanged and validation stays enabled.
+HTTP agent creation/PATCH plus branch/draft creation are newly unblocked by
+runtime 0.4.2 and are being implemented. Existing authored lifecycle, procedures
+and simulation operations are described below. Contracts remain unchanged and
+validation stays enabled.
 
 ## Tool configuration and execution history
 
@@ -1828,7 +1823,7 @@ reflect duplication/deletion/reset, return defensive copies and isolate instance
 Run `agentWidgetConfiguration` to add fictional styling, a Spanish first-message
 preset and text-only/file-input metadata to `sim-agent`; reset restores the base
 agent configuration. Fixtures and this setup action live in `api/scenarios/agents.ts`.
-Agent create/PATCH remain blocked by shared-schema expansion in runtime 0.4.1 (#2626). Contracts and request
+Agent create/PATCH are newly unblocked by runtime 0.4.2; see the current inventory. Contracts and request
 and response validation remain unchanged.
 
 
@@ -2246,11 +2241,9 @@ can be renamed after its live agent or test is deleted. Missing invocation IDs
 return 404; invalid requests return 400 without changes. Reset restores baseline
 names, and instances isolate edits.
 
-Run-tests and resubmit remain generated and uncounted because their shared
-configuration-override schema graphs exhaust memory before handler entry in
-runtime 0.4.1 (#2626), even when the override is omitted. Finite invocation PATCH
-controls work, including invalid-name rejection. Contracts and validation remain
-unchanged; see the [current blocker inventory](BLOCKED_OPERATIONS.md).
+Run-tests and resubmit are newly unblocked by runtime 0.4.2 and await their
+behavior slice. Their valid finite requests now pass validation and invalid
+controls return 400. See the [current backlog](BLOCKED_OPERATIONS.md).
 
 ## Local LLM usage estimates
 

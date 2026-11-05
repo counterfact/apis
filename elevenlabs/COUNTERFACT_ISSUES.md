@@ -1,6 +1,6 @@
 # Counterfact runtime observations
 
-This checkout pins Counterfact 3.2.1 and runtime 0.4.1. Contracts are unchanged;
+This checkout pins Counterfact 3.2.2 and runtime 0.4.2. Contracts are unchanged;
 request and response validation remain enabled. Generated bindings were refreshed.
 Old collection-context assertions and scalar query-coercion workarounds were
 removed. Optional object-body operations now use their existing empty-object
@@ -8,20 +8,19 @@ semantics when the body is omitted, while preserving explicit invalid inputs.
 The Dispatcher harness is a deliberate project test boundary, not a compatibility
 workaround; multipart tests supply the runtime's public parsed MultipartFile shape.
 
-## Reproduced observations in the pinned release
+## Runtime observations and resolved reports
 
 | Issue | Reproduction and effect | Project behavior |
 | --- | --- | --- |
-| [#2626](https://github.com/counterfact/api-simulator/issues/2626) | Shared schema graphs expand until heap exhaustion; six full-contract agent mutation requests abort before their handlers. A synthetic graph has a successful small control and bounded failing larger control. | Six operations remain generated and uncounted. The upstream source fix is merged but absent from this pin. |
-| [#2627](https://github.com/counterfact/api-simulator/issues/2627) | A scalar numeric query such as `count=3600junk` reaches the handler as 3600. | No duplicate transport parser is added. Business numeric validation cannot recover text already discarded by the runtime. |
+| [#2626](https://github.com/counterfact/api-simulator/issues/2626) | Shared schema graphs expand until heap exhaustion; six full-contract agent mutation requests abort before their handlers. A synthetic graph has a successful small control and bounded failing larger control. | Fixed in 0.4.2. The same bounded depth-22 control now succeeds; all six full-contract requests validate. Their simulator behavior is being implemented. |
+| [#2627](https://github.com/counterfact/api-simulator/issues/2627) | A scalar numeric query such as `count=3600junk` reaches the handler as 3600. | Fixed in 0.4.2: malformed suffixes and non-integer values for integer queries return 400; valid exponent conversion is preserved. No duplicate transport parser is added. |
 | [#2631](https://github.com/counterfact/api-simulator/issues/2631) | First new ModuleLoader preserves class identity; second and third fresh loaders over unchanged plain ESM files break context and custom-error instanceof checks. | Existing stable application error tags remain useful across loader instances; no claim that all class-identity cases are fixed. |
 | [#2632](https://github.com/counterfact/api-simulator/issues/2632) | Generated optional object request bodies omit undefined even though the runtime passes undefined for a valid absent body. | Context entry points explicitly supply meaningful defaults for omitted bodies. Contracts and generated files are not hand-edited. |
 
 Multipart parsing/types, collection context bindings, version routing, malformed
 boolean rejection, nullable primitive conversion, array query normalization and
 optional-body runtime validation have upstream fixes in this pin. Tools, agent
-tests, conversation simulation and Flows request validation now work. The six
-shared-agent-schema exceptions and their exact operation set are recorded in
+tests, conversation simulation and Flows request validation now work. The six newly unblocked operations awaiting implementation are recorded in
 [BLOCKED_OPERATIONS.md](BLOCKED_OPERATIONS.md).
 
 The original reports below describe 3.1.0 / 0.3.2 and are retained as historical

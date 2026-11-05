@@ -1,21 +1,29 @@
-# Remaining generated operations
+# Remaining implementation backlog
 
-Counterfact 3.2.1 and runtime 0.4.1 are installed. The contracts contain 437
-operations: 431 authored and six generated, with no missing or empty handlers.
-The 37 formerly blocked multipart/JSON operations that now work were implemented
-in separate verified slices. The six remaining operations exhaust memory during
-request validation before the handler runs; they are not counted as implemented.
+Counterfact 3.2.2 and runtime 0.4.2 resolve the schema-memory blocker. The shared
+schema depth-22 reproducer now returns 200 under 256 MiB; malformed scalar numeric
+queries return 400. All six pending operations accept valid exact-template
+requests and reject invalid controls before handler entry. The draft control
+includes its required branch_id query and a valid start workflow node.
 
-| Method | Path | Current blocker |
+The contracts still contain 437 operations: 431 authored and six awaiting their
+behavior slices. None is currently classified as runtime-blocked. Validators and
+contracts are unchanged. The current inventory is checked by
+`npm run audit:operations -- --check-blockers` (the script/filename retain their
+historical names).
+
+| Method | Path | Status |
 | --- | --- | --- |
-| PATCH | `/v1/convai/agents/{agent_id}` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
-| POST | `/v1/convai/agents/{agent_id}/branches` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
-| POST | `/v1/convai/agents/{agent_id}/drafts` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
-| POST | `/v1/convai/agents/{agent_id}/run-tests` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
-| POST | `/v1/convai/agents/create` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
-| POST | `/v1/convai/test-invocations/{test_invocation_id}/resubmit` | [#2626](https://github.com/counterfact/api-simulator/issues/2626) |
+| PATCH | `/v1/convai/agents/{agent_id}` | Runtime validation works; implementation pending |
+| POST | `/v1/convai/agents/{agent_id}/branches` | Runtime validation works; implementation pending |
+| POST | `/v1/convai/agents/{agent_id}/drafts` | Runtime validation works; implementation pending |
+| POST | `/v1/convai/agents/{agent_id}/run-tests` | Runtime validation works; implementation pending |
+| POST | `/v1/convai/agents/create` | Runtime validation works; implementation pending |
+| POST | `/v1/convai/test-invocations/{test_invocation_id}/resubmit` | Runtime validation works; implementation pending |
 
-## Shared-schema expansion (runtime 0.4.1)
+The evidence below describes earlier pinned releases, not 0.4.2.
+
+## Historical shared-schema expansion (runtime 0.4.1)
 
 Exact-template probes register a custom finite handler against the unchanged V1
 contract, send finite JSON requests, and keep both validators enabled. The six
