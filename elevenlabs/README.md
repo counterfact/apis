@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 427 operations retain their
+the stateful voices implementation. The remaining 426 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -123,6 +123,24 @@ Voice metadata editing remains generated. Its contract requires multipart form
 data, which the pinned Counterfact runtime's default body parser does not
 parse. That operation needs [runtime multipart support](https://github.com/counterfact/api-simulator/issues/2607)
 before it can be simulated faithfully.
+
+## Speech history listing
+
+`GET /v1/history` returns two synthetic historical metadata items, newest first.
+These fixtures do not represent generated audio; audio retrieval remains generated.
+Startup and `reset` populate `api/scenarios/history.ts`. Run `.scenario emptyHistory`
+(or `app.scenario("emptyHistory", "api")`) to exercise an empty collection.
+
+Listing supports `page_size` (1–1000, default 100),
+`start_after_history_item_id`, `voice_id`, `model_id`, `source`, `search`,
+`date_before_unix` (exclusive), `date_after_unix` (inclusive), and
+`sort_direction` (`asc` or `desc`, default `desc`). Filters combine with AND;
+search is a case-insensitive substring of the stored text, a local convention.
+Equal timestamps sort by history ID in the same direction for stable pagination.
+The cursor identifies a record in the complete sorted collection before filtering;
+unknown cursors return HTTP 400. Invalid page sizes also return HTTP 400.
+The final returned item's ID and timestamp populate `last_history_item_id` and
+`scanned_until`; empty pages return null for both. Responses are defensive copies.
 
 ## Account and subscription discovery
 

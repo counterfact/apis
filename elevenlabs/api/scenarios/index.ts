@@ -1,5 +1,7 @@
 import type { Scenario } from "../types/index.js";
 import { defaultSettings } from "../routes/_.context.js";
+import { resetHistory } from "./history.js";
+export { emptyHistory } from "./history.js";
 import { resetModels } from "./models.js";
 import { resetAccount } from "./account.js";
 export { emptyModels } from "./models.js";
@@ -7,6 +9,7 @@ export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
   resetModels($);
+  resetHistory($);
   resetAccount($);
   $.context.voices = new Map(
     ["sim-narrator", "sim-assistant"].map((voice_id, index) => [
