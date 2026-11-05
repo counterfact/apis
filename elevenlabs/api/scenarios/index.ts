@@ -1,3 +1,5 @@
+import {resetLegacyDubbing} from "./legacy-dubbing.js";
+export {emptyLegacyDubbing} from "./legacy-dubbing.js";
 import {resetWorkspaceRecords} from "./workspace-records.js";
 export {emptyWorkspaceRecords} from "./workspace-records.js";
 import {resetDubbingResources} from "./dubbing-resources.js";
@@ -74,6 +76,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetLegacyDubbing($);
   resetWorkspaceRecords($);
   resetDubbingProjects($);
   resetDubbingResources($);

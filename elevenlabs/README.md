@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 250 now have authored
-behavior. The remaining 187 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 255 now have authored
+behavior. The remaining 182 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1666,3 +1666,28 @@ and one anonymous conversation for discovery testing. The setup replaces only
 its own records; `reset` removes them and restores baseline contacts.
 `emptyConversations` clears users too, and instances isolate their state.
 These filter bounds, ties, unscored values and errors are local simulator behavior.
+
+
+## Legacy dubbing history and transcript exports
+
+Five deprecated operations now share separate historical records: list, detail,
+delete, and both transcript export routes. Startup/reset seed completed
+`sim-legacy-dub` and pending `sim-legacy-pending`; `emptyLegacyDubbing` clears
+these records. Newer dubbing-project and resource records are independent.
+Contexts start empty, responses are defensive copies, and instances isolate state.
+
+List filters combine with AND, including the legacy single status and newer
+status list. Array values accept repeated parameters or one value (the local
+normalization for Counterfact #2615). Model, target language, creation source and
+personal/others creator metadata are synthetic fixture fields. List ordering uses
+created_at or name, descending by default, with ascending ID ties. Decimal-offset
+cursors paginate 1–200 records (default 100); invalid options return 400.
+
+Both export routes use the same stored utterances and support SRT, WebVTT and
+JSON. `source` aliases the stored source language. The singular route returns
+plain text for subtitles and JSON for transcripts; the plural route returns the
+contract's format wrapper. Pending records return 425; missing dubs/languages
+return 404. Deleting a dub removes its metadata and transcripts; reset restores
+both. No transcription, translation, media processing, billing or network call
+runs. These errors, cursor, tie and filter combination rules are local conventions.
+Multipart creation and audio retrieval remain generated and uncounted.
