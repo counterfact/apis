@@ -1,3 +1,5 @@
+import type { ContentSchema } from "../../../types/v1/components/schemas/ContentSchema.js";
+import type { TemplateRunCreateRequest } from "../../../types/v1/components/schemas/TemplateRunCreateRequest.js";
 import type { TemplateSummary } from "../../../types/v1/components/schemas/TemplateSummary.js";
 import type { TemplateVersion } from "../../../types/v1/components/schemas/TemplateVersion.js";
 import type { TemplateRunResponse } from "../../../types/v1/components/schemas/TemplateRunResponse.js";
@@ -8,9 +10,36 @@ export type StoredTemplate = {
   description: string | null;
   updatedAt: number;
   listable: boolean;
-  versions: { value: TemplateVersion; runnable: boolean }[];
+  versions: { value: TemplateVersion; runnable: boolean; completionContent?: Record<string, string> }[];
 };
-export type StoredRun = { value: TemplateRunResponse; createdAt: number };
+export type StoredRun = {
+  value: TemplateRunResponse;
+  createdAt: number;
+  execution?: {
+    request: TemplateRunCreateRequest;
+    version: TemplateVersion;
+    completionContent: Record<string, string>;
+  };
+};
+const invalidRun = (code = "invalid_template_inputs"): never => {
+  throw new TemplateError(400, code);
+};
+const object = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+// Bind the actual selected version's schema, rather than only the wire union.
+const accepts = (schema: ContentSchema, value: unknown): boolean => {
+  switch (schema.type) {
+    case "string": return typeof value === "string" &&
+      (schema.enum == null || schema.enum.includes(value));
+    case "number": return typeof value === "number" && Number.isFinite(value) &&
+      (schema.enum == null || schema.enum.includes(value));
+    case "integer": return typeof value === "number" && Number.isInteger(value);
+    case "boolean": return typeof value === "boolean";
+    case "array": return Array.isArray(value) && value.every(item => accepts(schema.items, item));
+    default: return false; // Reference/media resolution and object binding are unsupported locally.
+  }
+};
 export class TemplateError extends Error {
   override name = "TemplateError";
   constructor(
@@ -47,6 +76,56 @@ const offset = (value: unknown) => {
 export class Context {
   templates = new Map<string, StoredTemplate>();
   records = new Map<string, StoredRun>();
+  nextRunId = 1;
+  runClock = 0;
+  createRun(templateId: string, input: unknown): TemplateRunResponse {
+    const template = this.template(templateId);
+    if (!object(input) || !object(input.inputs) ||
+      (input.version_id != null && typeof input.version_id !== "string")) return invalidRun();
+    if (input.webhook != null) return invalidRun("unsupported_template_webhook");
+    const requested = input.version_id ?? "latest";
+    const selected = requested === "latest"
+      ? template.versions.find(version => version.value.is_latest)
+      : template.versions.find(version => version.value.version_id === requested);
+    if (!selected) throw new TemplateError(404, "template_version_not_found");
+    if (!selected.runnable) return invalidRun("template_version_unavailable");
+    const version = selected.value;
+    const inputs = input.inputs;
+    if (Object.keys(inputs).length !== version.inputs.length ||
+      !version.inputs.every(port => Object.hasOwn(inputs, port.id) && accepts(port.content_schema, inputs[port.id])))
+      return invalidRun();
+    // Only scenario-backed text output execution is provided by this local subset.
+    const completion = selected.completionContent;
+    if (!completion || version.outputs.some(port => port.content_schema.type !== "string" ||
+      !Object.hasOwn(completion, port.id) || !accepts(port.content_schema, completion[port.id])))
+      return invalidRun("unsupported_template_outputs");
+    const id = `sim-template-created-${this.nextRunId}`;
+    const outputs: TemplateRunResponse["outputs"] = Object.fromEntries(version.outputs.map(port => [port.id, {
+      id: `${id}-${port.id}`, type: "string" as const, status: "pending" as const,
+    }]));
+    const value: TemplateRunResponse = { id, template_id: templateId,
+      version_id: version.version_id, status: version.outputs.length ? "pending" : "completed", outputs };
+    this.records.set(id, { value, createdAt: this.runClock,
+      execution: structuredClone({ request: input as TemplateRunCreateRequest, version, completionContent: completion }),
+    });
+    this.nextRunId++;
+    this.runClock++;
+    return structuredClone(value);
+  }
+  completeRun(runId: string, content: Record<string, string>) {
+    const record = this.records.get(runId);
+    if (!record) throw new TemplateError(404, "template_run_not_found");
+    if (["completed", "failed"].includes(record.value.status)) return;
+    const version = record.execution?.version;
+    if (!version || Object.keys(content).length !== version.outputs.length ||
+      !version.outputs.every(port => Object.hasOwn(content, port.id) && accepts(port.content_schema, content[port.id])))
+      return invalidRun("invalid_template_outputs");
+    const outputs: TemplateRunResponse["outputs"] = Object.fromEntries(version.outputs.map(port => [port.id, {
+      id: record.value.outputs[port.id].id, type: "string" as const,
+      status: "completed" as const, content: content[port.id],
+    }]));
+    record.value = { ...record.value, status: "completed", outputs };
+  }
   private template(id: string) {
     const result = this.templates.get(id);
     if (!result) throw new TemplateError(404, "template_not_found");

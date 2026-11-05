@@ -3,6 +3,8 @@ export const emptyFlowTemplates: Scenario = ($) => {
   const context = $.loadContext("/flows/templates");
   context.templates = new Map();
   context.records = new Map();
+  context.nextRunId = 1;
+  context.runClock = 1735689900;
 };
 export const resetFlowTemplates: Scenario = ($) => {
   emptyFlowTemplates($);
@@ -20,6 +22,7 @@ export const resetFlowTemplates: Scenario = ($) => {
       listable,
       versions: [2, 1].map((number) => ({
         runnable: id !== "sim-template-unavailable",
+        completionContent: { result: "Synthetic template result" },
         value: {
           version_id: `${id}-v${number}`,
           published_at_unix: 1735689600 + number,
@@ -75,4 +78,12 @@ export const resetFlowTemplates: Scenario = ($) => {
       },
     },
   });
+};
+
+/** Resolve local queued text runs using the fixture captured when each run began. */
+export const completeFlowTemplateRuns: Scenario = ($) => {
+  const context = $.loadContext("/flows/templates");
+  for (const [id, record] of context.records)
+    if (record.execution && record.value.status === "pending")
+      context.completeRun(id, record.execution.completionContent);
 };
