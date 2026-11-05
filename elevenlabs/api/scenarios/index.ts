@@ -1,3 +1,5 @@
+import { resetAssets } from "./assets.js";
+export { emptyAssets } from "./assets.js";
 import { resetMusicFinetunes } from "./music-finetunes.js";
 export { emptyMusicFinetunes } from "./music-finetunes.js";
 import {resetLegacyDubbing} from "./legacy-dubbing.js";
@@ -78,6 +80,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetAssets($);
   resetMusicFinetunes($);
   resetLegacyDubbing($);
   resetWorkspaceRecords($);

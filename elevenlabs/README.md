@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 259 now have authored
-behavior. The remaining 178 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 262 now have authored
+behavior. The remaining 175 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1715,3 +1715,22 @@ private or workspace; updates never alter training status/progress. Invalid
 updates leave state unchanged. DELETE returns the removed metadata, and later
 reads and lists reflect removal. `emptyMusicFinetunes` clears records; reset
 restores the baseline, and simulator instances isolate their changes.
+
+
+## Asset metadata
+
+Three asset operations now list, read and delete scenario-owned local metadata.
+Startup/reset seed `sim-asset-audio` and `sim-asset-pending` in
+`api/scenarios/assets.ts`. Contexts start empty; `emptyAssets` clears records.
+The ready fixture uses a synthetic `simulator.invalid` URL that serves no content;
+the pending fixture has a null URL. No upload, processing, signed URL generation,
+network request or billing occurs. Multipart upload remains generated and uncounted.
+
+Lists sort newest first with ascending asset-ID ties. Case-insensitive name search
+runs before decimal-offset cursor pagination (1–100 records, default 30). Empty or
+beyond-end pages return an empty collection and null cursor. Invalid query values
+return 400. Missing/deleted asset reads and repeated deletes return 404. Successful
+deletion returns an empty 204 response and removes only that asset. Existing Flows
+generation records are separate metadata and remain unchanged. Reads return copies,
+instances isolate changes and reset restores baseline. Search, cursor, tie ordering
+and error conventions are local behavior; contracts and validation remain unchanged.

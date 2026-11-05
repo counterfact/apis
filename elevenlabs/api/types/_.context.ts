@@ -31,6 +31,7 @@ import type { Context as WorkspaceAuthConnectionsContext } from "../routes/works
 import type { Context as WorkspaceGroupsContext } from "../routes/workspace/groups/_.context";
 import type { Context as WorkspaceWebhooksContext } from "../routes/workspace/webhooks/_.context";
 import type { Context as WorkspacesApiKeysContext } from "../routes/workspaces/api-keys/_.context";
+import type { Context as AssetsContext } from "../routes/assets/_.context";
 import type { Context as DubbingContext } from "../routes/dubbing/_.context";
 import type { Context as FlowsContext } from "../routes/flows/_.context";
 import type { Context as HistoryContext } from "../routes/history/_.context";
@@ -135,6 +136,7 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/workspaces/api-keys" | `/workspaces/api-keys/${string}`,
   ): WorkspacesApiKeysContext;
+  loadContext(path: "/assets" | `/assets/${string}`): AssetsContext;
   loadContext(path: "/dubbing" | `/dubbing/${string}`): DubbingContext;
   loadContext(path: "/flows" | `/flows/${string}`): FlowsContext;
   loadContext(path: "/history" | `/history/${string}`): HistoryContext;
