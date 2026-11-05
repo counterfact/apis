@@ -14,4 +14,16 @@ export const GET: Route["GET"] = async ($) => {
     throw error;
   }
 };
-export const POST: Route["POST"] = async ($) => $.response.status(200).random();
+export const POST: Route["POST"] = async ($) => {
+  try {
+    return $.response.status(200).json($.context.create($.body));
+  } catch (error) {
+    if (error instanceof Error && error.name === "LegacyDubbingError") {
+      const e = error as Error & { status: number; code: string };
+      return $.x.response
+        .status(e.status)
+        .json({ detail: { status: e.code, message: e.message } });
+    }
+    throw error;
+  }
+};

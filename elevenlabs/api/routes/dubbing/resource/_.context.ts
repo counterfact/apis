@@ -24,6 +24,13 @@ const invalid = (): never =>
   );
 const clone = <T>(v: T): T => structuredClone(v);
 export class Context {
+  removeCreated(id: string) {
+    this.resources.delete(id);
+    this.jobs.delete(id);
+    for (const key of this.speakerSettings.keys())
+      if (key.startsWith(`${id}/`)) this.speakerSettings.delete(key);
+  }
+
   jobs = new Map<string, {kind: "transcribe" | "translate" | "dub" | "render"; snapshot: DubbingResource; segments: string[]; languages: string[]; renderId?: string}>();
   nextRenderId = 1;
   candidates: import("../../../types/v1/components/schemas/SimilarVoice.js").SimilarVoice[] = [];

@@ -1,3 +1,5 @@
+import {resetDubbingCreation} from "./dubbing-creation.js";
+export {completeDubbingCreation} from "./dubbing-creation.js";
 import {resetSpeechInput} from "./speech-input.js";
 import { resetAudioTransformations } from "./audio-transformations.js";
 import { resetConversationSimulation } from "./conversation-simulation.js";
@@ -211,6 +213,7 @@ export const reset: Scenario = ($) => {
   resetVoiceUploads($);
   resetCollections($);
   resetDubbingProcessing($);
+  resetDubbingCreation($);
 };
 export const startup: Scenario = reset;
 

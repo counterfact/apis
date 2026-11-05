@@ -6,6 +6,7 @@ export const emptyDubbingProjects: Scenario = ($) => {
   c.editedSegments = new Map();
   c.nextSegmentId = 1;
   c.nextLanguageId = 1;
+  c.nextProjectId = 0;
   c.timestamp = "2025-01-01T00:00:00Z";
 };
 export const resetDubbingProjects: Scenario = ($) => {

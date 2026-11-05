@@ -1,3 +1,11 @@
+import {
+  creationObject,
+  creationLanguage,
+  creationSource,
+  type CreationDefaults,
+  type DubbingInput,
+} from "../_.context.js";
+import type { MultipartFile } from "../../../counterfact-types/index.js";
 import type { DubbingProjectResponse } from "../../../types/v1/components/schemas/DubbingProjectResponse.js";
 import type { DubbingLanguageResponse } from "../../../types/v1/components/schemas/DubbingLanguageResponse.js";
 import type { DubbingTranscriptSegment } from "../../../types/v1/components/schemas/DubbingTranscriptSegment.js";
@@ -6,6 +14,7 @@ export type StoredLanguage = {
   translations: Map<string, string | null>;
 };
 export type StoredProject = {
+  input?: DubbingInput;
   metadata: DubbingProjectResponse;
   segments: Map<string, DubbingTranscriptSegment>;
   languages: Map<string, StoredLanguage>;
@@ -34,6 +43,90 @@ const invalid = (): never =>
   );
 const clone = <T>(v: T): T => structuredClone(v);
 export class Context {
+  defaults?: CreationDefaults;
+  sources = new Map<string, MultipartFile>();
+  nextProjectId = 0;
+  create(v: unknown) {
+    if (
+      !creationObject(v) ||
+      Object.keys(v).some(
+        (k) =>
+          ![
+            "file",
+            "source_url",
+            "reference",
+            "source_language",
+            "model_id",
+            "target_language",
+            "transcript",
+            "keyterms",
+            "webhook_ids",
+          ].includes(k),
+      ) ||
+      (v.reference != null &&
+        (typeof v.reference !== "string" || v.reference.length > 500))
+    )
+      return invalid();
+    if (
+      (v.model_id != null &&
+        (typeof v.model_id !== "string" ||
+          !["dubbing_v1", "dubbing_v2"].includes(v.model_id))) ||
+      v.transcript != null ||
+      ["keyterms", "webhook_ids"].some(
+        (k) =>
+          v[k] != null && (!Array.isArray(v[k]) || (v[k] as unknown[]).length),
+      )
+    )
+      return fail(
+        400,
+        "unsupported_dubbing_option",
+        "Option is outside the bounded synthetic workflow",
+      );
+    let sourceLanguage: string | undefined,
+      target: string | undefined,
+      input: DubbingInput;
+    try {
+      sourceLanguage = creationLanguage(v.source_language);
+      target = creationLanguage(v.target_language);
+      input = creationSource(v, this.defaults, this.sources);
+    } catch (error) {
+      if (error instanceof Error && error.name === "LegacyDubbingError") {
+        const e = error as Error & { status: number; code: string };
+        return fail(e.status, e.code, e.message);
+      }
+      throw error;
+    }
+    let n = this.nextProjectId,
+      id: string;
+    do {
+      id = `sim-dubbing-project-created-${++n}`;
+    } while (this.projects.has(id));
+    const metadata: DubbingProjectResponse = {
+      project_id: id,
+      status: "queued",
+      reference: (v.reference as string | null) ?? null,
+      source_language: sourceLanguage ?? null,
+      model_id: (v.model_id as string | null) ?? "dubbing_v2",
+      media: null,
+      language_ids: [],
+      webhook_ids: [],
+      revision: 0,
+      error: null,
+      warnings: [],
+      created_at: this.defaults!.timestamp,
+      updated_at: this.defaults!.timestamp,
+    };
+    this.projects.set(id, {
+      input,
+      metadata,
+      segments: new Map(),
+      languages: new Map(),
+    });
+    if (target) this.createLanguage(id, { target_language: v.target_language });
+    this.nextProjectId = n;
+    return this.project(id);
+  }
+
   editedSegments = new Map<string, Set<string>>();
   regenerations = new Map<string, {projectId: string; languageId: string; revision: number; segments: DubbingTranscriptSegment[]; translations: Map<string, string | null>}>();
   regenerate(pid: string, lid: string) {

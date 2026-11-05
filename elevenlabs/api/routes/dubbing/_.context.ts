@@ -1,7 +1,12 @@
+import { copyUpload } from "../assets/_.context.js";
+import { audioDuration } from "../../support/audio.js";
+import type { MultipartFile } from "../../counterfact-types/index.js";
+import type { Context as Resources } from "./resource/_.context.js";
 import type { DubbingMetadataResponse } from "../../types/v1/components/schemas/DubbingMetadataResponse.js";
 import type { DubbingTranscript } from "../../types/v1/components/schemas/DubbingTranscript.js";
 import type { DubbingTranscriptsResponseModel } from "../../types/v1/components/schemas/DubbingTranscriptsResponseModel.js";
 export type LegacyDub = {
+  input?: DubbingInput;
   metadata: DubbingMetadataResponse;
   model: string;
   creator: "personal" | "others";
@@ -39,12 +44,154 @@ const stamp = (seconds: number, separator: string) => {
   const ms = Math.round(seconds * 1000);
   return `${String(Math.floor(ms / 3600000)).padStart(2, "0")}:${String(Math.floor(ms / 60000) % 60).padStart(2, "0")}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}${separator}${String(ms % 1000).padStart(3, "0")}`;
 };
+export type DubbingInput = { file: MultipartFile; duration: number };
+export type CreationDefaults = {
+  timestamp: string;
+  maxBytes: number;
+  maxDuration: number;
+  autoLanguage: string;
+  sourceText: string;
+};
+export const creationObject = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object" && !Array.isArray(v);
+export function creationLanguage(
+  v: unknown,
+  optional = true,
+): string | undefined {
+  if (v == null && optional) return undefined;
+  if (typeof v !== "string" || !/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(v))
+    return invalid();
+  return v.split("-")[0].toLowerCase();
+}
+export function creationSource(
+  v: Record<string, unknown>,
+  defaults: CreationDefaults | undefined,
+  sources: Map<string, MultipartFile>,
+): DubbingInput {
+  if (!defaults) throw new Error("Run startup or reset");
+  if ((v.file != null) === (v.source_url != null))
+    return fail(400, "dubbing_source_required");
+  let source = v.file;
+  if (v.source_url != null) {
+    if (typeof v.source_url !== "string") return invalid();
+    source = sources.get(v.source_url);
+    if (!source) return fail(400, "unsupported_dubbing_source_url");
+  }
+  let file: MultipartFile;
+  try {
+    file = copyUpload(source, defaults.maxBytes, 255);
+  } catch {
+    return invalid();
+  }
+  const duration = audioDuration(file.data, file.contentType);
+  if (duration == null || duration < 0.1 || duration > defaults.maxDuration)
+    return fail(400, "unsupported_dubbing_media");
+  return { file, duration };
+}
 export class Context {
+  defaults?: CreationDefaults;
+  sources = new Map<string, MultipartFile>();
+  resources?: () => Resources;
+  nextCreation = 0;
+  create(v: unknown) {
+    if (!creationObject(v)) return invalid();
+    const keys = [
+      "file",
+      "source_url",
+      "name",
+      "source_lang",
+      "target_lang",
+      "num_speakers",
+      "watermark",
+      "highest_resolution",
+      "drop_background_audio",
+      "use_profanity_filter",
+      "dubbing_studio",
+      "disable_voice_cloning",
+      "mode",
+      "csv_file",
+      "foreground_audio_file",
+      "background_audio_file",
+      "target_accent",
+      "start_time",
+      "end_time",
+      "csv_fps",
+    ];
+    if (
+      Object.keys(v).some((k) => !keys.includes(k)) ||
+      (v.name != null && (typeof v.name !== "string" || v.name.length > 500))
+    )
+      return invalid();
+    for (const k of [
+      "watermark",
+      "highest_resolution",
+      "drop_background_audio",
+      "use_profanity_filter",
+      "disable_voice_cloning",
+    ])
+      if (v[k] != null && v[k] !== false)
+        return fail(400, "unsupported_dubbing_option");
+    if (
+      (v.mode != null && v.mode !== "automatic") ||
+      (v.num_speakers != null &&
+        v.num_speakers !== 0 &&
+        v.num_speakers !== 1) ||
+      [
+        "csv_file",
+        "foreground_audio_file",
+        "background_audio_file",
+        "target_accent",
+        "start_time",
+        "end_time",
+        "csv_fps",
+      ].some((k) => v[k] != null)
+    )
+      return fail(400, "unsupported_dubbing_option");
+    if (v.dubbing_studio != null && typeof v.dubbing_studio !== "boolean")
+      return invalid();
+    const sourceLanguage =
+        v.source_lang == null || v.source_lang === "auto"
+          ? undefined
+          : creationLanguage(v.source_lang),
+      target = creationLanguage(v.target_lang);
+    const input = creationSource(v, this.defaults, this.sources);
+    let n = this.nextCreation,
+      id: string;
+    do {
+      id = `sim-dubbing-created-${++n}`;
+    } while (this.records.has(id) || this.resources?.().resources.has(id));
+    this.records.set(id, {
+      input,
+      metadata: {
+        dubbing_id: id,
+        name: (v.name as string | null) ?? input.file.filename,
+        status: "dubbing",
+        source_language: sourceLanguage ?? null,
+        target_languages: target ? [target] : [],
+        editable: v.dubbing_studio === true,
+        created_at: this.defaults!.timestamp,
+        media_metadata: {
+          content_type: input.file.contentType,
+          duration: input.duration,
+        },
+        error: null,
+      },
+      model: "dubbing_v1",
+      creator: "personal",
+      source: "dubbing_api",
+      transcripts: {},
+    });
+    this.nextCreation = n;
+    return { dubbing_id: id, expected_duration_sec: input.duration };
+  }
   audio = new Map<string, Record<string, Uint8Array>>();
   getAudio(id: string, language: string) {
     const r = this.record(id);
     if (r.metadata.status !== "dubbed") return fail(425, "dubbing_not_dubbed");
-    const bytes = this.audio.get(id)?.[language === "source" ? r.metadata.source_language! : language];
+    const bytes =
+      this.audio.get(id)?.[
+        language === "source" ? r.metadata.source_language! : language
+      ];
     if (!bytes) return fail(404, "dubbing_audio_not_found");
     return new Uint8Array(bytes);
   }
@@ -56,7 +203,9 @@ export class Context {
     return structuredClone(this.record(id).metadata);
   }
   delete(id: string) {
-    this.record(id);
+    const record = this.record(id);
+    if (record.input && record.metadata.editable)
+      this.resources?.().removeCreated(id);
     this.records.delete(id);
     this.audio.delete(id);
     return { status: "ok" };
