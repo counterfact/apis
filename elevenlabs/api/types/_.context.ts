@@ -56,6 +56,7 @@ import type { Context as PronunciationDictionariesContext } from "../routes/pron
 import type { Context as ServiceAccountsContext } from "../routes/service-accounts/_.context";
 import type { Context as SharedVoicesContext } from "../routes/shared-voices/_.context";
 import type { Context as SingleUseTokenContext } from "../routes/single-use-token/_.context";
+import type { Context as SoundGenerationContext } from "../routes/sound-generation/_.context";
 import type { Context as SpeechEngineContext } from "../routes/speech-engine/_.context";
 import type { Context as TextToDialogueContext } from "../routes/text-to-dialogue/_.context";
 import type { Context as TextToSpeechContext } from "../routes/text-to-speech/_.context";
@@ -225,6 +226,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/single-use-token" | `/single-use-token/${string}`,
   ): SingleUseTokenContext;
+  loadContext(
+    path: "/sound-generation" | `/sound-generation/${string}`,
+  ): SoundGenerationContext;
   loadContext(
     path: "/speech-engine" | `/speech-engine/${string}`,
   ): SpeechEngineContext;

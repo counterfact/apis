@@ -57,6 +57,33 @@ also removes its retained audio; deleting a voice preserves earlier history.
 Instances isolate all state, and returned media/metadata are defensive copies.
 These IDs, accounting, retention and error rules are local simulator conventions.
 
+## Bounded sound-effect fixture
+
+`POST /v1/sound-generation` returns one complete ordinary `audio/mpeg` response
+containing the same independently decoded 8,340-byte silence fixture above.
+It does not generate sound effects, infer a duration or run a model/provider.
+Startup/reset append the synthetic `eleven_text_to_sound_v2` catalog dependency
+with text-to-speech capability false. That is the only supported sound model;
+`eleven_text_to_sound_v3` returns 400.
+
+Text must be nonblank and contain at most 2,000 Unicode code points. Only
+`mp3_44100_128`, nonlooping output, default prompt influence 0.3 and the fixture's
+exact duration (`23040 / 44100` seconds) are supported. Omitted/null duration uses
+that fixed duration, without interpreting the prompt. Other durations, looping,
+nondefault influence and output formats return 400 before allocating an ID or
+changing state. Missing catalog models return 404.
+
+Each accepted request consumes one fictional character-quota unit per code point
+and returns `character-cost` and `request-id` headers. Insufficient quota returns
+429 without mutation. Retained input/model/duration/audio snapshots live in the
+sound context's separate request map; speech history remains unchanged because
+its source enum has no sound-effect entry. `enable_logging=false` still consumes
+quota but stores no request/audio snapshot. Returned bytes are defensive copies.
+These accounting, retention, IDs and errors are local simulator conventions,
+not provider pricing or billing. Context containers start empty;
+`api/scenarios/bounded-sound.ts` owns fixture/default/accessor/counter population
+during startup/reset. Reset clears retained sound requests and restores quota.
+
 ## Voice preview design and saving
 
 Five `/v1/text-to-voice` operations now share local preview state: deprecated
@@ -131,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 347 now have authored
-behavior. The remaining 90 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 348 now have authored
+behavior. The remaining 89 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -231,10 +258,11 @@ conventions. Authentication and permission enforcement are not simulated.
 
 ## Model discovery
 
-`GET /v1/models` returns a stable five-model catalog containing
+`GET /v1/models` returns a stable six-model catalog containing
 `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v3`,
-`eleven_multilingual_ttv_v2` and `eleven_ttv_v3`. The two `ttv` models are
-synthetic preview-design dependencies with text-to-speech capability false.
+`eleven_multilingual_ttv_v2`, `eleven_ttv_v3` and `eleven_text_to_sound_v2`.
+The two `ttv` models and the sound-effect model are synthetic dependencies
+with text-to-speech capability false.
 Voice fixtures reference an ID
 in this catalog. Responses include capabilities, languages, request limits,
 and rate fields, with defensive copies of the stored model data.
@@ -293,8 +321,9 @@ both endpoints. Run `reset` to restore baseline usage, voices, and models.
 As a local convention, every current simulator voice occupies one voice slot:
 deleting a voice or running `voiceDiscovery` changes `voice_slots_used` in both
 account responses. Other counters and limits are synthetic fixtures. Quota
-exhaustion changes account data and prevents the bounded speech-rendering operations
-described below; other operations do not enforce that quota. The fixed creation and reset timestamps do not advance with time.
+exhaustion changes account data and prevents bounded speech, sound-effect and
+voice-preview fixture requests; other operations do not enforce that quota.
+The fixed creation and reset timestamps do not advance with time.
 These fixtures do not represent ElevenLabs plans, prices, or billing behavior.
 Authentication, billing, and audio generation are not simulated.
 
