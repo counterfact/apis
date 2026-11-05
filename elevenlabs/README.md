@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 361 now have authored
-behavior. The remaining 76 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 366 now have authored
+behavior. The remaining 71 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -258,10 +258,10 @@ conventions. Authentication and permission enforcement are not simulated.
 
 ## Model discovery
 
-`GET /v1/models` returns a stable six-model catalog containing
+`GET /v1/models` returns a stable seven-model catalog containing
 `eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v3`,
-`eleven_multilingual_ttv_v2`, `eleven_ttv_v3` and `eleven_text_to_sound_v2`.
-The two `ttv` models and the sound-effect model are synthetic dependencies
+`eleven_multilingual_ttv_v2`, `eleven_ttv_v3`, `eleven_text_to_sound_v2` and `music_v1`.
+The two `ttv` models, the sound-effect model and the music model are synthetic dependencies
 with text-to-speech capability false.
 Voice fixtures reference an ID
 in this catalog. Responses include capabilities, languages, request limits,
@@ -2565,3 +2565,47 @@ case. Any content type or supplied body returns 400; multipart content imports
 remain blocked by Counterfact #2607. Historical snapshots are preserved. Unknown
 projects, chapters, snapshots or dependencies return 404; overlapping conversion
 or edits during a pending conversion return 409. These are local conventions.
+
+
+## Bounded synthetic music
+
+Five JSON music operations now share a fixed local plan and silence fixture:
+`POST /v1/music/plan`, `/v1/music`, `/v1/music/stream`, `/v1/music/detailed`
+and `/v1/music/detailed/stream`. Prompts are retained as input metadata only;
+no prompt interpretation, composition, lyrics, model inference, provider request,
+quota charge, or music-history insertion occurs. The plan always has one section,
+`Synthetic silence`, empty style/lyric lists, and a duration of exactly 3,840 ms.
+The audio repeats the independently decoded silent MPEG frame above 147 times:
+61,299 bytes, 169,344 sample frames, stereo, 44,100 Hz, nominal 128 kbps.
+
+Only `music_v1` is supported; startup/reset append that synthetic catalog
+entry with text-to-speech and voice-conversion capabilities false. Missing catalog
+entries return 404. Prompt input must be nonblank and at most 2,000 Unicode code
+points. Composition accepts either a prompt or the exact fixed plan returned by
+`/plan`; object property order does not matter. Changed plans, source-plan edits,
+deprecated music prompts, lyrics, seeds, finetunes and nondefault effects return
+400. Omitted/null duration uses 3,840 ms; explicit duration must match exactly
+and is allowed with prompt input only. Other durations return 400. Only omitted,
+`auto`, or `mp3_44100_128` output is supported. Default false flags, finetune
+strength 1, detailed model style `music`, prompt-only generation mode `track`,
+and default respect-section-durations true are accepted. Enabling timestamps,
+waveform visuals, signing, inpainting, phonetic names or forced instrumentation,
+changing section-duration behavior, or selecting other modes/models returns 400
+before IDs or retained state change. Optional request bodies still need JSON
+input under #2614; send a prompt or plan rather than an absent body.
+
+Binary endpoints return ordinary `audio/mpeg` responses. Detailed responses use
+actual `multipart/mixed` boundary framing: a JSON composition plan/song metadata
+part followed by the binary MP3 attachment. Detailed stream returns one complete
+ordinary `text/event-stream` response with JSON `composition_plan`, `song_metadata`,
+`audio_chunk` and `done` events. The single audio event contains `audio_base64`,
+empty `words_timestamps` and `waveform_visual` arrays; `done` carries `song_id`.
+These event payload keys and metadata are explicit simulator conventions. Both
+stream paths buffer the bounded result, without incremental timing simulation.
+
+Accepted compositions return increasing `song-id` headers. Context containers
+start empty; `api/scenarios/bounded-music.ts` populates the plan, media, model
+accessor and counters during startup/reset. Plans and songs retain immutable
+copies of inputs/results unless `enable_logging=false`; zero retention still
+allocates the next local ID. Reset clears both maps and counters. Instances
+isolate state, and returned plan/media copies cannot modify retained records.

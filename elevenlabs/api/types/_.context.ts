@@ -53,6 +53,7 @@ import type { Context as AudioEffectsContext } from "../routes/audio-effects/_.c
 import type { Context as DubbingContext } from "../routes/dubbing/_.context";
 import type { Context as FlowsContext } from "../routes/flows/_.context";
 import type { Context as HistoryContext } from "../routes/history/_.context";
+import type { Context as MusicContext } from "../routes/music/_.context";
 import type { Context as PronunciationDictionariesContext } from "../routes/pronunciation-dictionaries/_.context";
 import type { Context as ServiceAccountsContext } from "../routes/service-accounts/_.context";
 import type { Context as SharedVoicesContext } from "../routes/shared-voices/_.context";
@@ -217,6 +218,7 @@ interface LoadContextDefinitions {
   loadContext(path: "/dubbing" | `/dubbing/${string}`): DubbingContext;
   loadContext(path: "/flows" | `/flows/${string}`): FlowsContext;
   loadContext(path: "/history" | `/history/${string}`): HistoryContext;
+  loadContext(path: "/music" | `/music/${string}`): MusicContext;
   loadContext(
     path:
       "/pronunciation-dictionaries" | `/pronunciation-dictionaries/${string}`,

@@ -1,3 +1,4 @@
+import {resetBoundedMusic} from "./bounded-music.js";
 import {resetBoundedSpeech} from "./bounded-speech.js";
 import {resetBoundedSound} from "./bounded-sound.js";
 import {resetVoicePreviews} from "./voice-previews.js";
@@ -162,6 +163,7 @@ export const reset: Scenario = ($) => {
   resetBoundedSpeech($);
   historyAudioFixtures($);
   resetBoundedSound($);
+  resetBoundedMusic($);
   resetVoicePreviews($);
   $.context.voices = new Map(
     ["sim-narrator", "sim-assistant"].map((voice_id, index) => [

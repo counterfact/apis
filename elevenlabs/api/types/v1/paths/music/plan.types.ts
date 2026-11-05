@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../routes/_.context.ts";
+import type { Context } from "../../../../routes/music/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
 import type { Body_Generate_composition_plan_v1_music_plan_post } from "../../components/schemas/Body_Generate_composition_plan_v1_music_plan_post.js";
 import type { MusicPrompt } from "../../components/schemas/MusicPrompt.js";
