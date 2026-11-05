@@ -6,6 +6,7 @@ import type { OmitValueWhenNever } from "../../../../../../counterfact-types/ind
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
 import type { Context } from "../../../../../../routes/convai/knowledge-base/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
+import type { Body_Update_file_document_v1_convai_knowledge_base__documentation_id__update_file_patch } from "../../../../../multipart/v1/components/schemas/Body_Update_file_document_v1_convai_knowledge_base__documentation_id__update_file_patch.js";
 import type { GetKnowledgeBaseURLResponseModel } from "../../../../components/schemas/GetKnowledgeBaseURLResponseModel.js";
 import type { GetKnowledgeBaseFileResponseModel } from "../../../../components/schemas/GetKnowledgeBaseFileResponseModel.js";
 import type { GetKnowledgeBaseTextResponseModel } from "../../../../components/schemas/GetKnowledgeBaseTextResponseModel.js";
@@ -20,7 +21,7 @@ export type HTTP_PATCH_$_v1 = OmitValueWhenNever<{
   path: HTTP_PATCH_Path;
   headers: HTTP_PATCH_Headers;
   cookie: never;
-  body: never;
+  body: Body_Update_file_document_v1_convai_knowledge_base__documentation_id__update_file_patch;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

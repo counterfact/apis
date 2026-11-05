@@ -1,8 +1,7 @@
 import type { Routes } from "../../../../types/index.js";
-import type { Context } from "../_.context.js";
 type Route = Routes["/studio"]["/projects"]["/{project_id}"]["/muted-tracks"];
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.mutedTracks($.path.project_id));
   } catch (error) {

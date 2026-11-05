@@ -1,8 +1,7 @@
-import type { Context } from "./auth-connections/_.context.js";
 import type { Routes } from "../../types/index.js";
 type Route = Routes["/workspace"]["/auth-connections"];
 export const POST: Route["POST"] = async ($) => {
-  const context = $.x.context as Context;
+  const context = $.context;
   try { return $.response.status(200).json(context.createAuthConnection($.body)); }
   catch (error) {
     // Runtime module loading may create separate copies of the Context module.
@@ -11,7 +10,6 @@ export const POST: Route["POST"] = async ($) => {
   }
 };
 export const GET: Route["GET"] = async ($) => {
-  // Collection handlers use the parent's generated context type; runtime uses the child.
-  const context = $.x.context as Context;
+  const context = $.context;
   return $.response.status(200).json(context.listAuthConnections());
 };

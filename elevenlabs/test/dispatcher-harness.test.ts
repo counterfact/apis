@@ -36,3 +36,10 @@ test("dispatcher harness preserves repeated query parameters and validates JSON 
     method: "POST", body: new FormData(),
   }), /JSON/);
 });
+
+test("multipart harness keeps request validation and rejects missing required fields", async () => {
+  const app = await createDispatcherHarness();
+  const response = await app.requestMultipart("/v1/voices/sim-narrator/edit", {});
+  assert.equal(response.status, 400);
+  assert.equal((await (await app.request("/v1/voices/sim-narrator")).json()).name, "Simulator Narrator");
+});

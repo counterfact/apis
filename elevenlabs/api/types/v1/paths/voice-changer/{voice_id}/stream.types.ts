@@ -6,6 +6,7 @@ import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
 import type { Context } from "../../../../../routes/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
+import type { Body_Voice_Changer_Streaming_v1_voice_changer__voice_id__stream_post } from "../../../../multipart/v1/components/schemas/Body_Voice_Changer_Streaming_v1_voice_changer__voice_id__stream_post.js";
 import type { HTTPValidationError } from "../../../components/schemas/HTTPValidationError.js";
 /**
  * Stream audio from one voice to another. Maintain full control over emotion, timing and delivery.
@@ -16,7 +17,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: HTTP_POST_Path;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Voice_Changer_Streaming_v1_voice_changer__voice_id__stream_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

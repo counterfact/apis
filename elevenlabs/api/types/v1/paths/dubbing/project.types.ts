@@ -4,8 +4,9 @@
 import type { WideOperationArgument } from "../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../routes/dubbing/_.context.ts";
+import type { Context } from "../../../../routes/dubbing/project/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
+import type { Body_Create_Dubbing_Project_v1_dubbing_project_post } from "../../../multipart/v1/components/schemas/Body_Create_Dubbing_Project_v1_dubbing_project_post.js";
 import type { DubbingProjectResponse } from "../../components/schemas/DubbingProjectResponse.js";
 import type { HTTPValidationError } from "../../components/schemas/HTTPValidationError.js";
 import type { DubbingProjectListResponse } from "../../components/schemas/DubbingProjectListResponse.js";
@@ -24,7 +25,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Create_Dubbing_Project_v1_dubbing_project_post;
   context: Context;
   response: ResponseBuilderFactory<{
     201: {

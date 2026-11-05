@@ -1,9 +1,8 @@
-import type { Context } from "../../_.context.js";
 import type { Routes } from "../../../../../types/index.js";
 type Route =
   Routes["/dubbing"]["/resource"]["/{dubbing_id}"]["/segment"]["/{segment_id}"];
 export const DELETE: Route["DELETE"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response
       .status(200)

@@ -4,8 +4,9 @@
 import type { WideOperationArgument } from "../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../counterfact-types/index.ts";
-import type { Context } from "../../../routes/_.context.ts";
+import type { Context } from "../../../routes/assets/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../counterfact-types/index.ts";
+import type { Body_Upload_asset_v1_assets_post } from "../../multipart/v1/components/schemas/Body_Upload_asset_v1_assets_post.js";
 import type { AssetResponse } from "../components/schemas/AssetResponse.js";
 import type { HTTPValidationError } from "../components/schemas/HTTPValidationError.js";
 import type { AssetListResponse } from "../components/schemas/AssetListResponse.js";
@@ -18,7 +19,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Upload_asset_v1_assets_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

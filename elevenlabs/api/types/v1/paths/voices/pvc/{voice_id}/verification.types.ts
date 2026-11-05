@@ -6,6 +6,7 @@ import type { OmitValueWhenNever } from "../../../../../../counterfact-types/ind
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
 import type { Context } from "../../../../../../routes/voices/pvc/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
+import type { Body_Request_manual_verification_v1_voices_pvc__voice_id__verification_post } from "../../../../../multipart/v1/components/schemas/Body_Request_manual_verification_v1_voices_pvc__voice_id__verification_post.js";
 import type { RequestPVCManualVerificationResponseModel } from "../../../../components/schemas/RequestPVCManualVerificationResponseModel.js";
 import type { HTTPValidationError } from "../../../../components/schemas/HTTPValidationError.js";
 /**
@@ -17,7 +18,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: HTTP_POST_Path;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Request_manual_verification_v1_voices_pvc__voice_id__verification_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

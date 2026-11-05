@@ -1,8 +1,7 @@
 import type { Routes } from "../../types/index.js";
 type Route = Routes["/convai"]["/mcp-servers"];
-import type { Context } from "./mcp-servers/_.context.js";
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.list());
   } catch (error) {
@@ -16,7 +15,7 @@ export const GET: Route["GET"] = async ($) => {
   }
 };
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.create($.body));
   } catch (error) {

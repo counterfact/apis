@@ -1,9 +1,8 @@
 import type { Routes } from "../../types/index.js";
-import type { Context } from "./templates/_.context.js";
 type Route = Routes["/flows"]["/templates"];
 export const GET: Route["GET"] = async ($) => {
   try {
-    const context = $.context as unknown as Context;
+    const context = $.context;
     return $.response.status(200).json(context.list($.query));
   } catch (error) {
     if (error instanceof Error && error.name === "TemplateError") {

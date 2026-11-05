@@ -1,9 +1,8 @@
-import type { Context } from "../../../_.context.js";
 import type { Routes } from "../../../../../../types/index.js";
 type Route =
   Routes["/dubbing"]["/project"]["/{project_id}"]["/transcript"]["/segment"]["/{segment_id}"];
 export const PATCH: Route["PATCH"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     const result = c.updateSource($.path.project_id, {
       [$.path.segment_id]: $.body,
@@ -22,7 +21,7 @@ export const PATCH: Route["PATCH"] = async ($) => {
   }
 };
 export const DELETE: Route["DELETE"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response
       .status(200)

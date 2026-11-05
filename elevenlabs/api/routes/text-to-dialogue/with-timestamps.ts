@@ -3,7 +3,7 @@ import type {Context} from "../text-to-dialogue/_.context.js";
 type Route=Routes["/text-to-dialogue"]["/with-timestamps"];
 export const POST:Route["POST"]=async($)=>{
  try{
-  const context=$.context as unknown as Context;
+  const context=$.context;
   const result=context.dialogue($.body,$.query);
   let response=$.x.response.header("request-id",result.requestId);if(result.historyId)response=response.header("history-item-id",result.historyId);
   return response.status(200).json(result.payload);

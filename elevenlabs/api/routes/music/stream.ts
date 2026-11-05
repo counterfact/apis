@@ -1,8 +1,7 @@
 import type { Routes } from "../../types/index.js";
-import type { Context } from "./_.context.js";
 type Route = Routes["/music"]["/stream"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     const song = c.compose($.body, $.query);
     return $.x.response

@@ -1,8 +1,7 @@
-import type { Context } from "./podcasts/_.context.js";
 import type { Routes } from "../../types/index.js";
 type Route = Routes["/studio"]["/podcasts"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.podcast($.body));
   } catch (error) {

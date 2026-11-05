@@ -1,4 +1,12 @@
-# Remaining generated operations
+# Operation backlog after the runtime upgrade
+
+Counterfact 3.2.1 / runtime 0.4.1 fixes the runtime blockers recorded below.
+These tables preserve the original 43-operation implementation backlog and old
+reproductions. They do not assert failures in the upgraded runtime. The operation
+audit reports current authored and generated counts; the JSON manifest is reduced
+as each implementation slice completes.
+
+# Historical blocker inventory
 
 The two pinned contracts contain 437 operations: 436 V1 operations and one V2
 operation (GET /v2/voices). There are 394 authored operations and exactly 43

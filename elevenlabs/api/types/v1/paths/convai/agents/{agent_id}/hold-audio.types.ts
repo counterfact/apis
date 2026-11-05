@@ -6,6 +6,7 @@ import type { OmitValueWhenNever } from "../../../../../../counterfact-types/ind
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
 import type { Context } from "../../../../../../routes/convai/agents/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
+import type { Body_Post_Agent_hold_audio_v1_convai_agents__agent_id__hold_audio_post } from "../../../../../multipart/v1/components/schemas/Body_Post_Agent_hold_audio_v1_convai_agents__agent_id__hold_audio_post.js";
 import type { PostAgentHoldAudioResponseModel } from "../../../../components/schemas/PostAgentHoldAudioResponseModel.js";
 import type { HTTPValidationError } from "../../../../components/schemas/HTTPValidationError.js";
 import type { DeleteAgentHoldAudioResponseModel } from "../../../../components/schemas/DeleteAgentHoldAudioResponseModel.js";
@@ -18,7 +19,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: HTTP_POST_Path;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Post_Agent_hold_audio_v1_convai_agents__agent_id__hold_audio_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

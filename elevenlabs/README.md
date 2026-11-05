@@ -1,3 +1,11 @@
+# Current runtime
+
+This branch uses Counterfact 3.2.1. Earlier notes below describing multipart,
+recursive-schema, version-routing, query-conversion or optional-body runtime
+failures are historical. Those runtime fixes are installed; generated operations
+are being implemented in separate slices. See COUNTERFACT_ISSUES.md for upgrade
+status and run `npm run audit:operations` for current operation counts.
+
 # ElevenLabs API simulator
 
 Multi-version Counterfact simulator generated from the official
@@ -129,7 +137,7 @@ and restores quota. Instances isolate state and responses return copies.
 
 ## Run
 
-Requires Node.js 22.22 or newer. Counterfact is pinned to 3.1.0.
+Requires Node.js 22.22 or newer. Counterfact is pinned to 3.2.1 (runtime 0.4.1).
 
 ```sh
 cd elevenlabs
@@ -1593,6 +1601,10 @@ file watcher, or cleanup step is needed.
 
 Requests support `method`, `headers`, and JSON string `body` options, with
 repeated query parameters preserved. Other Fetch options are not simulated.
+`requestMultipart(path, fields, options)` supplies an already-parsed public
+`MultipartFile` body through the real Dispatcher and validators. It does not parse
+FormData or test Counterfact transport.
+
 Responses expose the standard `Response` status, headers, `json()`, and `text()`
 interfaces. Unsupported body formats and streaming responses fail explicitly.
 

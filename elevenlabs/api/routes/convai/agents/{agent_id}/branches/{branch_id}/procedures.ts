@@ -1,5 +1,4 @@
 import type { Routes } from "../../../../../../types/index.js";
-import type { Context } from "./procedures/_.context.js";
 type Route =
   Routes["/convai"]["/agents"]["/{agent_id}"]["/branches"]["/{branch_id}"]["/procedures"];
 export const POST: Route["POST"] = async ($) => {
@@ -7,7 +6,7 @@ export const POST: Route["POST"] = async ($) => {
     return $.response
       .status(200)
       .json(
-        ($.context as unknown as Context).create(
+        ($.context).create(
           $.path.agent_id,
           $.path.branch_id,
           $.body,
@@ -31,7 +30,7 @@ export const GET: Route["GET"] = async ($) => {
     return $.response
       .status(200)
       .json(
-        ($.context as unknown as Context).list(
+        ($.context).list(
           $.path.agent_id,
           $.path.branch_id,
           $.query.agent_version_id,

@@ -1,8 +1,7 @@
 import type { Routes } from "../../../types/index.js";
-import type { Context } from "./_.context.js";
 type Route = Routes["/convai"]["/agent-testing"]["/bulk-move"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
 
   try {
     c.move($.body);

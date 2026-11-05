@@ -1,8 +1,7 @@
-import type { Context } from "./_.context.js";
 import type { Routes } from "../../types/index.js";
 type Route = Routes["/flows"]["/video"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.create("video", $.body));
   } catch (error) {
@@ -16,7 +15,7 @@ export const POST: Route["POST"] = async ($) => {
   }
 };
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.list("video", $.query));
   } catch (error) {

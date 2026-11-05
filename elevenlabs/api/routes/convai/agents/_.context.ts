@@ -84,10 +84,7 @@ export class Context {
         value?: never;
       } {
     if (!this.agents.has(id)) return { error: "agent_not_found" };
-    // Nullable integers arrive as text under runtime #2612. Reject lossy or
-    // partial conversions, including decimals, whitespace and unsafe integers.
     const integer = (v: unknown): number | undefined => {
-      if (typeof v === "string" && /^-?(0|[1-9][0-9]*)$/.test(v)) v = Number(v);
       return typeof v === "number" && Number.isSafeInteger(v) ? v : undefined;
     };
     const size = query.page_size == null ? 30 : integer(query.page_size);

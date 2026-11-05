@@ -1,4 +1,29 @@
-# Counterfact issues encountered while building this simulator
+# Counterfact compatibility status
+
+The simulator now pins Counterfact 3.2.1 and runtime 0.4.1. Regeneration fixes
+collection context bindings and supplies MultipartFile request types. Nullable
+primitive and array query conversion, optional bodies, version availability,
+initial module identity and recursive request validation are fixed upstream.
+The affected collection casts and query coercion workarounds have been removed.
+Stable error tags remain a valid application convention, rather than a runtime
+requirement. The Dispatcher harness remains the project's deliberate integration
+test boundary; it is not a compatibility workaround.
+
+The reports below are historical evidence for 3.1.0 / 0.3.2, not current blockers.
+The remaining generated handlers are an implementation backlog after the upgrade.
+Use the operation audit for current counts. Actual multipart parser behavior is
+owned by Counterfact; simulator tests supply the public MultipartFile shape.
+
+## Remaining scalar numeric coercion limitation
+
+Runtime 0.4.1 still uses parseInt/parseFloat for scalar numeric parameters.
+For example, `aggregation_bucket_size=3600junk` arrives as 3600. Nullable numeric
+conversion is fixed, but strict lexical rejection is not promised here. The old
+nullable-string workaround could reject those spellings before conversion; it
+cannot do so after conversion. Simulator tests cover valid decimal queries and
+invalid business values directly; they do not duplicate transport parsing.
+
+# Historical issue evidence
 
 Observed with Counterfact 3.1.0 and `@counterfact/runtime` 0.3.2.
 New reports were filed using `pmcelhaney-codex`; existing reports were reused.

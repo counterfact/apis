@@ -1,9 +1,8 @@
-import type { Context } from "../../../_.context.js";
 import type { Routes } from "../../../../../../types/index.js";
 type Route =
   Routes["/studio"]["/projects"]["/{project_id}"]["/snapshots"]["/{project_snapshot_id}"]["/archive"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.x.response
       .status(200)

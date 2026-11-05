@@ -7,6 +7,7 @@ import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/i
 import type { Context } from "../../../../../../routes/productions/orders/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { OrderId } from "../../../../components/schemas/OrderId.js";
+import type { Body_Register_media_v1_productions_orders__order_id__media_post } from "../../../../../multipart/v1/components/schemas/Body_Register_media_v1_productions_orders__order_id__media_post.js";
 import type { RegisterMediaResponse } from "../../../../components/schemas/RegisterMediaResponse.js";
 import type { HTTPValidationError } from "../../../../components/schemas/HTTPValidationError.js";
 /**
@@ -18,7 +19,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: HTTP_POST_Path;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Register_media_v1_productions_orders__order_id__media_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

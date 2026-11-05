@@ -1,8 +1,7 @@
-import type { Context } from "./conversations/_.context.js";
 import type { Routes } from "../../types/index.js";
 type Route = Routes["/convai"]["/conversations"];
 export const GET: Route["GET"] = async ($) => {
-  try { return $.response.status(200).json(($.x.context as Context).listConversations($.query)); }
+  try { return $.response.status(200).json($.context.listConversations($.query)); }
   catch (error) {
     if (error instanceof Error && error.name === "ConversationError") {
       const failure = error as Error & {status: number; code: string};

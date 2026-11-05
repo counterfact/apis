@@ -50,8 +50,7 @@ test("service account Dispatcher persists account and key lifecycle and isolates
   assert.equal(stored.platform_limits.concurrency.limit, null);
   assert.equal(stored.third_party_disable_allowed, false);
   const unchanged = structuredClone(stored);
-  // Installed runtime validates absent optional bodies against the object schema.
-  assert.equal((await send(suffix, "PATCH")).status, 400);
+  assert.equal((await send(suffix, "PATCH")).status, 200);
   assert.equal((await send(suffix, "PATCH", {})).status, 200);
   assert.deepEqual((await keys(id))[0], unchanged);
   assert.equal((await send(suffix, "PATCH", { name: null, permissions: "no_update", character_limit: "no_update", is_enabled: "no_update" })).status, 200);

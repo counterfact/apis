@@ -7,6 +7,7 @@ import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/i
 import type { Context } from "../../../../../../routes/voices/pvc/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { HTTPValidationError } from "../../../../components/schemas/HTTPValidationError.js";
+import type { Body_Verify_PVC_voice_captcha_v1_voices_pvc__voice_id__captcha_post } from "../../../../../multipart/v1/components/schemas/Body_Verify_PVC_voice_captcha_v1_voices_pvc__voice_id__captcha_post.js";
 import type { VerifyPVCVoiceCaptchaResponseModel } from "../../../../components/schemas/VerifyPVCVoiceCaptchaResponseModel.js";
 /**
  * Get captcha for PVC voice verification.
@@ -53,7 +54,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: HTTP_POST_Path;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Verify_PVC_voice_captcha_v1_voices_pvc__voice_id__captcha_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

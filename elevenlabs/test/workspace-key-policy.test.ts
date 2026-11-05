@@ -44,7 +44,7 @@ test("workspace key policy Dispatcher confirmation, live state, override, reset 
   assert.equal((await disable("unknown-synthetic-caller")).status,401);
   assert.equal((await policy({third_party_disable_allowed:false})).status,200);
   assert.equal((await disable()).status,403);assert.equal((await keys())[0].is_disabled,false);
-  assert.equal((await policy()).status,400); // Installed runtime optional-body limitation #2614.
+  assert.equal((await policy()).status,200);
   assert.equal((await policy({})).status,200);assert.equal((await disable()).status,403);
   assert.equal((await policy({third_party_disable_allowed:"yes"})).status,400);
   assert.equal((await policy({third_party_disable_allowed:null})).status,200);

@@ -4,10 +4,11 @@
 import type { WideOperationArgument } from "../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../counterfact-types/index.ts";
-import type { Context } from "../../../routes/_.context.ts";
+import type { Context } from "../../../routes/dubbing/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../counterfact-types/index.ts";
 import type { DubbingMetadataPageResponseModel } from "../components/schemas/DubbingMetadataPageResponseModel.js";
 import type { HTTPValidationError } from "../components/schemas/HTTPValidationError.js";
+import type { Body_Dub_a_video_or_an_audio_file_v1_dubbing_post } from "../../multipart/v1/components/schemas/Body_Dub_a_video_or_an_audio_file_v1_dubbing_post.js";
 import type { DoDubbingResponseModel } from "../components/schemas/DoDubbingResponseModel.js";
 /**
  * List the dubs you have access to.
@@ -60,7 +61,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Dub_a_video_or_an_audio_file_v1_dubbing_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

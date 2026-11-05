@@ -1,9 +1,8 @@
 import type { Routes } from "../../../../../types/index.js";
 type Route =
   Routes["/convai"]["/mcp-servers"]["/{mcp_server_id}"]["/tool-approvals"]["/{tool_name}"];
-import type { Context } from "../../_.context.js";
 export const DELETE: Route["DELETE"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response
       .status(200)

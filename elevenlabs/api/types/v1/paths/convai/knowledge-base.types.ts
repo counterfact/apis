@@ -4,8 +4,9 @@
 import type { WideOperationArgument } from "../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../routes/_.context.ts";
+import type { Context } from "../../../../routes/convai/knowledge-base/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
+import type { Body_Add_to_knowledge_base_v1_convai_knowledge_base_post } from "../../../multipart/v1/components/schemas/Body_Add_to_knowledge_base_v1_convai_knowledge_base_post.js";
 import type { AddKnowledgeBaseResponseModel } from "../../components/schemas/AddKnowledgeBaseResponseModel.js";
 import type { HTTPValidationError } from "../../components/schemas/HTTPValidationError.js";
 import type { KnowledgeBaseDocumentType } from "../../components/schemas/KnowledgeBaseDocumentType.js";
@@ -22,7 +23,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Add_to_knowledge_base_v1_convai_knowledge_base_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

@@ -1,8 +1,7 @@
-import type { Context } from "../_.context.js";
 import type { Routes } from "../../../../types/index.js";
 type Route = Routes["/dubbing"]["/resource"]["/{dubbing_id}"]["/speaker"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response
       .status(200)

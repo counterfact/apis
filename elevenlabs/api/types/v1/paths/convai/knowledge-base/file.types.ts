@@ -6,6 +6,7 @@ import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
 import type { Context } from "../../../../../routes/convai/knowledge-base/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
+import type { Body_Create_file_document_v1_convai_knowledge_base_file_post } from "../../../../multipart/v1/components/schemas/Body_Create_file_document_v1_convai_knowledge_base_file_post.js";
 import type { AddKnowledgeBaseResponseModel } from "../../../components/schemas/AddKnowledgeBaseResponseModel.js";
 import type { HTTPValidationError } from "../../../components/schemas/HTTPValidationError.js";
 /**
@@ -17,7 +18,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Create_file_document_v1_convai_knowledge_base_file_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

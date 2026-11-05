@@ -7,6 +7,7 @@ import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.t
 import type { Context } from "../../../../routes/music/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
 import type { AllowedOutputFormats } from "../../components/schemas/AllowedOutputFormats.js";
+import type { Body_Stem_separation_v1_music_stem_separation_post } from "../../../multipart/v1/components/schemas/Body_Stem_separation_v1_music_stem_separation_post.js";
 import type { HTTPValidationError } from "../../components/schemas/HTTPValidationError.js";
 /**
  * Separate an audio file into individual stems. This endpoint might have high latency, depending on the length of the audio file.
@@ -17,7 +18,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Stem_separation_v1_music_stem_separation_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

@@ -51,13 +51,13 @@ export async function createDispatcherHarness() {
   };
   await scenario("startup");
 
-  const request = async (path: string, init: RequestInit = {}) => {
+  const dispatch = async (path: string, init: RequestInit = {}, multipartBody?: Record<string, unknown>) => {
     const url = new URL(path, "http://dispatcher.invalid");
     const runner = runners.find(({ prefix }) =>
       url.pathname === prefix || url.pathname.startsWith(`${prefix}/`));
     if (!runner) return new Response(null, { status: 404 });
     const headers = new Headers(init.headers);
-    let body: unknown;
+    let body: unknown = multipartBody;
     if (init.body != null) {
       if (typeof init.body !== "string" ||
         headers.get("content-type")?.split(";")[0].trim() !== "application/json") {
@@ -94,5 +94,14 @@ export async function createDispatcherHarness() {
           JSON.stringify(result.body);
     return new Response(responseBody, { status: result.status ?? 200, headers: responseHeaders });
   };
-  return { scenario, request };
+  const request = (path: string, init: RequestInit = {}) => dispatch(path, init);
+  // Supply the public runtime's already-parsed multipart body. Transport parsing
+  // belongs to Counterfact; simulator integration tests exercise its validators.
+  const requestMultipart = (path: string, body: Record<string, unknown>, init: RequestInit = {}) => {
+    if (init.body != null) throw new Error("Supply multipart fields through the body argument");
+    const headers = new Headers(init.headers);
+    headers.set("content-type", "multipart/form-data; boundary=simulator-test");
+    return dispatch(path, { ...init, method: init.method ?? "POST", headers }, body);
+  };
+  return { scenario, request, requestMultipart };
 }

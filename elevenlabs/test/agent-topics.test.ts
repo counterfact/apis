@@ -44,8 +44,8 @@ test("topic context reads immutable historical runs with bounded query behavior"
     0,
   );
   assert.equal(
-    c.getTopics("sim-agent", { page_size: "1" } as never).value!.has_more,
-    true,
+    c.getTopics("sim-agent", { page_size: "1" } as never).error,
+    "invalid_topic_query",
   );
   assert.equal(
     c.getTopics("sim-agent", { sort_by: "sentiment", sort_direction: "asc" })

@@ -1,8 +1,7 @@
 import type { Routes } from "../../../types/index.js";
 type Route = Routes["/convai"]["/mcp-servers"]["/{mcp_server_id}"];
-import type { Context } from "./_.context.js";
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.get($.path.mcp_server_id));
   } catch (error) {
@@ -16,7 +15,7 @@ export const GET: Route["GET"] = async ($) => {
   }
 };
 export const PATCH: Route["PATCH"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.patch($.path.mcp_server_id, $.body));
   } catch (error) {
@@ -30,7 +29,7 @@ export const PATCH: Route["PATCH"] = async ($) => {
   }
 };
 export const DELETE: Route["DELETE"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.delete($.path.mcp_server_id));
   } catch (error) {

@@ -1,8 +1,7 @@
 import type { Routes } from "../../types/index.js";
-import type { Context } from "./projects/_.context.js";
 type Route = Routes["/studio"]["/projects"];
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.list());
   } catch (error) {

@@ -170,14 +170,10 @@ export class Context {
       tag_ids: this.tagIds(conversation) };
   }
   listConversations(query: ListQuery = {}) {
-    // Counterfact #2615 preserves a single array query value as a string.
-    const arrays = ["visited_agent_ids", "visited_agent_branch_ids", "main_languages", "exclude_statuses", "tag_ids", "termination_reasons"];
-    query = Object.fromEntries(Object.entries(query).map(([key, value]) => {
-      if (!arrays.includes(key) || value == null) return [key, value];
-      const values = typeof value === "string" ? [value] : value;
-      if (!Array.isArray(values) || values.some(item => typeof item !== "string") || key.startsWith("visited_") && values.length > 50) return invalid();
-      return [key, values];
-    })) as ListQuery;
+    for (const key of ["visited_agent_ids", "visited_agent_branch_ids", "main_languages", "exclude_statuses", "tag_ids", "termination_reasons"] as const) {
+      const values = query[key];
+      if (values != null && (!Array.isArray(values) || values.some(item => typeof item !== "string") || key.startsWith("visited_") && values.length > 50)) return invalid();
+    }
     const unsupported: Array<keyof ListQuery> = ["triggered_procedure_ids", "evaluation_params", "data_collection_params", "dynamic_variable_params", "data_collection_filter", "dynamic_variable_filter", "data_collection_ids", "evaluation_criteria_ids", "tool_names", "tool_names_successful", "tool_names_errored", "parent_conversation_id", "topic_ids", "workflow_node_entered_id", "guardrail_types", "custom_guardrail_names"];
     if (unsupported.some(key => query[key] != null) || query.include_invalid_tool_calls === true) return invalid();
     if (query.sort_direction != null && !["asc", "desc"].includes(query.sort_direction) || query.summary_mode != null && !["include", "exclude"].includes(query.summary_mode)) return invalid();

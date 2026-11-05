@@ -1,8 +1,7 @@
-import type { Context } from "./dubbing/_.context.js";
 import type { Routes } from "../types/index.js";
 type Route = Routes["/dubbing"];
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.list($.query));
   } catch (error) {

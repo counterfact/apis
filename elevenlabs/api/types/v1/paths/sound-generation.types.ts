@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../counterfact-types/index.ts";
-import type { Context } from "../../../routes/_.context.ts";
+import type { Context } from "../../../routes/sound-generation/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../counterfact-types/index.ts";
 import type { NonStreamingOutputFormats } from "../components/schemas/NonStreamingOutputFormats.js";
 import type { AllowedOutputFormats } from "../components/schemas/AllowedOutputFormats.js";

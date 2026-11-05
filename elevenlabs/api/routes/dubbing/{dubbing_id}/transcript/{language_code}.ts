@@ -1,9 +1,8 @@
-import type { Context } from "../../_.context.js";
 import type { Routes } from "../../../../types/index.js";
 type Route =
   Routes["/dubbing"]["/{dubbing_id}"]["/transcript"]["/{language_code}"];
 export const GET: Route["GET"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     const value = c.transcript(
       $.path.dubbing_id,

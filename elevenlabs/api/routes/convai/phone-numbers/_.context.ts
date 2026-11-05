@@ -73,7 +73,6 @@ export class Context {
     const raw: unknown = query.supports_outbound;
     if (raw != null) {
       if (typeof raw === "boolean") outbound = raw;
-      else if (raw === "true" || raw === "false") outbound = raw === "true"; // Counterfact #2612
       else return invalid();
     }
     for (const field of [query.search, query.label, query.phone_number]) if (field != null && (typeof field !== "string" || field.length > 100)) return invalid();

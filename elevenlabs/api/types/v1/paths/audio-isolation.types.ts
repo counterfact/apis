@@ -6,6 +6,7 @@ import type { OmitValueWhenNever } from "../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../counterfact-types/index.ts";
 import type { Context } from "../../../routes/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../counterfact-types/index.ts";
+import type { Body_Audio_Isolation_v1_audio_isolation_post } from "../../multipart/v1/components/schemas/Body_Audio_Isolation_v1_audio_isolation_post.js";
 import type { HTTPValidationError } from "../components/schemas/HTTPValidationError.js";
 /**
  * Removes background noise from audio
@@ -16,7 +17,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Audio_Isolation_v1_audio_isolation_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {

@@ -1,8 +1,7 @@
-import type { Context } from "../_.context.js";
 import type { Routes } from "../../../../types/index.js";
 type Route = Routes["/productions"]["/orders"]["/{order_id}"]["/items"];
 export const POST: Route["POST"] = async ($) => {
-  const c = $.context as unknown as Context;
+  const c = $.context;
   try {
     return $.response.status(200).json(c.upsert($.path.order_id, $.body));
   } catch (error) {

@@ -7,6 +7,7 @@ import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.t
 import type { Context } from "../../../../routes/music/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
 import type { AllowedOutputFormats } from "../../components/schemas/AllowedOutputFormats.js";
+import type { Body_Video_to_Music_v1_music_video_to_music_post } from "../../../multipart/v1/components/schemas/Body_Video_to_Music_v1_music_video_to_music_post.js";
 /**
  * Generate background music from one or more video files. Videos are combined in order. Optional description and style tags influence the generated music.
  */
@@ -16,7 +17,7 @@ export type HTTP_POST_$_v1 = OmitValueWhenNever<{
   path: never;
   headers: HTTP_POST_Headers;
   cookie: never;
-  body: never;
+  body: Body_Video_to_Music_v1_music_video_to_music_post;
   context: Context;
   response: ResponseBuilderFactory<{
     200: {
