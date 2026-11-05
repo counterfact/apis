@@ -26,7 +26,13 @@ test("analysis dependencies and attachments follow canonical main-branch replace
   const duplicate = agents.duplicateAgent("sim-agent", {});
   assert.ok(duplicate.value);
   assert.equal(c.dependentAgents("sim-analysis-evaluation").agents.length, 2);
-  assert.equal(c.dependentAgents("sim-analysis-evaluation").branches!.length, 1);
+  const duplicateBranch = agents.agents.get(duplicate.value.agent_id)!.mainBranch;
+  assert.ok(duplicateBranch);
+  assert.notEqual(duplicateBranch.id, "replacement-main");
+  assert.deepEqual(
+    new Set(c.dependentAgents("sim-analysis-evaluation").branches!.map(branch => branch.branch_id)),
+    new Set(["replacement-main", duplicateBranch.id]),
+  );
   const missingBranch = c.updateAttachments("sim-analysis-data", { source: "user", attach: [
     { agent_id: duplicate.value.agent_id, branch_id: "replacement-main" },
   ] });
