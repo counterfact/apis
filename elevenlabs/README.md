@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 290 now have authored
-behavior. The remaining 147 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 292 now have authored
+behavior. The remaining 145 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1961,3 +1961,26 @@ and the PVC counter. `emptyPvcVoices` removes professional records only and rese
 the counter, preserving other voices. Instances isolate changes and reads return
 copies. Sample upload, verification and training routes remain generated and
 uncounted as unfinished implementation; no provider or AI request occurs.
+
+
+## Audio-isolation historical metadata
+
+`GET /v1/audio-isolation/history` lists two synthetic saved records, and
+`DELETE /v1/audio-isolation/history/{history_item_id}` removes one record.
+Missing or already removed IDs return 404; successful deletion returns empty 204.
+Speech history, voices and other media records remain separate. No media files
+are stored or deleted, and no isolation, video or audio processing runs. Download
+URLs use simulator.invalid and do not serve files; processing flags are inert
+historical metadata. Creation and streaming remain generated and uncounted.
+
+Search matches title and separately stored historical text without case sensitivity.
+Filtering precedes newest-first ordering with ascending ID ties. Page size is
+1–1000 (default 100); the 1-based page is used only when search is supplied,
+including an empty search string. Without search, page is validated but has no
+effect, as described by the contract. Empty pages return has_more false. Invalid
+query values return 400 without changing records. These search, ordering and
+error choices are local simulator conventions; contracts and validation stay unchanged.
+
+Contexts start empty. Startup/reset populate `api/scenarios/isolation-history.ts`;
+`emptyIsolationHistory` clears only these records. Reads return defensive copies,
+instances isolate state and reset restores deleted records.

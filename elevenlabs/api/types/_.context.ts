@@ -3,6 +3,7 @@ import type { Context as ConvaiAgentsAgentIdBranchesBranchIdProceduresContext } 
 import type { Context as ConvaiAgentsAgentIdBranchesContext } from "../routes/convai/agents/{agent_id}/branches/_.context";
 import type { Context as ConvaiAgentsAgentIdMergeProposalsContext } from "../routes/convai/agents/{agent_id}/merge-proposals/_.context";
 import type { Context as ConvaiAgentsAgentIdTriageTicketsContext } from "../routes/convai/agents/{agent_id}/triage-tickets/_.context";
+import type { Context as AudioIsolationHistoryContext } from "../routes/audio-isolation/history/_.context";
 import type { Context as ConvaiAgentContext } from "../routes/convai/agent/_.context";
 import type { Context as ConvaiAgentTestingContext } from "../routes/convai/agent-testing/_.context";
 import type { Context as ConvaiAgentsContext } from "../routes/convai/agents/_.context";
@@ -59,6 +60,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: `/convai/agents/${string}/triage-tickets`,
   ): ConvaiAgentsAgentIdTriageTicketsContext;
+  loadContext(
+    path: "/audio-isolation/history" | `/audio-isolation/history/${string}`,
+  ): AudioIsolationHistoryContext;
   loadContext(
     path: "/convai/agent" | `/convai/agent/${string}`,
   ): ConvaiAgentContext;

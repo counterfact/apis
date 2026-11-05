@@ -1,3 +1,5 @@
+import { resetIsolationHistory } from "./isolation-history.js";
+export { emptyIsolationHistory } from "./isolation-history.js";
 import { resetPvcVoices } from "./pvc-voices.js";
 export { emptyPvcVoices } from "./pvc-voices.js";
 import { resetVoiceLibrary } from "./voice-library.js";
@@ -92,6 +94,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetIsolationHistory($);
   resetVoiceLibrary($);
   resetAssets($);
   resetMusicFinetunes($);
