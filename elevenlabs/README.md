@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 350 now have authored
-behavior. The remaining 87 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 361 now have authored
+behavior. The remaining 76 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2519,3 +2519,49 @@ and a whole duration of 1–3600 seconds. Explicit null session fields return 40
 null top-level session/expiry preserves defaults. Audio, tools, tracing, prompt,
 turn-detection and other session options return 400 rather than claiming to run
 them. Issuance does not change realtime groups or their existing conversations.
+
+## Bounded Studio conversion and snapshots
+
+Eleven additional Studio operations queue project/chapter conversion, list/read
+immutable snapshots, download buffered snapshot audio/archives, queue a synthetic
+bulletin podcast, and clear content using the optional bodyless content operation.
+No synthesis, podcast writing, summarization, normalization, fetching or provider
+request occurs. A bulletin retains the supplied text verbatim in a new canonical
+project/chapter; only one text source and bulletin host are supported. Existing
+speech-capable models and voices are required before conversion is queued.
+
+Conversion captures current content and locks project/chapter edits until
+`completeStudioConversions` runs. The scenario populates immutable snapshots and
+marks live conversion state complete. Repeated completion does nothing. Each
+captured chapter receives a copy of the independently decoded 8,340-byte MP3
+silence fixture documented above; a project audio response concatenates its
+chapter MP3 fixtures. Synthetic character timing divides each chapter's fixed
+duration evenly over Unicode code points. Project timings offset each chapter.
+Counts use UTF-16 text length, matching the existing Studio metadata convention.
+Only standard quality, automatic normalization metadata, disabled volume/quality
+processing, at most 100 chapters and 2,000 characters per chapter are
+supported. Conversion consumes no fictional character quota or speech history.
+
+Project conversions create project and chapter snapshots. Chapter-only conversion
+creates chapter snapshots only. Snapshot metadata and media survive live content
+edits, blank resets and chapter deletion; deleting the project removes its jobs
+and snapshots. Historical chapter IDs remain usable for snapshot reads/listing.
+Archives contain one percent-encoded chapter-ID MP3 per captured chapter, using
+STORE, CRC-32 and fixed ZIP timestamps. An independent Python `zipfile` check
+verified archive integrity and the extracted fixture hash. Returned bytes and
+metadata are copies; startup/reset clear all jobs/snapshots and restore counters.
+
+Both stream paths return complete buffered `audio/mpeg`, with no incremental
+framing. Send JSON `{}` for default stream options under Counterfact #2614;
+`convert_to_mpeg` false/true both select the fixture's existing MP3 format.
+Archive MIME follows the contract's `application/x-zip`. Podcast accepts standard
+quality, default duration metadata and auto normalization; nondefault generation
+controls, URL/multiple sources, conversation mode, language, callback, intro/outro,
+highlights and instructions return 400. It does not generate a podcast script.
+
+`POST /v1/studio/projects/{project_id}/content` with no body and no Content-Type
+clears live chapters/muted tracks, following its documented blank initialization
+case. Any content type or supplied body returns 400; multipart content imports
+remain blocked by Counterfact #2607. Historical snapshots are preserved. Unknown
+projects, chapters, snapshots or dependencies return 404; overlapping conversion
+or edits during a pending conversion return 409. These are local conventions.

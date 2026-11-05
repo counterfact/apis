@@ -44,7 +44,7 @@ export {emptyFlowGenerations,startFlowGenerations,completeFlowGenerations,failFl
 import {resetProductionOrders} from "./productions.js";
 export {emptyProductionOrders,completeProductionOrders} from "./productions.js";
 import { resetStudioProjects } from "./studio-projects.js";
-export { emptyStudioProjects } from "./studio-projects.js";
+export { emptyStudioProjects, completeStudioConversions } from "./studio-projects.js";
 import { resetAgentTests } from "./agent-tests.js";
 export { emptyAgentTests } from "./agent-tests.js";
 import { resetSpeechEngines } from "./speech-engines.js";

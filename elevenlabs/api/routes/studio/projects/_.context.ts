@@ -3,6 +3,16 @@ import type { ProjectResponseModel as Summary } from "../../../types/v1/componen
 import type { ChapterWithContentResponseModel as Chapter } from "../../../types/v1/components/schemas/ChapterWithContentResponseModel.js";
 import type { ChapterResponseModel as ChapterSummary } from "../../../types/v1/components/schemas/ChapterResponseModel.js";
 import type { PronunciationDictionaryVersionResponseModel as Version } from "../../../types/v1/components/schemas/PronunciationDictionaryVersionResponseModel.js";
+import type { ProjectSnapshotExtendedResponseModel as ProjectSnapshot } from "../../../types/v1/components/schemas/ProjectSnapshotExtendedResponseModel.js";
+import type { ChapterSnapshotExtendedResponseModel as ChapterSnapshot } from "../../../types/v1/components/schemas/ChapterSnapshotExtendedResponseModel.js";
+import { crc32 } from "node:zlib";
+export type StudioSnapshot = {
+  projectwide: boolean;
+  metadata: ProjectSnapshot;
+  audio: Uint8Array;
+  chapters: Array<{ metadata: ChapterSnapshot; audio: Uint8Array }>;
+};
+export type StudioConversion = { project: StoredProject; chapter?: string };
 type Obj = Record<string, unknown>;
 export type StoredProject = {
   metadata: Omit<Project, "chapters">;
@@ -37,6 +47,327 @@ function input(v: unknown, allowed: string[]) {
 export class Context {
   projects = new Map<string, StoredProject>();
   nextChapterId = 1;
+  snapshots = new Map<string, StudioSnapshot>();
+  pending = new Map<string, StudioConversion>();
+  nextSnapshot = 1;
+  nextProject = 1;
+  audio = new Uint8Array();
+  time = 0;
+  duration = 0;
+  voiceExists: (id: string) => boolean = () => false;
+  modelExists: (id: string) => boolean = () => false;
+  podcastTemplate: StoredProject | undefined;
+  private idle(id: string) {
+    if (this.pending.has(id))
+      throw new StudioError(
+        409,
+        "studio_conversion_pending",
+        "Conversion already pending",
+      );
+  }
+  convert(id: string, chapter?: string) {
+    const p = this.stored(id);
+    this.idle(id);
+    const chapters = chapter
+      ? [this.storedChapter(id, chapter)]
+      : [...p.chapters.values()];
+    if (
+      chapters.length > 100 ||
+      chapters.some(
+        (c) =>
+          c.content.blocks
+            .flatMap((b) =>
+              b.nodes.map((n) => (n.type === "tts_node" ? n.text : "")),
+            )
+            .join("").length > 2000,
+      )
+    )
+      return invalid();
+    if (
+      !chapters.length ||
+      !chapters.some((c) =>
+        c.content.blocks.some((b) =>
+          b.nodes.some((n) => n.type === "tts_node" && n.text.trim()),
+        ),
+      )
+    )
+      return invalid();
+    if (
+      !this.modelExists(p.metadata.default_model_id) ||
+      chapters.some((c) =>
+        c.content.blocks.some((b) =>
+          b.nodes.some(
+            (n) => n.type === "tts_node" && !this.voiceExists(n.voice_id),
+          ),
+        ),
+      )
+    )
+      throw new StudioError(
+        404,
+        "studio_dependency_not_found",
+        "Voice or speech model not found",
+      );
+    if (
+      p.metadata.quality_preset !== "standard" ||
+      p.metadata.volume_normalization ||
+      p.metadata.quality_check_on ||
+      p.metadata.quality_check_on_when_bulk_convert ||
+      p.metadata.apply_text_normalization !== "auto"
+    )
+      throw new StudioError(
+        400,
+        "unsupported_studio_quality",
+        "Only standard MP3 fixture quality is supported",
+      );
+    this.pending.set(id, { project: structuredClone(p), chapter });
+    p.metadata.state = "converting";
+    for (const c of chapters) c.state = "converting";
+    return { status: "ok" };
+  }
+  listSnapshots(id: string): {
+    snapshots: Array<{
+      project_snapshot_id: string;
+      project_id: string;
+      created_at_unix: number;
+      name: string;
+    }>;
+  };
+  listSnapshots(
+    id: string,
+    chapter: string,
+  ): {
+    snapshots: Array<{
+      chapter_snapshot_id: string;
+      project_id: string;
+      chapter_id: string;
+      created_at_unix: number;
+      name: string;
+    }>;
+  };
+  listSnapshots(id: string, chapter?: string) {
+    const p = this.stored(id);
+    if (
+      chapter &&
+      !p.chapters.has(chapter) &&
+      ![...this.snapshots.values()].some(
+        (s) =>
+          s.metadata.project_id === id &&
+          s.chapters.some((c) => c.metadata.chapter_id === chapter),
+      )
+    )
+      this.storedChapter(id, chapter);
+    const selected = [...this.snapshots.values()].filter(
+      (s) => s.metadata.project_id === id,
+    );
+    if (chapter)
+      return {
+        snapshots: selected.flatMap((s) =>
+          s.chapters
+            .filter((c) => c.metadata.chapter_id === chapter)
+            .map((c) => {
+              const { character_alignments, ...m } = c.metadata;
+              return structuredClone(m);
+            }),
+        ),
+      };
+    return {
+      snapshots: selected
+        .filter((s) => s.projectwide)
+        .map((s) => ({
+          project_snapshot_id: s.metadata.project_snapshot_id,
+          project_id: id,
+          created_at_unix: s.metadata.created_at_unix,
+          name: s.metadata.name,
+        })),
+    };
+  }
+
+  snapshot(id: string, snapshot: string): ProjectSnapshot;
+  snapshot(id: string, snapshot: string, chapter: string): ChapterSnapshot;
+  snapshot(
+    id: string,
+    snapshot: string,
+    chapter?: string,
+  ): ProjectSnapshot | ChapterSnapshot {
+    return structuredClone(this.retained(id, snapshot, chapter).metadata);
+  }
+  private retained(id: string, snapshot: string, chapter?: string) {
+    this.stored(id);
+    for (const s of this.snapshots.values())
+      if (s.metadata.project_id === id) {
+        if (
+          !chapter &&
+          s.projectwide &&
+          s.metadata.project_snapshot_id === snapshot
+        )
+          return s;
+        if (chapter) {
+          const c = s.chapters.find(
+            (c) =>
+              c.metadata.chapter_id === chapter &&
+              c.metadata.chapter_snapshot_id === snapshot,
+          );
+          if (c) return c;
+        }
+      }
+    throw new StudioError(
+      404,
+      "studio_snapshot_not_found",
+      "Snapshot not found",
+    );
+  }
+  snapshotAudio(
+    id: string,
+    snapshot: string,
+    value: unknown,
+    chapter?: string,
+  ) {
+    const b = input(value, ["convert_to_mpeg"]);
+    if (
+      b.convert_to_mpeg !== undefined &&
+      typeof b.convert_to_mpeg !== "boolean"
+    )
+      return invalid();
+    return new Uint8Array(this.retained(id, snapshot, chapter).audio);
+  }
+  archive(id: string, snapshot: string) {
+    const s = this.retained(id, snapshot) as StudioSnapshot;
+    const files: Buffer[] = [],
+      directory: Buffer[] = [];
+    let offset = 0;
+    for (const c of s.chapters) {
+      const name = Buffer.from(
+          encodeURIComponent(c.metadata.chapter_id) + ".mp3",
+        ),
+        audio = Buffer.from(c.audio),
+        sum = crc32(audio),
+        local = Buffer.alloc(30),
+        central = Buffer.alloc(46);
+      local.writeUInt32LE(0x04034b50);
+      local.writeUInt16LE(20, 4);
+      local.writeUInt16LE(0x21, 12);
+      local.writeUInt32LE(sum, 14);
+      local.writeUInt32LE(audio.length, 18);
+      local.writeUInt32LE(audio.length, 22);
+      local.writeUInt16LE(name.length, 26);
+      central.writeUInt32LE(0x02014b50);
+      central.writeUInt16LE(20, 4);
+      central.writeUInt16LE(20, 6);
+      central.writeUInt16LE(0x21, 14);
+      central.writeUInt32LE(sum, 16);
+      central.writeUInt32LE(audio.length, 20);
+      central.writeUInt32LE(audio.length, 24);
+      central.writeUInt16LE(name.length, 28);
+      central.writeUInt32LE(offset, 42);
+      files.push(local, name, audio);
+      directory.push(central, name);
+      offset += local.length + name.length + audio.length;
+    }
+    const d = Buffer.concat(directory),
+      end = Buffer.alloc(22);
+    end.writeUInt32LE(0x06054b50);
+    end.writeUInt16LE(s.chapters.length, 8);
+    end.writeUInt16LE(s.chapters.length, 10);
+    end.writeUInt32LE(d.length, 12);
+    end.writeUInt32LE(offset, 16);
+    return new Uint8Array(Buffer.concat([...files, d, end]));
+  }
+  blankContent(id: string, value: unknown, contentType?: string) {
+    const p = this.stored(id);
+    this.idle(id);
+    if (value !== undefined || contentType !== undefined) return invalid();
+    p.chapters = new Map();
+    p.muted = new Set();
+    p.metadata.can_be_downloaded = false;
+    return { project: this.projectSummary(p) };
+  }
+  podcast(value: unknown) {
+    const b = input(value, [
+      "model_id",
+      "mode",
+      "source",
+      "quality_preset",
+      "duration_scale",
+      "language",
+      "intro",
+      "outro",
+      "instructions_prompt",
+      "highlights",
+      "callback_url",
+      "apply_text_normalization",
+    ]);
+    if (
+      !object(b.mode) ||
+      b.mode.type !== "bulletin" ||
+      !object(b.mode.bulletin) ||
+      !text(b.mode.bulletin.host_voice_id) ||
+      Object.keys(b.mode).some((k) => !["type", "bulletin"].includes(k)) ||
+      Object.keys(b.mode.bulletin).some((k) => k !== "host_voice_id") ||
+      !object(b.source) ||
+      b.source.type !== "text" ||
+      !text(b.source.text) ||
+      Object.keys(b.source).some((k) => !["type", "text"].includes(k)) ||
+      b.source.text.length > 2000 ||
+      !text(b.model_id)
+    )
+      return invalid();
+    if (
+      (b.quality_preset != null && b.quality_preset !== "standard") ||
+      (b.duration_scale !== undefined && b.duration_scale !== "default") ||
+      (b.apply_text_normalization != null &&
+        b.apply_text_normalization !== "auto") ||
+      [
+        "language",
+        "intro",
+        "outro",
+        "instructions_prompt",
+        "highlights",
+        "callback_url",
+      ].some((k) => b[k] != null)
+    )
+      return invalid();
+    if (
+      !this.voiceExists(b.mode.bulletin.host_voice_id) ||
+      !this.modelExists(b.model_id)
+    )
+      throw new StudioError(
+        404,
+        "studio_dependency_not_found",
+        "Voice or speech model not found",
+      );
+    if (!this.podcastTemplate) return invalid();
+    const p = structuredClone(this.podcastTemplate),
+      id = `sim-podcast-${this.nextProject++}`;
+    p.metadata.project_id = id;
+    p.metadata.name = "Synthetic bulletin";
+    p.metadata.default_model_id = b.model_id;
+    p.metadata.source_type = "blank";
+    p.metadata.default_title_voice_id = b.mode.bulletin.host_voice_id;
+    p.metadata.default_title_voice_ref_id = b.mode.bulletin.host_voice_id;
+    p.metadata.default_paragraph_voice_id = b.mode.bulletin.host_voice_id;
+    p.metadata.default_paragraph_voice_ref_id = b.mode.bulletin.host_voice_id;
+    p.chapters = new Map();
+    p.muted = new Set();
+    this.projects.set(id, p);
+    const ch = this.createChapter(id, { name: "Source text" }).chapter;
+    this.updateChapter(id, ch.chapter_id, {
+      content: {
+        blocks: [
+          {
+            nodes: [
+              {
+                type: "tts_node",
+                text: b.source.text,
+                voice_id: b.mode.bulletin.host_voice_id,
+              },
+            ],
+          },
+        ],
+      },
+    });
+    this.convert(id);
+    return { project: this.projectSummary(p) };
+  }
   dictionaryVersion: (
     id: string,
     version: string | null,
@@ -99,6 +430,7 @@ export class Context {
     });
   }
   updateProject(id: string, value: unknown) {
+    this.idle(id);
     const p = this.stored(id),
       b = input(value, [
         "name",
@@ -138,6 +470,9 @@ export class Context {
   deleteProject(id: string) {
     this.stored(id);
     this.projects.delete(id);
+    this.pending.delete(id);
+    for (const [key, s] of this.snapshots)
+      if (s.metadata.project_id === id) this.snapshots.delete(key);
     return { status: "ok" };
   }
   chapters(id: string) {
@@ -151,6 +486,7 @@ export class Context {
     return structuredClone(this.storedChapter(project, id));
   }
   createChapter(project: string, value: unknown) {
+    this.idle(project);
     const p = this.stored(project),
       b = input(value, ["name", "from_url"]);
     if (!text(b.name)) return invalid();
@@ -182,6 +518,7 @@ export class Context {
     return { chapter: this.chapter(project, id) };
   }
   updateChapter(project: string, id: string, value: unknown) {
+    this.idle(project);
     const old = this.storedChapter(project, id),
       b = input(value, ["name", "content"]);
     if (b.name != null && !text(b.name)) return invalid();
@@ -246,6 +583,7 @@ export class Context {
     return { chapter: this.chapter(project, id) };
   }
   deleteChapter(project: string, id: string) {
+    this.idle(project);
     this.storedChapter(project, id);
     const p = this.stored(project);
     p.chapters.delete(id);
@@ -259,6 +597,7 @@ export class Context {
     };
   }
   attachDictionaries(id: string, value: unknown) {
+    this.idle(id);
     const p = this.stored(id),
       b = input(value, [
         "pronunciation_dictionary_locators",
