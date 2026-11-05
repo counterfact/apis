@@ -26,7 +26,7 @@ test("Music context retains copied plans and bounded music; rejects unsupported 
   assert.equal(hash(c.songs.get(song.songId)!.audio), original);
   plan.sections[0].section_name = "Changed";
   assert.equal(
-    c.songs.get(song.songId)!.compositionPlan.sections[0].section_name,
+    c.songs.get(song.songId)!.compositionPlan!.sections[0].section_name,
     "Synthetic silence",
   );
   const next = c.nextSong;

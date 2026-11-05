@@ -6,6 +6,7 @@ export const resetBoundedMusic: Scenario = ($) => {
   c.plans = new Map();
   c.nextSong = 0;
   c.nextPlan = 0;
+  c.stemNames = { two_stems_v1: ["vocals", "instrumental"], six_stems_v1: ["vocals", "drums", "bass", "guitar", "piano", "other"] };
   c.audio = new Uint8Array(147 * 417);
   for (let n = 0; n < 147; n++)
     c.audio.set(speech.audio.subarray(0, 417), n * 417);

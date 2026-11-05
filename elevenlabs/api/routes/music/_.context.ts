@@ -1,9 +1,12 @@
+import { audioDuration } from "../../support/audio.js";
+import { storedZip } from "../../support/zip.js";
 import type { MusicPrompt } from "../../types/v1/components/schemas/MusicPrompt.js";
 import type { SongMetadata } from "../../types/v1/components/schemas/SongMetadata.js";
 import { isDeepStrictEqual } from "node:util";
 type RecordValue = {
   input: unknown;
-  compositionPlan: MusicPrompt;
+  compositionPlan?: MusicPrompt;
+  contentType?: string;
   audio: Uint8Array;
   durationMs: number;
   songId: string;
@@ -30,6 +33,7 @@ export class Context {
   nextPlan = 0;
   defaults?: { plan: MusicPrompt; durationMs: number; metadata: SongMetadata };
   modelExists: ((id: string) => boolean) | undefined;
+  stemNames: Record<string, string[]> = {};
   private ready() {
     if (!this.defaults || !this.modelExists || !this.audio.length)
       throw new Error("Run startup or reset");
@@ -153,6 +157,74 @@ export class Context {
       this.songs.set(songId, structuredClone(record));
     this.nextSong++;
     return record;
+  }
+  validateAudio(input: unknown) {
+    if (!object(input) || !(input.data instanceof Uint8Array) ||
+        typeof input.filename !== "string" || !input.filename.trim() || input.filename.length > 255 ||
+        typeof input.contentType !== "string" || input.size !== input.data.length ||
+        input.data.length === 0 || input.data.length > 8 * 1024 * 1024)
+      return fail(400, "invalid_music_file");
+    const duration = audioDuration(input.data, input.contentType);
+    if (duration === undefined || duration > 600) return fail(400, "invalid_music_file");
+    return { audio: new Uint8Array(input.data), contentType: input.contentType, durationMs: duration * 1000 };
+  }
+  private processingOptions(query: Record<string, unknown>) {
+    if (Object.keys(query).some(k => !["output_format", "enable_logging"].includes(k)) ||
+        (query.enable_logging != null && typeof query.enable_logging !== "boolean"))
+      return fail(400, "invalid_music_request");
+    if (query.output_format != null && query.output_format !== "mp3_44100_128")
+      return fail(400, "unsupported_music_option");
+  }
+  upload(input: unknown) {
+    this.ready();
+    if (!object(input) || Object.keys(input).some(k => !["file", "extract_composition_plan", "with_timestamps", "with_waveform_visual"].includes(k)))
+      return fail(400, "invalid_music_request");
+    if (["extract_composition_plan", "with_timestamps", "with_waveform_visual"].some(k => input[k] != null && input[k] !== false))
+      return fail(400, "unsupported_music_option");
+    const source = this.validateAudio(input.file);
+    if (!this.modelExists!("music_v1")) return fail(404, "model_not_found");
+    const songId = `sim-music-song-${this.nextSong + 1}`;
+    this.songs.set(songId, { songId, ...source, input: structuredClone(input) });
+    this.nextSong++;
+    return { song_id: songId };
+  }
+  separateStems(input: unknown, query: Record<string, unknown> = {}) {
+    this.ready(); this.processingOptions(query);
+    if (!object(input) || Object.keys(input).some(k => !["file", "stem_variation_id", "sign_with_c2pa"].includes(k)))
+      return fail(400, "invalid_music_request");
+    if (input.sign_with_c2pa != null && input.sign_with_c2pa !== false) return fail(400, "unsupported_music_option");
+    this.validateAudio(input.file);
+    const variation = input.stem_variation_id ?? "six_stems_v1";
+    if (typeof variation !== "string" || !["two_stems_v1", "six_stems_v1"].includes(variation))
+      return fail(400, "invalid_music_request");
+    const names = this.stemNames[variation];
+    if (!names?.length) throw new Error("Run startup or reset");
+    // Synthetic silence tracks; input is validated but is never separated.
+    return storedZip(names.map(name => ({ name: `${name}.mp3`, data: this.audio })));
+  }
+  videoToMusic(input: unknown, query: Record<string, unknown> = {}) {
+    this.ready(); this.processingOptions(query);
+    if (!object(input) || Object.keys(input).some(k => !["videos", "description", "tags", "model_id", "add_sfx", "separate_tracks", "use_audio_as_reference", "sign_with_c2pa"].includes(k)) ||
+        !Array.isArray(input.videos) || input.videos.length < 1 || input.videos.length > 10 ||
+        (input.description != null && (typeof input.description !== "string" || Array.from(input.description).length > 4100)) ||
+        (input.tags != null && (!Array.isArray(input.tags) || input.tags.length > 10 || input.tags.some(t => typeof t !== "string" || !t.trim()))))
+      return fail(400, "invalid_music_request");
+    let size = 0;
+    for (const video of input.videos) {
+      if (!object(video) || !(video.data instanceof Uint8Array) || video.contentType !== "video/mp4" ||
+          typeof video.filename !== "string" || !video.filename.trim() || video.filename.length > 255 ||
+          video.size !== video.data.length || !video.data.length || video.data.length > 8 * 1024 * 1024)
+        return fail(400, "invalid_video_file");
+      size += video.data.length;
+    }
+    if (size > 16 * 1024 * 1024) return fail(400, "video_size_exceeded");
+    if ((input.model_id != null && input.model_id !== "music_v1") ||
+        ["add_sfx", "separate_tracks", "use_audio_as_reference", "sign_with_c2pa"].some(k => input[k] != null && input[k] !== false))
+      return fail(400, "unsupported_music_option");
+    // Opaque video input: no decoding, duration measurement or visual analysis.
+    const song = this.compose({ prompt: "Synthetic video soundtrack" }, query);
+    if (query.enable_logging !== false) this.songs.get(song.songId)!.input = structuredClone(input);
+    return song;
   }
   detailed(song: RecordValue) {
     const boundary = `counterfact-${song.songId}`,

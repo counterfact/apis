@@ -16,6 +16,32 @@ const object = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 export class Context {
   records = new Map<string, Finetune>();
+  nextFinetune = 0;
+  creationDefaults?: { createdAt: string; status: Finetune["status"]; progress: number };
+  modelExists?: (id: string) => boolean;
+  validateAudio?: (input: unknown) => { audio: Uint8Array };
+  create(input: unknown) {
+    if (!object(input) || Object.keys(input).some(k => !["name", "primary_genre", "files", "tags", "visibility", "model_id"].includes(k)) ||
+        typeof input.name !== "string" || input.name.trim().length < 5 || Array.from(input.name).length > 200 ||
+        typeof input.primary_genre !== "string" || !input.primary_genre.trim() ||
+        !Array.isArray(input.files) || input.files.length < 1 || input.files.length > 20 ||
+        (input.tags != null && (!Array.isArray(input.tags) || input.tags.some(t => typeof t !== "string" || !t.trim()))) ||
+        (input.visibility != null && !["private", "workspace"].includes(String(input.visibility)))) return invalid();
+    if (input.model_id != null && input.model_id !== "music_v1") return fail(400, "unsupported_music_model");
+    if (!this.creationDefaults || !this.modelExists || !this.validateAudio) throw new Error("Run startup or reset");
+    if (!this.modelExists("music_v1")) return fail(404, "model_not_found");
+    let size = 0;
+    for (const source of input.files) size += this.validateAudio(source).audio.length;
+    if (size > 16 * 1024 * 1024) return fail(400, "training_files_too_large");
+    let next = this.nextFinetune + 1;
+    while (this.records.has(`sim-music-finetune-${next}`)) next++;
+    const row: Finetune = { id: `sim-music-finetune-${next}`, name: input.name, primary_genre: input.primary_genre,
+      tags: structuredClone(input.tags as string[] ?? []), visibility: input.visibility as "private" | "workspace" ?? "private",
+      created_by: "self", model_id: "music_v1", created_at: this.creationDefaults.createdAt,
+      status: this.creationDefaults.status, training_progress: this.creationDefaults.progress, failure_reason: null };
+    this.records.set(row.id, row); this.nextFinetune = next;
+    return structuredClone(row);
+  }
   private record(id: string) {
     return this.records.get(id) ?? fail(404, "finetune_not_found");
   }
