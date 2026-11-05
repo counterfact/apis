@@ -8,11 +8,36 @@ export const emptyAgentLifecycle: Scenario = ($) => {
   c.versions = new Map();
   c.history = new Map();
   c.nextDeployment = 0;
+  c.nextVersion = 0;
   for (const a of agents.agents.values()) {
     delete a.configuration.branch_id;
     delete a.configuration.version_id;
     delete a.configuration.main_branch_id;
   }
+};
+
+/** A newer live main configuration and an independently changed feature greeting. */
+export const branchMergeConflicts: Scenario = ($) => {
+  const agent = $.loadContext("/convai/agents").agents.get("sim-agent")!;
+  agent.configuration.conversation_config.agent!.first_message = "Main changed greeting";
+  agent.configuration.conversation_config.agent!.language = "es";
+  agent.configuration.metadata.updated_at_unix_secs = 1735689610;
+};
+
+/** Saved feature references and atomic-list conflicts for local merge review. */
+export const branchMergeReferences: Scenario = ($) => {
+  const lifecycle = $.loadContext("/convai/agents/{agent_id}/branches");
+  const procedures = $.loadContext("/convai/agents/{agent_id}/branches/{branch_id}/procedures");
+  const source = lifecycle.versions.get("sim-agent-version-feature")!.configuration;
+  const published = structuredClone(procedures.versions.get("sim-procedure-version")!);
+  published.branchId = "sim-agent-feature";
+  published.value.version_id = "sim-procedure-feature-version";
+  published.value.name = "Published feature support";
+  procedures.versions.set(published.value.version_id!, published);
+  source.procedures!["sim-procedure"].version_id = published.value.version_id!;
+  source.procedures!["sim-procedure"].name = published.value.name;
+  source.conversation_config.agent!.prompt!.tool_ids = ["feature-tool"];
+  $.loadContext("/convai/agents").agents.get("sim-agent")!.configuration.conversation_config.agent!.prompt!.tool_ids = ["main-tool"];
 };
 export const resetAgentLifecycle: Scenario = ($) => {
   emptyAgentLifecycle($);

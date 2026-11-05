@@ -17,7 +17,7 @@ export {emptyAgentProcedures,procedureFolderReferences} from "./agent-procedures
 import {resetAgentMergeProposals} from "./agent-merge-proposals.js";
 export {emptyAgentMergeProposals} from "./agent-merge-proposals.js";
 import { resetAgentLifecycle } from "./agent-lifecycle.js";
-export { emptyAgentLifecycle } from "./agent-lifecycle.js";
+export { emptyAgentLifecycle, branchMergeConflicts, branchMergeReferences } from "./agent-lifecycle.js";
 import { resetAssets } from "./assets.js";
 export { emptyAssets } from "./assets.js";
 import { resetMusicFinetunes } from "./music-finetunes.js";

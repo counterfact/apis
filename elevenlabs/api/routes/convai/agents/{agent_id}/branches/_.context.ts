@@ -3,6 +3,8 @@ import type { GetAgentResponseModel as Agent } from "../../../../../types/v1/com
 import type { AgentBranchResponse as Branch } from "../../../../../types/v1/components/schemas/AgentBranchResponse.js";
 import type { AgentVersionMetadata as Version } from "../../../../../types/v1/components/schemas/AgentVersionMetadata.js";
 import type { AgentDeploymentHistoryItem as Deployment } from "../../../../../types/v1/components/schemas/AgentDeploymentHistoryItem.js";
+import type { FieldConflict } from "../../../../../types/v1/components/schemas/FieldConflict.js";
+import { isDeepStrictEqual as equal } from "node:util";
 export type StoredBranch = {
   metadata: Branch;
   tip: string;
@@ -30,6 +32,7 @@ export class Context {
   versions = new Map<string, StoredVersion>();
   history = new Map<string, Deployment[]>();
   nextDeployment = 0;
+  nextVersion = 0;
   agents?: () => Map<string, StoredAgent>;
   private agent(id: string) {
     return this.agents?.().get(id) ?? fail(404, "agent_not_found");
@@ -308,6 +311,114 @@ export class Context {
     return { traffic_percentage_branch_id_map: structuredClone(splits) };
   }
   clearProcedureDrafts?: (agentId: string, branchId: string) => void;
+  private ancestors(id: string, tip: string) {
+    const distances = new Map<string, number>();
+    const pending: [string, number][] = [[tip, 0]];
+    for (let index = 0; index < pending.length; index++) {
+      const [key, distance] = pending[index]!;
+      if (distances.has(key)) continue;
+      const version = this.versions.get(key);
+      if (version?.metadata.agent_id !== id) fail(409, "incomplete_branch_ancestry");
+      distances.set(key, distance);
+      const parents = version!.metadata.parents;
+      for (const parent of [parents.in_branch_parent_id, parents.out_of_branch_parent_id, parents.merged_from_version_id, parents.rebased_from_version_id])
+        if (parent) pending.push([parent, distance + 1]);
+    }
+    return distances;
+  }
+  private plan(id: string, sourceId: string, targetId: string, force: boolean, rebase: boolean) {
+    const source = this.branch(id, sourceId), target = this.branch(id, targetId);
+    if (sourceId === targetId) return invalid();
+    if (source.metadata.is_archived || target.metadata.is_archived) fail(409, "branch_archived");
+    const sourceAncestors = this.ancestors(id, source.tip), targetAncestors = this.ancestors(id, target.tip);
+    const baseId = [...sourceAncestors.keys()].filter(key => targetAncestors.has(key)).sort((a, b) =>
+      sourceAncestors.get(a)! + targetAncestors.get(a)! - sourceAncestors.get(b)! - targetAncestors.get(b)! || a.localeCompare(b))[0];
+    if (!baseId) return fail(409, "no_common_ancestor");
+    const base = this.versions.get(baseId)!.configuration;
+    const from = this.select(id, { branch_id: sourceId }), to = this.select(id, { branch_id: targetId });
+    const sourceTime = Math.max(source.metadata.last_committed_at, from.metadata.updated_at_unix_secs);
+    const targetTime = Math.max(target.metadata.last_committed_at, to.metadata.updated_at_unix_secs);
+    const sourceWins = !rebase && (force || sourceTime > targetTime);
+    const conflicts: FieldConflict[] = [];
+    const mergeValue = (ancestor: unknown, left: unknown, right: unknown, section: FieldConflict["section"], path: string): unknown => {
+      if (equal(left, ancestor)) return structuredClone(right);
+      if (equal(right, ancestor) || equal(left, right)) return structuredClone(left);
+      // Procedure references identify immutable versions and are merged as units.
+      // Arrays and discriminated values also replace atomically.
+      if (object(left) && object(right) && (ancestor === undefined || object(ancestor)) &&
+          !(section === "procedures" && path) && left.type === right.type) {
+        const value: Record<string, unknown> = {};
+        for (const key of [...new Set([...Object.keys(object(ancestor) ? ancestor : {}), ...Object.keys(left), ...Object.keys(right)])].sort()) {
+          const child = mergeValue(object(ancestor) ? ancestor[key] : undefined, left[key], right[key], section, path ? `${path}.${key}` : key);
+          if (child !== undefined) Object.defineProperty(value, key, { value: child, enumerable: true, configurable: true, writable: true });
+        }
+        return value;
+      }
+      conflicts.push({ section, path, ...(ancestor === undefined ? {} : { base_value: structuredClone(ancestor) }), ...(left === undefined ? {} : { source_value: structuredClone(left) }), ...(right === undefined ? {} : { target_value: structuredClone(right) }) });
+      return structuredClone(sourceWins ? left : right);
+    };
+    const merged = structuredClone(to);
+    for (const section of ["conversation_config", "platform_settings", "workflow", "procedures"] as const) {
+      const value = mergeValue(base[section], from[section], to[section], section, "");
+      if (value === undefined) delete merged[section];
+      else Object.assign(merged, { [section]: value });
+    }
+    const unchanged = ["conversation_config", "platform_settings", "workflow", "procedures"].every(section => equal(merged[section as keyof Agent], to[section as keyof Agent]));
+    return { source, target, merged, conflicts, unchanged };
+  }
+  private previewOptions(input: unknown, forceAllowed: boolean) {
+    if (!object(input) || Object.keys(input).some(key => !["include_procedure_generated_workflow_elements", ...(forceAllowed ? ["force"] : [])].includes(key)) ||
+      Object.values(input).some(value => typeof value !== "boolean")) return invalid();
+    if (input.include_procedure_generated_workflow_elements === true) fail(400, "unsupported_generated_workflow");
+    return input;
+  }
+  mergePreview(id: string, sourceId: string, targetId: string, options: unknown = {}) {
+    const input = this.previewOptions(options, true);
+    const plan = this.plan(id, sourceId, targetId, input.force === true, false);
+    return { ...plan.merged, overridden_fields: plan.conflicts.map(c => `${c.section}.${c.path}`), conflicts: plan.conflicts, source_identical_to_target: plan.unchanged };
+  }
+  rebasePreview(id: string, targetId: string, sourceId?: string | null, options: unknown = {}) {
+    this.previewOptions(options, false);
+    const from = sourceId ?? this.agent(id).mainBranch?.id;
+    if (!from) return fail(404, "branch_not_found");
+    const plan = this.plan(id, from, targetId, false, true);
+    return { ...plan.merged, overridden_fields: plan.conflicts.map(c => `${c.section}.${c.path}`), conflicts: plan.conflicts, source_identical_to_target: plan.unchanged };
+  }
+  private commitPlan(id: string, plan: ReturnType<Context["plan"]>, rebase: boolean, archive: boolean) {
+    if (rebase && plan.unchanged) fail(409, "branch_already_up_to_date");
+    if (archive && (plan.source.metadata.id === this.agent(id).mainBranch?.id || this.project(plan.source).current_live_percentage > 0)) fail(409, "branch_in_use");
+    // Validate every precondition before allocating an ID or changing any state.
+    const branchId = plan.target.metadata.id;
+    let number = this.nextVersion, versionId: string;
+    do { versionId = `sim-agent-version-created-${++number}`; } while (this.versions.has(versionId));
+    const time = Math.max(plan.source.metadata.last_committed_at, plan.target.metadata.last_committed_at, plan.merged.metadata.updated_at_unix_secs,
+      ...[...this.versions.values()].filter(v => v.metadata.agent_id === id).map(v => v.metadata.time_committed_secs)) + 1;
+    const configuration = structuredClone({ ...plan.merged, branch_id: branchId, version_id: versionId, main_branch_id: this.agent(id).mainBranch?.id,
+      metadata: { ...plan.merged.metadata, updated_at_unix_secs: time } });
+    const previous = this.versions.get(plan.target.tip)!;
+    const metadata: Version = { id: versionId, agent_id: id, branch_id: branchId, version_description: rebase ? "Local branch rebase" : "Local branch merge",
+      seq_no_in_branch: previous.metadata.seq_no_in_branch + 1, time_committed_secs: time,
+      parents: { in_branch_parent_id: plan.target.tip, out_of_branch_parent_id: plan.source.tip,
+        ...(rebase ? { rebased_from_version_id: plan.source.tip } : { merged_from_branch_id: plan.source.metadata.id, merged_from_version_id: plan.source.tip }) },
+      access_info: structuredClone(configuration.access_info) };
+    this.versions.set(versionId, { metadata, configuration: structuredClone(configuration) });
+    this.nextVersion = number;
+    plan.target.tip = versionId;
+    plan.target.metadata.last_committed_at = time;
+    if (this.agent(id).mainBranch?.id === branchId) this.agent(id).configuration = configuration;
+    if (archive) plan.source.metadata.is_archived = true;
+    return { version_id: versionId, branch_id: branchId };
+  }
+  merge(id: string, sourceId: string, targetId: string, input: unknown) {
+    if (!object(input) || Object.keys(input).some(key => !["force", "archive_source_branch"].includes(key)) || Object.values(input).some(value => typeof value !== "boolean")) return invalid();
+    return this.commitPlan(id, this.plan(id, sourceId, targetId, input.force === true, false), false, input.archive_source_branch !== false);
+  }
+  rebase(id: string, targetId: string, sourceId: string | null | undefined, input: unknown) {
+    if (!object(input) || Object.keys(input).length) return invalid();
+    const from = sourceId ?? this.agent(id).mainBranch?.id;
+    if (!from) return fail(404, "branch_not_found");
+    return this.commitPlan(id, this.plan(id, from, targetId, false, true), true, false);
+  }
   deleteDraft(id: string, branchId: string) {
     this.branch(id, branchId);
     this.clearProcedureDrafts?.(id, branchId);

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 300 now have authored
-behavior. The remaining 137 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 304 now have authored
+behavior. The remaining 133 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2089,3 +2089,49 @@ Contexts initialize empty. Startup/reset populate `api/scenarios/audio-effects.t
 `emptyAudioEffects` clears only these three catalogs. Reads return defensive copies,
 instances isolate state, and reset restores baseline metadata. The contract has
 no query options. Request/response validation and the contracts remain unchanged.
+
+
+## Agent branch merges and rebases
+
+Four branch operations now preview and apply local configuration merges under
+`/v1/convai/agents/{agent_id}/branches`: `GET /{source_branch_id}/merge-preview`,
+`POST /{source_branch_id}/merge`, `GET /{branch_id}/rebase-preview` and
+`POST /{branch_id}/rebase`. Merge requires `target_branch_id`;
+rebase accepts `source_branch_id` and defaults it to the canonical main branch.
+
+The lifecycle context finds a shared version ancestor, then merges
+`conversation_config`, `platform_settings`, `workflow` and `procedures` recursively.
+Arrays, procedure-version references and objects with different discriminator
+values are atomic. Deletions are retained. Other agent envelope fields, including
+name, tags, access information and creation metadata, stay with the destination.
+The main branch contributes its current canonical configuration, including live
+analysis, knowledge-base and MCP references that may postdate its tip snapshot.
+Preview conflicts report the ancestor, source and destination values and dot paths.
+Merge conflicts use the greater of commit and configuration-update timestamps;
+the source wins only when newer, or with `force: true`. Ties retain the destination.
+Rebase always retains the destination's conflicting changes. The common ancestor
+is the nearest by combined parent distance, with version ID breaking ties.
+These merge and ordering choices are deterministic simulator conventions.
+
+Previews do not mutate state. Applying a merge or rebase creates a new immutable
+version on the destination with both parent links, advances its branch tip and
+updates canonical agent reads when the destination is main. Published procedure
+references remain readable across branches; working drafts stay on their original
+branch and are neither published nor discarded. Rebase rejects an unchanged result
+with 409. Merge can record an unchanged result as a new version. The preview's
+`source_identical_to_target` reports that unchanged destination result.
+
+Merge archives its source by default; `archive_source_branch: false` preserves it.
+Archiving main or a branch receiving live traffic fails with 409 before any version,
+ID counter or configuration changes. Archived branches, absent shared ancestry and
+incomplete ancestry also fail with 409; missing agents/branches return 404. Invalid
+options return 400. Procedure-generated workflow elements are unsupported and
+explicit `include_procedure_generated_workflow_elements: true` returns 400.
+No workflow, procedure, provider request or model executes. Contracts and validation
+remain unchanged. Proposal merge remains generated until its integration slice.
+
+Contexts start empty; startup/reset seed ancestry and reset the version counter in
+`api/scenarios/agent-lifecycle.ts`. `branchMergeConflicts` adds divergent live-main
+settings; `branchMergeReferences` adds a published feature procedure version and
+atomic list conflicts. Reset removes created versions and restores main, feature,
+procedure references and branch-local drafts. Simulator instances remain isolated.
