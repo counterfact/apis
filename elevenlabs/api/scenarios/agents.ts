@@ -12,13 +12,24 @@ export const emptyAgents: Scenario = ($) => {
 export const resetAgents: Scenario = ($) => {
   emptyAgents($);
   const context = $.loadContext("/convai/agents");
-  context.agents.set("sim-agent", { creatorUserId: "sim-user", configuration: {
+  context.agents.set("sim-agent", { creatorUserId: "sim-user", mainBranch: { id: "sim-main-branch", name: "main" }, configuration: {
     agent_id: "sim-agent", name: "Simulator Support", tags: ["support"],
     conversation_config: { agent: { first_message: "Hello from the simulator.", language: "en", prompt: { prompt: "Help with synthetic examples.", llm: "gemini-3.5-flash", tool_ids: [] } }, tts: { voice_id: "sim-narrator" } },
     platform_settings: { archived: false },
     metadata: { created_at_unix_secs: 1_735_689_600, updated_at_unix_secs: 1_735_689_600 },
     access_info: structuredClone(context.defaults!.accessInfo),
   } });
+};
+
+/** Replace canonical main-branch metadata for local dependency-picker flows. */
+export const agentMainBranchPreview: Scenario = ($) => {
+  const context = $.loadContext("/convai/agents");
+  const agent = context.agents.get("sim-agent");
+  if (!agent?.mainBranch) throw new Error("Run reset before agentMainBranchPreview");
+  context.agents.set("sim-agent", {
+    ...agent,
+    mainBranch: { ...agent.mainBranch, name: "Preview main" },
+  });
 };
 
 /** Seed a persisted analysis reference without running an evaluation. */

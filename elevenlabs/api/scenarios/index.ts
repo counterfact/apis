@@ -63,7 +63,7 @@ export { emptyWebhooks } from "./webhooks.js";
 import { resetTools } from "./tools.js";
 export { emptyTools, toolDiscovery } from "./tools.js";
 import { resetAgents } from "./agents.js";
-export { emptyAgents, agentAnalysisReferences, agentWidgetConfiguration } from "./agents.js";
+export { emptyAgents, agentAnalysisReferences, agentWidgetConfiguration, agentMainBranchPreview } from "./agents.js";
 import { resetSecrets } from "./secrets.js";
 export { emptySecrets } from "./secrets.js";
 import { resetEnvironments } from "./environments.js";

@@ -10,7 +10,12 @@ import type { ResourceAccessInfo } from "../../../types/v1/components/schemas/Re
 import type { HTTP_GET_Query as Query } from "../../../types/v1/paths/convai/agents.types.js";
 
 type Result<T> = { value: T; error?: never } | { error: "invalid_agent" | "agent_not_found" | "invalid_agent_query"; value?: never };
-export type StoredAgent = { configuration: Agent; creatorUserId: string };
+export type MainBranch = { id: string; name: string };
+export type StoredAgent = {
+  configuration: Agent;
+  creatorUserId: string;
+  mainBranch?: MainBranch;
+};
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): value is ObjectValue => typeof value === "object" && value !== null && !Array.isArray(value);
 const keys = (value: ObjectValue, allowed: string[]) => Object.keys(value).every(key => allowed.includes(key));

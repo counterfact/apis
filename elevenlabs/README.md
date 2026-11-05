@@ -939,7 +939,8 @@ updates and dependent-agent discovery. No evaluations, extraction, model calls o
 other AI work run. Definitions are local configuration only. Startup and `reset`
 populate `sim-analysis-evaluation` and `sim-analysis-data` in
 `api/scenarios/analysis-items.ts`; contexts start empty. `emptyAnalysisItems` clears
-items, versions and their user references from live agents, preserving other refs.
+items, versions and their user references from live agents, preserving other refs
+and canonical main-branch metadata.
 
 Creation returns `sim-analysis-created-N` IDs and publishes a first version.
 PATCH replaces the complete definition, preserves the item's kind, and publishes
@@ -970,6 +971,13 @@ are outside this slice. Deletion returns 409 when referenced unless `force=true`
 which removes every user reference from current agents before deleting versions.
 Reset restores both agent and analysis-item baselines. Simulator instances isolate
 state. `agentAnalysisReferences` can add a seeded reference for testing discovery.
+Main-branch identity and name belong to the canonical agent record, seeded in
+`api/scenarios/agents.ts`. Analysis attachment validation and dependency reads
+resolve that metadata live, including record/map replacement, rename and deletion.
+Duplicating an agent copies its configuration references without borrowing the
+source agent's branch identity. `agentMainBranchPreview` replaces the fictional
+main-branch metadata for dependency-picker setup; `reset` restores
+`sim-main-branch` and `main`. This metadata refactor adds no API operations.
 
 ## Knowledge base local records
 

@@ -5,6 +5,69 @@ import { createDispatcherHarness } from "../test-support/dispatcher.js";
 import * as scenarios from "../api/scenarios/index.js";
 const base = "/v1/convai/analysis-items";
 const definition = {kind:"evaluation",name:"Greeting",conversation_goal_prompt:"Did the agent greet the user?"};
+test("analysis dependencies and attachments follow canonical main-branch replacement", async () => {
+  const r = await createScenarioRunner();
+  await r.run(scenarios.startup);
+  const c = r.loadContext("/convai/analysis-items");
+  const agents = r.loadContext("/convai/agents");
+  await r.run(scenarios.agentAnalysisReferences);
+  const original = agents.agents.get("sim-agent")!;
+  Object.assign(original, { mainBranch: { id: "sim-main-branch", name: "Renamed main" } });
+  assert.equal(c.dependentAgents("sim-analysis-evaluation").branches![0].branch_name, "Renamed main");
+  agents.agents = new Map([["sim-agent", {
+    ...original, mainBranch: { id: "replacement-main", name: "Replacement main" },
+  }]]);
+  assert.equal(c.dependentAgents("sim-analysis-evaluation").branches![0].branch_id, "replacement-main");
+  const results = c.updateAttachments("sim-analysis-data", { source: "user", attach: [
+    { agent_id: "sim-agent", branch_id: "sim-main-branch" },
+    { agent_id: "sim-agent", branch_id: "replacement-main" },
+  ] });
+  assert.deepEqual(results.results.map(result => result.status), ["failure", "success"]);
+  const duplicate = agents.duplicateAgent("sim-agent", {});
+  assert.ok(duplicate.value);
+  assert.equal(c.dependentAgents("sim-analysis-evaluation").agents.length, 2);
+  assert.equal(c.dependentAgents("sim-analysis-evaluation").branches!.length, 1);
+  const missingBranch = c.updateAttachments("sim-analysis-data", { source: "user", attach: [
+    { agent_id: duplicate.value.agent_id, branch_id: "replacement-main" },
+  ] });
+  assert.equal(missingBranch.results[0].status, "failure");
+  await r.run(scenarios.emptyAnalysisItems);
+  const newItem = c.createItem(definition);
+  assert.equal(c.updateAttachments(newItem.id, { source: "user", attach: [
+    { agent_id: "sim-agent", branch_id: "replacement-main" },
+  ] }).results[0].status, "success");
+  agents.deleteAgent("sim-agent");
+  assert.deepEqual(c.dependentAgents(newItem.id).branches, []);
+  await r.run(scenarios.reset);
+  await r.run(scenarios.agentAnalysisReferences);
+  assert.equal(c.dependentAgents("sim-analysis-evaluation").branches![0].branch_id, "sim-main-branch");
+});
+
+test("validated analysis dependencies use canonical branch scenario metadata", async () => {
+  const h = await createDispatcherHarness();
+  await h.scenario("agentAnalysisReferences");
+  await h.scenario("agentMainBranchPreview");
+  const dependencies = async () => {
+    const response = await h.request(`${base}/sim-analysis-evaluation/dependent-agents`);
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  assert.equal((await dependencies()).branches![0].branch_name, "Preview main");
+  const attachment = await h.request(`${base}/sim-analysis-data/attachments`, {
+    method: "PATCH", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ source: "user", attach: [
+      { agent_id: "sim-agent", branch_id: "unknown-main-branch" },
+      { agent_id: "sim-agent", branch_id: "sim-main-branch" },
+    ] }),
+  });
+  assert.equal(attachment.status, 200);
+  assert.deepEqual((await attachment.json()).results.map((result: {status:string}) => result.status), ["failure", "success"]);
+  assert.equal((await h.request("/v1/convai/agents/sim-agent", { method: "DELETE" })).status, 204);
+  assert.deepEqual((await dependencies()).branches, []);
+  await h.scenario("reset");
+  await h.scenario("agentAnalysisReferences");
+  assert.equal((await dependencies()).branches![0].branch_name, "main");
+});
 test("analysis context versions, copies, filters and defensive snapshots", async () => {
   const {Context} = await import("../api/routes/convai/analysis-items/_.context.js");
   assert.equal(new Context().items.size,0);
@@ -67,7 +130,7 @@ test("validated analysis Dispatcher lifecycle versions attachments isolation and
   assert.equal((await (await app.request(`${base}?kind=data_collection&created_by_user_id=@me`)).json()).analysis_items.length,2);
   const dataDestination={agent_id:"sim-agent",branch_id:"sim-main-branch"};
   assert.equal((await send(`${base}/${dataItem.id}/attachments`,"PATCH",{source:"user",attach:[dataDestination]})).status,200);
-  assert.equal((await (await app.request(`${base}/${dataItem.id}/dependent-agents`)).json()).branches[0].branch_id,"sim-main-branch");
+  assert.equal((await (await app.request(`${base}/${dataItem.id}/dependent-agents`)).json()).branches![0].branch_id,"sim-main-branch");
   const detached=await send(`${base}/${dataItem.id}/attachments`,"PATCH",{source:"user",detach:[dataDestination]});
   assert.equal(detached.status,200); assert.equal((await detached.json()).results[0].data.changed,true);
   assert.equal((await (await app.request(`${base}/${dataItem.id}/dependent-agents`)).json()).agents.length,0);

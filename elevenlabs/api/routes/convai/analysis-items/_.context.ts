@@ -3,7 +3,7 @@ import type { AnalysisItemResponseModel as Item } from "../../../types/v1/compon
 import type { AnalysisItemVersionResponseModel as Version } from "../../../types/v1/components/schemas/AnalysisItemVersionResponseModel.js";
 import type { UpdateAnalysisItemAttachmentsResponseModel as Attachments } from "../../../types/v1/components/schemas/UpdateAnalysisItemAttachmentsResponseModel.js";
 import type { GetAnalysisItemDependentAgentsResponseModel as Dependencies } from "../../../types/v1/components/schemas/GetAnalysisItemDependentAgentsResponseModel.js";
-import type { StoredAgent } from "../agents/_.context.js";
+import type { MainBranch, StoredAgent } from "../agents/_.context.js";
 type Definition = Item["definition"];
 type Stored = { item: Item; versions: Version[]; creatorUserId: string };
 const object = (v: unknown): v is Record<string,unknown> => !!v && typeof v === "object" && !Array.isArray(v);
@@ -15,7 +15,7 @@ const invalid = (): never => {throw new AnalysisItemError(400,"invalid_analysis_
 const array = (v:unknown): string[]|null => v==null?null:typeof v==="string"?[v]:Array.isArray(v)&&v.every(x=>typeof x==="string")?v:invalid();
 export class Context {
   items = new Map<string,Stored>();
-  mainBranches = new Map<string,{id:string;name:string}>();
+  mainBranch: (agentId: string) => MainBranch | undefined = () => undefined;
   agents:()=>Map<string,StoredAgent> = ()=>new Map();
   nextId=1;
   nextMutation=0;
@@ -81,7 +81,7 @@ export class Context {
   private dependencies(id:string){return [...this.agents()].filter(([,agent])=>{const refs=this.refs(agent);return [...refs?.evaluation_criteria??[],...refs?.data_collection??[]].some(r=>r.source==="user"&&r.analysis_item_id===id);}).sort(([a],[b])=>a.localeCompare(b));}
   dependentAgents(id:string,query:Record<string,unknown>={}):Dependencies {
     this.stored(id);const page=this.paginate(this.dependencies(id).map(([id,a])=>({id,name:a.configuration.name,created_at_unix_secs:a.configuration.metadata.created_at_unix_secs,access_level:"admin" as const,type:"available" as const})),query);
-    return {agents:page.values,branches:page.values.flatMap(a=>{const b=this.mainBranches.get(a.id);return b?[{agent_id:a.id,agent_name:a.name,branch_id:b.id,branch_name:b.name,is_main:true}]:[];}),has_more:page.has_more,next_cursor:page.next_cursor};
+    return {agents:page.values,branches:page.values.flatMap(a=>{const b=this.mainBranch(a.id);return b?[{agent_id:a.id,agent_name:a.name,branch_id:b.id,branch_name:b.name,is_main:true}]:[];}),has_more:page.has_more,next_cursor:page.next_cursor};
   }
   deleteItem(id:string,force:boolean){
     this.stored(id);if(typeof force!=="boolean")return invalid();
@@ -95,7 +95,7 @@ export class Context {
     for(const key of ["attach","detach"])if(input[key]!==undefined&&(!Array.isArray(input[key])||input[key].some(d=>!object(d)||typeof d.agent_id!=="string"||typeof d.branch_id!=="string")))return invalid();
     const results:Attachments["results"]=[];
     for(const action of ["attach","detach"] as const)for(const dest of (input[action]??[]) as {agent_id:string;branch_id:string}[]){
-      const agent=this.agents().get(dest.agent_id),branch=this.mainBranches.get(dest.agent_id);
+      const agent=this.agents().get(dest.agent_id),branch=this.mainBranch(dest.agent_id);
       if(!agent||!branch||branch.id!==dest.branch_id){results.push({status:"failure",error_code:404,error_status:!agent?"agent_not_found":"branch_not_found",error_message:"Known agent main branch not found"});continue;}
       agent.configuration.platform_settings??={};const refs=agent.configuration.platform_settings.analysis_items??={};
       const key=item.definition.kind==="evaluation"?"evaluation_criteria":"data_collection";
