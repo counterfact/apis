@@ -6,6 +6,7 @@ import type { HTTP_GET_Query } from "../../types/v1/paths/pronunciation-dictiona
 import type { Body_Add_a_pronunciation_dictionary_v1_pronunciation_dictionaries_add_from_rules_post as CreateDictionary } from "../../types/v1/components/schemas/Body_Add_a_pronunciation_dictionary_v1_pronunciation_dictionaries_add_from_rules_post.js";
 import type { AddPronunciationDictionaryResponseModel as CreatedDictionary } from "../../types/v1/components/schemas/AddPronunciationDictionaryResponseModel.js";
 import type { PronunciationDictionaryRulesResponseModel as RulesVersion } from "../../types/v1/components/schemas/PronunciationDictionaryRulesResponseModel.js";
+import type { Body_Update_pronunciation_dictionary_v1_pronunciation_dictionaries__pronunciation_dictionary_id__patch as UpdateDictionary } from "../../types/v1/components/schemas/Body_Update_pronunciation_dictionary_v1_pronunciation_dictionaries__pronunciation_dictionary_id__patch.js";
 
 export type DictionaryRule = PronunciationDictionaryAliasRuleRequestModel | PronunciationDictionaryPhonemeRuleRequestModel;
 export type DictionaryRecord = {
@@ -24,6 +25,20 @@ export class Context {
   dictionaries = new Map<string, DictionaryRecord>();
   nextDictionaryNumber = 0;
   creationDefaults?: { createdBy: string; timeUnix: number };
+  archiveTimeUnix?: number;
+
+  updateDictionary(id: string, input: UpdateDictionary) {
+    const dictionary = this.dictionaries.get(id);
+    if (!dictionary) return undefined;
+    const metadata = dictionary.metadata;
+    if (input.archived === true && metadata.archived_time_unix == null && this.archiveTimeUnix === undefined) {
+      throw new Error("Dictionary archive state is not initialized; run startup or reset");
+    }
+    if (input.name !== undefined) metadata.name = input.name;
+    if (input.archived === true) metadata.archived_time_unix ??= this.archiveTimeUnix!;
+    if (input.archived === false) metadata.archived_time_unix = null;
+    return structuredClone(metadata);
+  }
 
   addRules(id: string, rules: DictionaryRule[]): RulesResult {
     const dictionary = this.dictionaries.get(id);

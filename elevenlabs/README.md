@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 418 operations retain their
+the stateful voices implementation. The remaining 417 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -240,6 +240,17 @@ As a local convention, array order and duplicate replacement strings are
 preserved, including for an unchanged rule list. Malformed bodies and empty
 replacement strings return HTTP 400 without changing state; unknown dictionary
 IDs return HTTP 404. `reset` restores the original rules and versions.
+
+`PATCH /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}` updates
+`name` and/or `archived` without changing rules, version IDs, or rule counts.
+Omitted fields are preserved, and an empty object is a no-op. Archiving changes
+the results of `include_archived=false`; renaming changes name-based sorting.
+Unarchiving sets `archived_time_unix` to null. As a local convention, new archive
+events use the fixed scenario-owned timestamp `1735689900`; repeated archiving
+preserves an existing archive timestamp. Responses contain metadata without
+rules and are isolated copies. Malformed bodies return HTTP 400 without changing
+state, and unknown dictionary IDs return HTTP 404. `reset` restores metadata,
+archive timestamps, and all rule versions.
 
 ## Development
 

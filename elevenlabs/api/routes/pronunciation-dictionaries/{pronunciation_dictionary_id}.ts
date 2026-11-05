@@ -2,7 +2,11 @@ import type { Routes } from "../../types/index.js";
 type Route =
   Routes["/pronunciation-dictionaries"]["/{pronunciation_dictionary_id}"];
 export const PATCH: Route["PATCH"] = async ($) => {
-  return $.response.status(200).random();
+  const metadata = $.context.updateDictionary($.path.pronunciation_dictionary_id, $.body);
+  if (!metadata) return $.x.response.status(404).json({
+    detail: { status: "pronunciation_dictionary_not_found", message: "Pronunciation dictionary not found" },
+  });
+  return $.response.status(200).json(metadata);
 };
 export const GET: Route["GET"] = async ($) => {
   const dictionary = $.context.getDictionary($.path.pronunciation_dictionary_id);
