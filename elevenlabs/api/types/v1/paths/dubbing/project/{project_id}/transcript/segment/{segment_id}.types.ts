@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../../../routes/dubbing/project/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../../../counterfact-types/index.ts";
 import type { DubbingSegmentUpdateRequest } from "../../../../../../components/schemas/DubbingSegmentUpdateRequest.js";
 import type { DubbingSourceSegmentUpdateResponse } from "../../../../../../components/schemas/DubbingSourceSegmentUpdateResponse.js";

@@ -1,3 +1,5 @@
+import {resetDubbingProjects} from "./dubbing-projects.js";
+export {emptyDubbingProjects,completeDubbingLanguages,pendingDubbingProject} from "./dubbing-projects.js";
 import {resetFlowGenerations} from "./flows.js";
 export {emptyFlowGenerations,startFlowGenerations,completeFlowGenerations,failFlowGenerations} from "./flows.js";
 import {resetProductionOrders} from "./productions.js";
@@ -68,6 +70,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetDubbingProjects($);
   resetFlowGenerations($);
   resetProductionOrders($);
   resetStudioProjects($);

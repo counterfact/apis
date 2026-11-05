@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 219 now have authored
-behavior. The remaining 218 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 234 now have authored
+behavior. The remaining 203 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1480,3 +1480,49 @@ not serve files or expire. `failFlowGenerations` instead stores a synthetic
 `model_error`. Terminal records are preserved by later transition scenarios.
 `emptyFlowGenerations` clears records/counters; reset restores the baseline.
 Template and template-run operations remain generated and uncounted.
+
+
+## Dubbing project and transcript records
+
+Fifteen project, language-target and transcript operations now use local metadata.
+Startup/reset seed ready project `sim-dubbing-project`, completed Spanish target
+`sim-dubbing-es` and source segment `sim-dubbing-segment` in
+`api/scenarios/dubbing-projects.ts`. Contexts initialize empty; instances isolate
+changes and all reads return defensive copies. Project deletion removes its
+languages/transcripts; target deletion preserves the project and other targets.
+Missing records return 404. Authentication and enterprise permissions are not enforced.
+
+Project lists sort by creation time (descending by default, or ASCENDING) with ID
+ties; language lists sort newest first with ID ties. Status filtering precedes
+decimal-offset cursor pagination. Page sizes are clamped to 1–100 as the contract
+describes; malformed cursors/options return 400. Project list rows have empty
+language_ids; detail derives IDs from live target state.
+
+Language creation stores a queued record with its inherited model and optional
+voice settings. Language tags receive a syntax check only, not a provider catalog
+lookup. Optional caller translations must cover every source external ID (or ID)
+exactly once. They require a ready source and remain inaccessible until completion.
+No dubbing, translation, billing, notifications or media processing occurs.
+
+Source edits require a ready project. Add/edit validates the complete final
+timeline: finite nonnegative spans within source duration, 0.1–25 seconds long,
+with no overlaps for the same speaker. Different speakers may overlap. Bulk edits
+apply atomically, including timing swaps. Playback order is start time then ID.
+Every accepted edit request, including unchanged values, increments the project
+revision once and every target revision once; affected translations are discarded
+and completed targets become stale. Existing outputs and output_revision remain
+as historical metadata. Source null fields preserve existing values.
+
+Target transcript reads/edits require a prior output (409 otherwise). Single/bulk
+translation edits increment only that target revision, stale a completed target,
+and preserve source/other targets. Omitted translation preserves it; null clears
+it. Unknown IDs or invalid edits leave state and counters unchanged. These error,
+ID, timing-update, ordering and null-source conventions are local behavior.
+
+`completeDubbingLanguages` explicitly completes queued/processing/stale targets of
+ready projects. It preserves supplied translations and fills gaps with labeled
+synthetic text, then records synthetic simulator.invalid output URLs that serve
+no files and do not expire. `pendingDubbingProject` adds a queued fixture for
+readiness/list flows; `emptyDubbingProjects` clears records and resets counters.
+Reset restores baseline. Multipart project creation and transcript regeneration
+remain generated and uncounted. Contracts and validation remain unchanged.

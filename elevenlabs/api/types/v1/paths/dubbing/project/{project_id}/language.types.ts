@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/dubbing/project/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Create_Dubbing_Language_Target_v1_dubbing_project__project_id__language_post } from "../../../../components/schemas/Body_Create_Dubbing_Language_Target_v1_dubbing_project__project_id__language_post.js";
 import type { DubbingLanguageResponse } from "../../../../components/schemas/DubbingLanguageResponse.js";
