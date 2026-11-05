@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/convai/whatsapp/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { Body_Send_an_outbound_message_via_WhatsApp_v1_convai_whatsapp_outbound_message_post } from "../../../components/schemas/Body_Send_an_outbound_message_via_WhatsApp_v1_convai_whatsapp_outbound_message_post.js";
 import type { WhatsAppOutboundMessageResponse } from "../../../components/schemas/WhatsAppOutboundMessageResponse.js";

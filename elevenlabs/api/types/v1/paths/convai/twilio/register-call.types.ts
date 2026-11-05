@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/convai/twilio/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { Body_Register_a_Twilio_call_and_return_TwiML_v1_convai_twilio_register_call_post } from "../../../components/schemas/Body_Register_a_Twilio_call_and_return_TwiML_v1_convai_twilio_register_call_post.js";
 import type { HTTPValidationError } from "../../../components/schemas/HTTPValidationError.js";

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 318 now have authored
-behavior. The remaining 119 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 328 now have authored
+behavior. The remaining 109 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2258,3 +2258,54 @@ in-progress record, and deleting it changes the count immediately. Context conta
 start empty; startup/reset in `api/scenarios/conversations.ts` clear rankings/outcomes
 and restore the historical baseline. Instances isolate state. Contracts and request/
 response validation remain unchanged; all values are synthetic local conventions.
+
+
+## Synthetic outbound communication
+
+Ten communication operations now persist WhatsApp account settings and queue local
+Twilio, Exotel, SIP and WhatsApp actions. No provider request, phone call, message,
+recording, speech synthesis or model execution occurs. Queuing creates an initiated
+canonical conversation with empty transcript, no audio and zero synthetic cost;
+conversation reads/lists and live count observe the same record. Provider call IDs
+are increasing local identifiers. The account and request containers start empty.
+
+Startup/reset in `api/scenarios/synthetic-outbound.ts` populate `sim-whatsapp`,
+assigned to `sim-agent`, and wire live canonical accessors. Account lists sort by
+phone-number ID; reads return copies and resolve assigned agent names live.
+PATCH persists the three enable flags, preserving omitted/null flags; explicit
+null assignment detaches the agent. Missing accounts/assigned agents return 404.
+Deleting an account preserves historical conversations. Deleted agents project a
+null name while retaining historical assignment metadata.
+
+Outbound calls require an existing nonarchived agent, a matching phone provider
+and outbound capability; SIP also requires an outbound trunk. The existing Twilio
+fixture works at baseline. Run `syntheticOutboundProviders` to add fictional Exotel
+metadata and enable the SIP fixture. Destinations use E.164 syntax. Twilio register
+checks the local number against inbound/outbound direction and returns contract
+`text/html` TwiML containing a synthetic `wss://simulator.invalid` URL. This URL
+is an inert fixture, not a WebSocket service. Registration still creates local
+conversation state. Phone deletion does not remove already queued history.
+
+Client data supports user ID, existing branch ID and production environment.
+Selected branches supply their immutable version ID; canonical main uses live
+configuration. Archived branches fail with 409. Other client overrides, dynamic
+variables, procedure selection and nonproduction environments return 400 explicitly.
+Recording, machine detection and nondefault ringing options are unsupported;
+default false recording and 60-second ringing metadata are accepted without
+performing telephony. All checks precede ID allocation and state writes.
+
+WhatsApp call/message routes require an unexpired account assigned to the selected
+agent. Disabled messaging blocks outbound messages. Template names/languages and
+contact IDs are stored as synthetic request metadata; only empty message template
+parameter arrays are supported. No template is rendered or sent. Audio-response
+and typing flags are persisted configuration only. Outbound message conversations
+are text-only; calls are not. These ID, matching, failure and subset rules are
+local simulator conventions, with contracts and validation unchanged.
+
+Run `completeSyntheticOutbound` to mark only currently initiated local requests
+done, with zero duration and no invented transcript/audio. Repeating completion
+leaves terminal records unchanged. `emptySyntheticOutbound` clears accounts and
+request metadata without deleting canonical conversation history; `reset` restores
+the full baseline and counters. Instances isolate all changes. All six request
+contracts passed guarded finite Dispatcher probes against the unchanged V1 spec
+before implementation; no additional recursive-schema blocker was observed.

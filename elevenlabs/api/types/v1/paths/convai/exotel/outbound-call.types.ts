@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/convai/exotel/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { Body_Handle_an_outbound_call_via_Exotel_v1_convai_exotel_outbound_call_post } from "../../../components/schemas/Body_Handle_an_outbound_call_via_Exotel_v1_convai_exotel_outbound_call_post.js";
 import type { ExotelOutboundCallResponse } from "../../../components/schemas/ExotelOutboundCallResponse.js";

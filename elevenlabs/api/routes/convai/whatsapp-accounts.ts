@@ -1,5 +1,4 @@
 import type { Routes } from "../../types/index.js";
 type Route = Routes["/convai"]["/whatsapp-accounts"];
-export const GET: Route["GET"] = async ($) => {
-  return $.response.status(200).random();
-};
+import type {Context} from "./whatsapp-accounts/_.context.js";
+export const GET: Route["GET"] = async ($) => $.response.status(200).json(($.context as unknown as Context).list());

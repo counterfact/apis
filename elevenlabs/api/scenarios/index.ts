@@ -1,3 +1,5 @@
+import {resetSyntheticOutbound} from "./synthetic-outbound.js";
+export {emptySyntheticOutbound,syntheticOutboundProviders,completeSyntheticOutbound} from "./synthetic-outbound.js";
 import { resetAudioEffects } from "./audio-effects.js";
 export { emptyAudioEffects } from "./audio-effects.js";
 import { resetLlmUsage } from "./llm-usage.js";
@@ -142,6 +144,7 @@ export const reset: Scenario = ($) => {
   resetEnvironmentVariables($);
   resetTags($);
   resetConversations($);
+  resetSyntheticOutbound($);
   resetSettings($);
   resetAuthConnections($);
   resetWebhooks($);

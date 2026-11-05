@@ -13,6 +13,7 @@ import type { Context as ConvaiBatchCallingContext } from "../routes/convai/batc
 import type { Context as ConvaiConversationsContext } from "../routes/convai/conversations/_.context";
 import type { Context as ConvaiEnvironmentVariablesContext } from "../routes/convai/environment-variables/_.context";
 import type { Context as ConvaiEnvironmentsContext } from "../routes/convai/environments/_.context";
+import type { Context as ConvaiExotelContext } from "../routes/convai/exotel/_.context";
 import type { Context as ConvaiKnowledgeBaseContext } from "../routes/convai/knowledge-base/_.context";
 import type { Context as ConvaiLlmContext } from "../routes/convai/llm/_.context";
 import type { Context as ConvaiLlmUsageContext } from "../routes/convai/llm-usage/_.context";
@@ -21,12 +22,16 @@ import type { Context as ConvaiPhoneNumbersContext } from "../routes/convai/phon
 import type { Context as ConvaiRealtimeContext } from "../routes/convai/realtime/_.context";
 import type { Context as ConvaiSecretsContext } from "../routes/convai/secrets/_.context";
 import type { Context as ConvaiSettingsContext } from "../routes/convai/settings/_.context";
+import type { Context as ConvaiSipTrunkContext } from "../routes/convai/sip-trunk/_.context";
 import type { Context as ConvaiTagsContext } from "../routes/convai/tags/_.context";
 import type { Context as ConvaiTestInvocationsContext } from "../routes/convai/test-invocations/_.context";
 import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.context";
 import type { Context as ConvaiTriageTicketsContext } from "../routes/convai/triage-tickets/_.context";
+import type { Context as ConvaiTwilioContext } from "../routes/convai/twilio/_.context";
 import type { Context as ConvaiUsersContext } from "../routes/convai/users/_.context";
 import type { Context as ConvaiV2Context } from "../routes/convai/v2/_.context";
+import type { Context as ConvaiWhatsappContext } from "../routes/convai/whatsapp/_.context";
+import type { Context as ConvaiWhatsappAccountsContext } from "../routes/convai/whatsapp-accounts/_.context";
 import type { Context as DubbingProjectContext } from "../routes/dubbing/project/_.context";
 import type { Context as DubbingResourceContext } from "../routes/dubbing/resource/_.context";
 import type { Context as FlowsTemplatesContext } from "../routes/flows/templates/_.context";
@@ -98,6 +103,9 @@ interface LoadContextDefinitions {
     path: "/convai/environments" | `/convai/environments/${string}`,
   ): ConvaiEnvironmentsContext;
   loadContext(
+    path: "/convai/exotel" | `/convai/exotel/${string}`,
+  ): ConvaiExotelContext;
+  loadContext(
     path: "/convai/knowledge-base" | `/convai/knowledge-base/${string}`,
   ): ConvaiKnowledgeBaseContext;
   loadContext(path: "/convai/llm" | `/convai/llm/${string}`): ConvaiLlmContext;
@@ -120,6 +128,9 @@ interface LoadContextDefinitions {
     path: "/convai/settings" | `/convai/settings/${string}`,
   ): ConvaiSettingsContext;
   loadContext(
+    path: "/convai/sip-trunk" | `/convai/sip-trunk/${string}`,
+  ): ConvaiSipTrunkContext;
+  loadContext(
     path: "/convai/tags" | `/convai/tags/${string}`,
   ): ConvaiTagsContext;
   loadContext(
@@ -132,9 +143,18 @@ interface LoadContextDefinitions {
     path: "/convai/triage-tickets" | `/convai/triage-tickets/${string}`,
   ): ConvaiTriageTicketsContext;
   loadContext(
+    path: "/convai/twilio" | `/convai/twilio/${string}`,
+  ): ConvaiTwilioContext;
+  loadContext(
     path: "/convai/users" | `/convai/users/${string}`,
   ): ConvaiUsersContext;
   loadContext(path: "/convai/v2" | `/convai/v2/${string}`): ConvaiV2Context;
+  loadContext(
+    path: "/convai/whatsapp" | `/convai/whatsapp/${string}`,
+  ): ConvaiWhatsappContext;
+  loadContext(
+    path: "/convai/whatsapp-accounts" | `/convai/whatsapp-accounts/${string}`,
+  ): ConvaiWhatsappAccountsContext;
   loadContext(
     path: "/dubbing/project" | `/dubbing/project/${string}`,
   ): DubbingProjectContext;
