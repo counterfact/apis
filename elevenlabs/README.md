@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 390 operations retain their
+the stateful voices implementation. The remaining 387 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -417,7 +417,7 @@ counters in `api/scenarios/tags.ts`. Run `.scenario emptyTags` (or
 `app.scenario("emptyTags", "api")`) to clear tags and reset creation numbering.
 Business rules live in `api/routes/convai/tags/_.context.ts`; the root context
 is unchanged. Conversation assignment, ownership checks, authentication, and
-permissions are not simulated. Stateful coverage is now 47 of 437 operations.
+permissions are not simulated. Stateful coverage is now 50 of 437 operations.
 
 ## Environment variable configuration
 
@@ -452,8 +452,36 @@ This is reference configuration storage only. The simulator does not resolve
 secrets, validate referenced auth connections or environment names, make network
 requests, enforce permissions, or track variable usage by tools, agents, MCP
 servers, or initiation webhooks. Deletion does not enforce those usage conflicts.
-Use synthetic values and references only. The environment registry remains
-generated separately.
+Use synthetic values and references only.
+
+## Workspace environments
+
+Three operations maintain the workspace environment registry: `GET`/`POST
+`/v1/convai/environments` and `DELETE /v1/convai/environments/{environment}`.
+Lists put production first, then preserve insertion order, and return defensive
+copies. Creation requires a nonblank unique name; matching is case-sensitive
+and accepted names are stored unchanged. Invalid bodies return empty HTTP 400;
+duplicate names return empty HTTP 409. Failed requests do not change state or
+advance the creation counter. These validation and ordering details are local
+simulator conventions.
+
+Production cannot be deleted (HTTP 400). Unknown names return HTTP 404.
+Successful deletion returns empty HTTP 204 and removes only that environment's
+values from every variable, including secret and auth connection references.
+The live scenario-wired relationship follows variable map replacement by reset
+or `emptyEnvironmentVariables`. Creating an environment does not populate
+variable values; this registry does not resolve production fallback values.
+Existing variable endpoints still accept names outside the registry.
+
+Startup and `reset` populate production and staging in
+`api/scenarios/environments.ts`. Run `.scenario productionEnvironmentOnly`
+(or `app.scenario("productionEnvironmentOnly", "api")`) to keep production,
+remove other environments and their variable values, and reset creation metadata.
+`reset` restores both registry and variable fixtures. New environments use a
+fictional `sim-user` creator and timestamps advancing one second from the fixed
+scenario baseline; production omits its creator. Instances isolate state.
+Business operations live in `api/routes/convai/environments/_.context.ts`;
+the root context is unchanged. Authentication and permissions are not simulated.
 
 ## Development
 
