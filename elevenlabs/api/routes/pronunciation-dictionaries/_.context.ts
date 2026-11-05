@@ -5,6 +5,7 @@ import type { PronunciationDictionaryPhonemeRuleRequestModel } from "../../types
 import type { HTTP_GET_Query } from "../../types/v1/paths/pronunciation-dictionaries.types.js";
 import type { Body_Add_a_pronunciation_dictionary_v1_pronunciation_dictionaries_add_from_rules_post as CreateDictionary } from "../../types/v1/components/schemas/Body_Add_a_pronunciation_dictionary_v1_pronunciation_dictionaries_add_from_rules_post.js";
 import type { AddPronunciationDictionaryResponseModel as CreatedDictionary } from "../../types/v1/components/schemas/AddPronunciationDictionaryResponseModel.js";
+import type { PronunciationDictionaryRulesResponseModel as RulesVersion } from "../../types/v1/components/schemas/PronunciationDictionaryRulesResponseModel.js";
 
 export type DictionaryRule = PronunciationDictionaryAliasRuleRequestModel | PronunciationDictionaryPhonemeRuleRequestModel;
 export type DictionaryRecord = {
@@ -14,11 +15,38 @@ export type DictionaryRecord = {
 };
 type ListResult = { page: DictionaryPage; error?: never } | { page?: never; error: string };
 type CreateResult = { value: CreatedDictionary; error?: never } | { value?: never; error: string };
+type RulesResult =
+  | { value: RulesVersion; error?: never; missing?: never }
+  | { value?: never; error: string; missing?: never }
+  | { value?: never; error?: never; missing: true };
 
 export class Context {
   dictionaries = new Map<string, DictionaryRecord>();
   nextDictionaryNumber = 0;
   creationDefaults?: { createdBy: string; timeUnix: number };
+
+  addRules(id: string, rules: DictionaryRule[]): RulesResult {
+    const dictionary = this.dictionaries.get(id);
+    if (!dictionary) return { missing: true };
+    if (rules.some((rule) => rule.string_to_replace.length === 0)) {
+      return { error: "Rule string_to_replace must be non-empty" };
+    }
+    const current = dictionary.versions.get(dictionary.metadata.latest_version_id)!;
+    // Matching is exact and case-sensitive; the last supplied rule wins.
+    const combined = new Map([...current, ...rules].map((rule) => [rule.string_to_replace, rule]));
+    return { value: this.saveRules(dictionary, [...combined.values()]) };
+  }
+
+  private saveRules(dictionary: DictionaryRecord, rules: readonly DictionaryRule[]): RulesVersion {
+    const id = dictionary.metadata.id;
+    let number = dictionary.versions.size + 1;
+    while (dictionary.versions.has(`${id}-v${number}`)) number++;
+    const version_id = `${id}-v${number}`;
+    dictionary.versions.set(version_id, structuredClone(rules));
+    dictionary.metadata.latest_version_id = version_id;
+    dictionary.metadata.latest_version_rules_num = rules.length;
+    return { id, version_id, version_rules_num: rules.length };
+  }
 
   createDictionary(input: CreateDictionary): CreateResult {
     if (input.rules.some((rule) => rule.string_to_replace.length === 0)) {

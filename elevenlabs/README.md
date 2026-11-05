@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 421 operations retain their
+the stateful voices implementation. The remaining 420 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -210,6 +210,18 @@ one second per allocated ID. `reset` removes created dictionaries and restores
 the ID sequence. These are local simulator conventions. The fictional creator
 has `admin` permission; `workspace_access` is accepted but sharing and permission
 enforcement are not simulated.
+
+`POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/add-rules`
+adds alias or phoneme rules and replaces existing rules with the same
+`string_to_replace`, as specified by the contract. Each successful request stores
+a new version snapshot and updates the latest version and rule count in both
+metadata and detail responses. Earlier snapshots remain unchanged.
+
+Matching strings are exact and case-sensitive. When a request repeats a string,
+the last rule wins; an empty rule list still creates a new version with the
+current rules. These are local simulator conventions. Empty replacement strings
+and malformed bodies return HTTP 400 without changing state; unknown IDs return
+HTTP 404. `reset` restores the original versions and rules.
 
 ## Development
 
