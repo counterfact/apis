@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 174 now have authored
-behavior. The remaining 263 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 180 now have authored
+behavior. The remaining 257 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1245,6 +1245,40 @@ resources use admin access metadata; authentication and access enforcement are
 not simulated. These errors, IDs, ordering, hashing and deletion safeguards are
 local simulator conventions. No network requests, model inference or real
 credentials are needed.
+
+## Speech engine configuration
+
+Six `/v1/speech-engine` operations now persist local speech engine configuration:
+list, create, detail, PATCH, delete and duplicate. Startup/reset seed
+`sim-speech-engine` in `api/scenarios/speech-engines.ts`; contexts start empty.
+`emptySpeechEngines` clears engines and counters. Creation and duplication return
+201 with IDs `sim-speech-engine-created-N` and scenario-owned metadata/defaults.
+Deletion returns an empty 204 and removes only that engine. Missing IDs return 404.
+Each instance is isolated; reads and duplicates use independent copies.
+
+Configurations store WebSocket endpoints, ASR/TTS, turn detection, privacy,
+conversation, call-limit, authentication and override settings as inert metadata.
+Endpoints must use `ws:` or `wss:` without embedded credentials. No connection,
+audio synthesis, transcription, retention job, authentication enforcement or billing
+occurs. Voice IDs are stored references; engines do not alter voices and deleting
+a voice does not rewrite engine configuration. Defaults and limits are synthetic
+local fixtures, not current provider product claims.
+
+PATCH recursively merges supplied object fields and replaces arrays. Omitted/null
+top-level fields preserve existing values; explicit nested nullable values remain
+null. An empty object or unchanged update preserves timestamps. Supplied partial
+`tts.audio_effects` objects receive the output contract's required default fields,
+including after clearing effects with null. Duplication preserves the configuration
+and source name unless a new name is supplied; use a JSON `{}` or `null` body for
+the optional duplicate request under the installed runtime's optional-body behavior.
+All changes are validated before counters or stored records change.
+
+Listing supports case-insensitive name search, `name`/`created_at`/`updated_at`
+sorting and `asc`/`desc` direction (creation descending by default). ID ties sort
+ascending. Decimal-offset cursors paginate after filtering/sorting, with page size
+1–100 (default 30); invalid query options return 400 and offsets beyond the end
+return an empty page. These sorting, merge, ID, timestamp and error conventions
+are local simulator behavior. Authentication and permissions are not enforced.
 
 ## Development
 
