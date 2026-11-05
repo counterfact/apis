@@ -1,3 +1,5 @@
+import { resetKnowledgeBase } from "./knowledge-base.js";
+export { emptyKnowledgeBase, knowledgeBaseReferences } from "./knowledge-base.js";
 import { resetAnalysisItems } from "./analysis-items.js";
 export { emptyAnalysisItems } from "./analysis-items.js";
 import { resetWorkspaceMembers } from "./workspace-members.js";
@@ -52,6 +54,7 @@ export const reset: Scenario = ($) => {
   resetServiceAccounts($);
   resetAgents($);
   resetAnalysisItems($);
+  resetKnowledgeBase($);
   resetPhoneNumbers($);
   resetTools($);
   resetSecrets($);

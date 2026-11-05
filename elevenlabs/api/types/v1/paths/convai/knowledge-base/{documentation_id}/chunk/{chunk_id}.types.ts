@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../../routes/convai/knowledge-base/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../../counterfact-types/index.ts";
 import type { EmbeddingModelEnum } from "../../../../../components/schemas/EmbeddingModelEnum.js";
 import type { KnowledgeBaseDocumentChunkResponseModel } from "../../../../../components/schemas/KnowledgeBaseDocumentChunkResponseModel.js";

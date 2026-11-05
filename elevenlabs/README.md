@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 118 now have authored
-behavior. The remaining 319 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 126 now have authored
+behavior. The remaining 311 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -940,6 +940,51 @@ are outside this slice. Deletion returns 409 when referenced unless `force=true`
 which removes every user reference from current agents before deleting versions.
 Reset restores both agent and analysis-item baselines. Simulator instances isolate
 state. `agentAnalysisReferences` can add a seeded reference for testing discovery.
+
+## Knowledge base local records
+
+Eight operations now share local text/folder state: list documents, create text,
+create folder, read/update/delete a document or folder, read document content,
+and fetch summary batches. Startup and `reset` populate `sim-kb-folder` and its
+`sim-kb-text` child in `api/scenarios/knowledge-base.ts`; `emptyKnowledgeBase`
+clears the collection and allocation counters. Contexts start empty and simulator
+instances isolate changes. Multipart upload/update operations remain generated
+because of [Counterfact #2607](https://github.com/counterfact/api-simulator/issues/2607).
+
+Text input and PATCH content are treated as plain text and escaped for HTML,
+including ampersands, angle brackets and quotes. Detail returns that escaped
+`extracted_inner_html`; content reads return the same bytes as `text/html`.
+`size_bytes` measures the original plain text in UTF-8. Folders have no content;
+requesting folder content returns 400. Text without a name uses `Untitled text document`.
+Created IDs are `sim-kb-created-N`; timestamps advance deterministically on creation
+or content/name changes. Null/omitted PATCH fields preserve values; `{}` is a no-op.
+Absent optional PATCH bodies remain subject to the installed runtime's
+[optional-body limitation #2614](https://github.com/counterfact/api-simulator/issues/2614).
+
+All list filters combine before decimal-offset pagination: name prefix search
+(case-insensitive), creator (`@me` supported), deprecated ownership filtering,
+types, direct parent and ancestor folder. An explicit creator takes precedence
+over deprecated ownership. `folders_first` groups folders before the selected
+`name`, `created_at`, `updated_at` or `size` sort, with ID ties ascending.
+Sort direction defaults to descending, sort field to creation time, page size
+to 30 (1–100). Invalid options return 400; offsets beyond the end return an empty
+page. Single array values for `types` and summary `document_ids` are normalized
+at this group's boundary for [Counterfact #2615](https://github.com/counterfact/api-simulator/issues/2615).
+Summary batches return success or 404 failure per ID and omit duplicate keys.
+
+Folder paths, direct child counts and recursive document counts are derived from
+current state. Nonempty folders and documents referenced by canonical agents
+return 409 on deletion without `force=true`. Forced deletion removes the subtree
+and matching knowledge-base references from all live agents, including duplicates.
+The optional `knowledgeBaseReferences` scenario assigns the text fixture to
+`sim-agent`; summaries project these live dependencies. Main agent prompt
+knowledge-base references are supported; workflow/branch configuration is outside
+this slice. Unknown IDs return 404. Reads return defensive copies.
+
+Automatic sync settings that request syncing, removal or a refresh frequency
+return 400 explicitly; these local text/folder records perform no remote fetch,
+refresh, embedding or AI processing. No permissions or authentication are enforced.
+These IDs, errors, default names, ordering and text conventions are local behavior.
 
 ## Development
 

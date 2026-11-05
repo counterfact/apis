@@ -4,6 +4,7 @@ import type { Context as ConvaiAnalysisItemsContext } from "../routes/convai/ana
 import type { Context as ConvaiConversationsContext } from "../routes/convai/conversations/_.context";
 import type { Context as ConvaiEnvironmentVariablesContext } from "../routes/convai/environment-variables/_.context";
 import type { Context as ConvaiEnvironmentsContext } from "../routes/convai/environments/_.context";
+import type { Context as ConvaiKnowledgeBaseContext } from "../routes/convai/knowledge-base/_.context";
 import type { Context as ConvaiPhoneNumbersContext } from "../routes/convai/phone-numbers/_.context";
 import type { Context as ConvaiRealtimeContext } from "../routes/convai/realtime/_.context";
 import type { Context as ConvaiSecretsContext } from "../routes/convai/secrets/_.context";
@@ -39,6 +40,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/environments" | `/convai/environments/${string}`,
   ): ConvaiEnvironmentsContext;
+  loadContext(
+    path: "/convai/knowledge-base" | `/convai/knowledge-base/${string}`,
+  ): ConvaiKnowledgeBaseContext;
   loadContext(
     path: "/convai/phone-numbers" | `/convai/phone-numbers/${string}`,
   ): ConvaiPhoneNumbersContext;

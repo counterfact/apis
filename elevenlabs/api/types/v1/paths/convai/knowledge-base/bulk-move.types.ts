@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/convai/knowledge-base/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { Body_Bulk_move_entities_to_folder_v1_convai_knowledge_base_bulk_move_post } from "../../../components/schemas/Body_Bulk_move_entities_to_folder_v1_convai_knowledge_base_bulk_move_post.js";
 import type { HTTPValidationError } from "../../../components/schemas/HTTPValidationError.js";
