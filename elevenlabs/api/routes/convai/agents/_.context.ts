@@ -60,6 +60,130 @@ function merge(base: ObjectValue, patch: ObjectValue): ObjectValue {
   return result;
 }
 export class Context {
+  topicRuns = new Map<
+    string,
+    {
+      agentId: string;
+      result: import("../../../types/v1/components/schemas/GetAgentTopicsResponseModel.js").GetAgentTopicsResponseModel;
+    }
+  >();
+
+  getTopics(
+    id: string,
+    query: Record<string, unknown> = {},
+  ):
+    | {
+        value: import("../../../types/v1/components/schemas/GetAgentTopicsResponseModel.js").GetAgentTopicsResponseModel;
+        error?: never;
+      }
+    | {
+        error:
+          | "agent_not_found"
+          | "invalid_topic_query"
+          | "unsupported_topic_aggregation";
+        value?: never;
+      } {
+    if (!this.agents.has(id)) return { error: "agent_not_found" };
+    // Nullable integers arrive as text under runtime #2612. Reject lossy or
+    // partial conversions, including decimals, whitespace and unsafe integers.
+    const integer = (v: unknown): number | undefined => {
+      if (typeof v === "string" && /^-?(0|[1-9][0-9]*)$/.test(v)) v = Number(v);
+      return typeof v === "number" && Number.isSafeInteger(v) ? v : undefined;
+    };
+    const size = query.page_size == null ? 30 : integer(query.page_size);
+    const from =
+      query.from_unix_secs == null ? undefined : integer(query.from_unix_secs);
+    const to =
+      query.to_unix_secs == null ? undefined : integer(query.to_unix_secs);
+    const cursor = query.cursor ?? "0";
+    const sort = query.sort_by ?? "conversations";
+    const direction = query.sort_direction ?? "desc";
+    if (
+      !keys(query, [
+        "page_size",
+        "from_unix_secs",
+        "to_unix_secs",
+        "cursor",
+        "sort_by",
+        "sort_direction",
+        "include_evaluation_criteria",
+      ]) ||
+      size === undefined ||
+      size < 1 ||
+      size > 100 ||
+      (query.from_unix_secs != null && from === undefined) ||
+      (query.to_unix_secs != null && to === undefined) ||
+      (from === undefined) !== (to === undefined) ||
+      (from !== undefined && (from < 0 || to! <= from)) ||
+      typeof cursor !== "string" ||
+      !/^(0|[1-9][0-9]*)$/.test(cursor) ||
+      !Number.isSafeInteger(Number(cursor)) ||
+      !["conversations", "sentiment", "frustration", "success_rate"].includes(
+        sort as string,
+      ) ||
+      !["asc", "desc"].includes(direction as string) ||
+      (query.include_evaluation_criteria !== undefined &&
+        typeof query.include_evaluation_criteria !== "boolean")
+    )
+      return { error: "invalid_topic_query" };
+    const start =
+      from === undefined ? undefined : Math.floor(from / 86400) * 86400;
+    let runs = [...this.topicRuns.values()].filter((run) => run.agentId === id);
+    if (start !== undefined)
+      runs = runs.filter(
+        (run) =>
+          run.result.window_start_unix_secs >= start &&
+          run.result.window_end_unix_secs <= to!,
+      );
+    runs.sort(
+      (a, b) =>
+        b.result.window_end_unix_secs - a.result.window_end_unix_secs ||
+        b.result.window_start_unix_secs - a.result.window_start_unix_secs,
+    );
+    if (start !== undefined && runs.length > 1)
+      return { error: "unsupported_topic_aggregation" };
+    const result = structuredClone(
+      runs[0]?.result ?? {
+        topics: [],
+        window_start_unix_secs: start ?? 0,
+        window_end_unix_secs: to ?? 0,
+      },
+    );
+    result.aggregated_run_count = runs.length ? 1 : 0;
+    const score = (
+      topic: (typeof result.topics)[number],
+    ): number | null | undefined => {
+      if (sort === "conversations") return topic.conversation_count;
+      if (sort === "success_rate") return topic.success_rate;
+      const distribution =
+        topic.metrics?.sentiment?.[sort as "sentiment" | "frustration"];
+      return distribution?.count && distribution.sum != null
+        ? distribution.sum / distribution.count
+        : null;
+    };
+    // Fixture topics are independent top-level groups; hierarchy discovery and
+    // aggregation are deliberately not inferred from labels or conversations.
+    result.topics.sort((a, b) => {
+      const x = score(a),
+        y = score(b);
+      return x == null
+        ? y == null
+          ? a.topic_id.localeCompare(b.topic_id)
+          : 1
+        : y == null
+          ? -1
+          : (direction === "asc" ? 1 : -1) * (x - y) ||
+            a.topic_id.localeCompare(b.topic_id);
+    });
+    const offset = Number(cursor);
+    result.has_more = offset + size < result.topics.length;
+    result.next_cursor = result.has_more ? String(offset + size) : null;
+    result.topics = result.topics.slice(offset, offset + size);
+    if (query.include_evaluation_criteria === false)
+      for (const topic of result.topics)
+        if (topic.metrics) delete topic.metrics.evaluation_criteria;
+    return { value: result };
+  }
   knowledgeBase?:()=>import("../knowledge-base/_.context.js").Context;
   queryKnowledgeBase(id:string,input:unknown,branchId?:string|null){if(!this.knowledgeBase)throw new Error("Run startup or reset");return this.knowledgeBase().queryAgent(id,input,branchId);}
   lifecycle?: import("./{agent_id}/branches/_.context.js").Context;

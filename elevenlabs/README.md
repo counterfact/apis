@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 390 now have authored
-behavior. The remaining 47 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 391 now have authored
+behavior. The remaining 46 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2806,3 +2806,36 @@ publication work. Existing canonical Studio conversion jobs remain pending and
 can finish through `completeStudioConversions`; no disabled player is republished.
 Full `reset` clears both groups and restores the baseline. Context containers
 start empty, scenarios own all fixtures, and separate instances isolate state.
+
+
+## Historical agent topic discovery results
+
+`GET /v1/convai/agents/{agent_id}/topics` reads immutable synthetic completed
+runs for the canonical agent. Startup/reset seed two daily runs for `sim-agent`;
+the default returns only the latest (2025-01-02 UTC). The labels and metrics are
+scenario fixtures, with no discovery, conversation analysis, model or provider
+request. Live agent edits leave historical runs and stored agent versions alone.
+Missing/deleted agents return 404 even when historical runs remain stored.
+Existing agents without runs return an empty list and zero window bounds.
+
+Listing supports `page_size` (1–100, default 30), integer-offset `cursor`, all
+four `sort_by` values and `asc`/`desc` direction (default conversations/desc).
+Sentiment and frustration sort by stored sum/count; missing scores always sort
+last, and topic IDs break ties. Fixtures are independent top-level groups without
+inferred hierarchy. `include_evaluation_criteria=false` removes only the criteria
+breakdown, preserving the stored weighted `success_rate`.
+
+Both date bounds must be provided together. Start is floored to its UTC day;
+only complete daily runs within the resulting start-inclusive/end-exclusive
+window qualify. One matching run is returned with `aggregated_run_count: 1`;
+no matches return empty topics with the requested window and count zero.
+Windows matching multiple runs return 400 `unsupported_topic_aggregation`;
+combining topic identities or metric distributions across runs is not simulated.
+Invalid/unknown query options return 400 before changing state. Numeric query
+text is strictly normalized for runtime #2612. Cursors are local offsets, scoped
+by the caller's unchanged query. Offsets past the end return an empty final page.
+
+Context containers start empty; `api/scenarios/agent-topics.ts` owns all fixtures.
+`emptyAgentTopics` clears completed runs, and reset restores the baseline.
+Reads return defensive copies and separate instances isolate state. IDs, windows,
+ordering and error rules above are local simulator conventions.

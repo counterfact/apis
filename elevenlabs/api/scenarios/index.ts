@@ -1,3 +1,5 @@
+import { resetAgentTopics } from "./agent-topics.js";
+export { emptyAgentTopics } from "./agent-topics.js";
 import { resetVoiceTransfers } from "./voice-transfers.js";
 import {resetDubbingProcessing} from "./dubbing-processing.js";
 export {completeDubbingProcessing} from "./dubbing-processing.js";
@@ -143,6 +145,7 @@ export const reset: Scenario = ($) => {
   resetServiceAccounts($);
   resetWorkspaceKeyPolicy($);
   resetAgents($);
+  resetAgentTopics($);
   resetAgentLifecycle($);
   resetAgentProcedures($);
   resetAgentMergeProposals($);
