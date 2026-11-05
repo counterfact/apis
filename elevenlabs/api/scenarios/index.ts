@@ -1,4 +1,6 @@
 import { resetBatchCalls } from "./batch-calling.js";
+import { resetLlmCatalog } from "./llm-catalog.js";
+export { emptyLlmCatalog } from "./llm-catalog.js";
 import { resetWorkspaceKeyPolicy } from "./workspace-key-policy.js";
 export { emptyWorkspaceKeyPolicy } from "./workspace-key-policy.js";
 export { emptyBatchCalls, completeBatchCalls } from "./batch-calling.js";
@@ -52,6 +54,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetLlmCatalog($);
   resetRealtimeGroups($);
   resetGroups($);
   resetWorkspaceMembers($);

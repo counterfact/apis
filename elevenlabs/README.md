@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 149 now have authored
-behavior. The remaining 288 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 150 now have authored
+behavior. The remaining 287 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1134,6 +1134,29 @@ Deleting a batch returns 204 and removes its recipient records while preserving
 conversation history. Unknown batch IDs return 404. Error codes, ID allocation,
 pagination, counter projections and lifecycle restrictions above are local
 simulator conventions. Authentication and permissions are not enforced.
+
+## LLM catalog discovery
+
+`GET /v1/convai/llm/list` returns a stable four-entry catalog for
+`gemini-3.5-flash`, `gemini-2.5-flash`, `gpt-4o`, and `gpt-4o-mini`, matching
+the model IDs supported by the local agent configuration helpers. The canonical
+agent fixture references a catalog entry. Reads include capability flags, token
+limits, service tiers and default deprecation timing, with defensive copies of
+all nested data. Catalog order follows the scenario fixture order.
+
+Every capability, limit and deprecation value is synthetic. In particular, the
+`gpt-4o-mini` deprecation fixture pointing to `gpt-4o` is a local UI example,
+not a claim about provider availability or retirement. These metadata fields do
+not reroute requests or change agent configuration. No model inference, provider
+request, residency filtering, compliance enforcement or billing occurs. This
+catalog represents one fictional deployment without making regional availability
+or compliance claims.
+
+The context initializes an empty model map and no deprecation configuration.
+Startup and `reset` populate both in `api/scenarios/llm-catalog.ts`.
+Run `.scenario emptyLlmCatalog` to return an empty model list with the default
+deprecation timing still present; `reset` restores all entries. Clearing this
+catalog does not modify stored agents. Each simulator instance has isolated state.
 
 ## Development
 
