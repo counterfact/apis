@@ -1,3 +1,4 @@
+import { resetVoiceUploads } from "./voice-uploads.js";
 import { resetAgentTopics } from "./agent-topics.js";
 export { emptyAgentTopics } from "./agent-topics.js";
 import { resetVoiceTransfers } from "./voice-transfers.js";
@@ -200,6 +201,7 @@ export const reset: Scenario = ($) => {
     ]),
   );
   resetPvcVoices($);
+  resetVoiceUploads($);
   resetCollections($);
   resetDubbingProcessing($);
 };
