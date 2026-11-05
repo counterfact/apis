@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 126 now have authored
-behavior. The remaining 311 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 132 now have authored
+behavior. The remaining 305 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -985,6 +985,41 @@ Automatic sync settings that request syncing, removal or a refresh frequency
 return 400 explicitly; these local text/folder records perform no remote fetch,
 refresh, embedding or AI processing. No permissions or authentication are enforced.
 These IDs, errors, default names, ordering and text conventions are local behavior.
+
+## Knowledge base organization and dependencies
+
+Six further operations persist document organization: single/bulk moves,
+independent bulk deletion, single/bulk dependent-agent reads, and
+`GET /v1/convai/agent/{agent_id}/knowledge-base/size` (singular `agent`).
+Moves return an empty HTTP 200 body and validate every ID and destination before
+changing state. Omitted/null `move_to` selects the root. Moving into a document,
+into itself, or into a descendant returns 400. Missing IDs return 404.
+Moving folders preserves descendant relationships; paths and folder counts in
+existing list/detail responses update immediately. Repeated no-op moves preserve
+timestamps. Bulk requests require 1–20 unique IDs.
+
+Bulk deletion evaluates each requested ID against the initial state, then applies
+successful deletions; missing/in-use IDs produce per-ID failure records while
+other IDs succeed. Overlapping force-deleted subtrees report success for each
+initially existing requested ID. Force deletion removes canonical agent references,
+including references in duplicated agents. Folder references also protect their
+contained documents from unforced deletion.
+
+Dependency reads return unique live agents ordered by ID, with 1–100 results
+(default 30), decimal-offset cursors, and no branch records. As a local convention,
+`direct` means an explicit reference to the requested document/folder;
+`transitive` means a reference to an ancestor folder; `all` combines both.
+Multiple document IDs combine with OR before pagination. Unknown document IDs
+return 404, and invalid filters/cursors return 400. Deleted agents disappear and
+duplicated agents appear immediately. Workflow and branch dependencies are outside
+this local model.
+
+Size uses one synthetic page per unique local text document, expanding folder
+references and deduplicating overlapping references. This is a local counting
+convention, with no PDF extraction or remote processing. Unknown agents or stale
+document references return 404. Startup/reset and `emptyKnowledgeBase` wire the
+singular-agent size context to live knowledge-base state; reset restores the same
+baseline and `knowledgeBaseReferences` provides a referenced-text setup.
 
 ## Development
 

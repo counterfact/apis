@@ -3,6 +3,7 @@ export const emptyKnowledgeBase:Scenario=($)=>{
   const c=$.loadContext("/convai/knowledge-base");c.documents=new Map();c.nextId=1;c.nextMutation=0;
   c.defaults={userId:"sim-user",time:1_735_689_602,accessInfo:{is_creator:true,creator_name:"Simulator",creator_email:"sim@example.invalid",role:"admin",access_source:"creator"}};
   c.agents=()=>$.loadContext("/convai/agents").agents;
+  $.loadContext("/convai/agent").knowledgeBase=()=>$.loadContext("/convai/knowledge-base");
 };
 export const resetKnowledgeBase:Scenario=($)=>{
   emptyKnowledgeBase($);const c=$.loadContext("/convai/knowledge-base");

@@ -30,7 +30,10 @@ export class Context {
     while(current){if(visited.has(current))throw new Error("Knowledge base folder cycle");visited.add(current);const d=this.stored(current).document;path.unshift({id:d.id,name:d.name});current=d.folder_parent_id;}return path;}
   private descendants(id:string){return [...this.documents.keys()].filter(k=>k!==id&&this.folderPath(k).some(p=>p.id===id));}
   private refs(agent:StoredAgent){return agent.configuration.conversation_config.agent?.prompt?.knowledge_base??[];}
-  dependentAgents(id:string){return [...this.agents()].filter(([,a])=>this.refs(a).some(r=>r.id===id)).sort(([a],[b])=>a.localeCompare(b)).map(([id,a])=>({type:"available" as const,id,name:a.configuration.name,created_at_unix_secs:a.configuration.metadata.created_at_unix_secs,access_level:"admin" as const}));}
+  dependentAgents(id:string,mode:"direct"|"transitive"|"all"="all"){
+    const ancestors=new Set(this.folderPath(id).map(p=>p.id));
+    return [...this.agents()].filter(([,a])=>this.refs(a).some(r=>mode!=="transitive"&&r.id===id||mode!=="direct"&&ancestors.has(r.id))).sort(([a],[b])=>a.localeCompare(b)).map(([id,a])=>({type:"available" as const,id,name:a.configuration.name,created_at_unix_secs:a.configuration.metadata.created_at_unix_secs,access_level:"admin" as const}));
+  }
   getDocument(id:string):Document {
     const d=structuredClone(this.stored(id).document);d.folder_path=this.folderPath(id);
     if(d.type==="folder"){d.children_count=[...this.documents.values()].filter(r=>r.document.folder_parent_id===id).length;d.document_count=Math.min(1000,this.descendants(id).filter(k=>this.stored(k).document.type!=="folder").length);}return d;
@@ -57,11 +60,61 @@ export class Context {
     if(name!==d.name||content!==undefined&&d.type==="text"&&content!==d.extracted_inner_html){d.name=name;if(content!==undefined&&d.type==="text"){d.extracted_inner_html=content;d.metadata.size_bytes=Buffer.byteLength(input.content as string,"utf8");}d.metadata.last_updated_at_unix_secs=this.settings().time+ ++this.nextMutation;}
     return this.getDocument(id);
   }
-  deleteDocument(id:string,force:boolean){
+  private deletionIds(id:string,force:boolean){
     this.stored(id);if(typeof force!=="boolean")return invalid();const ids=[id,...this.descendants(id)];
     if(!force&&(ids.length>1||ids.some(k=>this.dependentAgents(k).length)))throw new KnowledgeBaseError(409,"knowledge_base_document_in_use","Document is referenced or folder is not empty");
+    return ids;
+  }
+  deleteDocument(id:string,force:boolean){
+    const ids=this.deletionIds(id,force);
     const removed=new Set(ids);for(const a of this.agents().values()){const prompt=a.configuration.conversation_config.agent?.prompt;if(prompt?.knowledge_base)prompt.knowledge_base=prompt.knowledge_base.filter(r=>!removed.has(r.id));}
     for(const k of ids)this.documents.delete(k);return {};
+  }
+  private documentIds(value:unknown):string[]{
+    if(!Array.isArray(value)||value.length<1||value.length>20||value.some(id=>typeof id!=="string")||new Set(value).size!==value.length)return invalid();
+    return value as string[];
+  }
+  moveDocument(id:string,input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>k!=="move_to"))return invalid();
+    this.moveDocuments({document_ids:[id],move_to:input.move_to});
+  }
+  moveDocuments(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["document_ids","move_to"].includes(k)))return invalid();
+    const ids=this.documentIds(input.document_ids),destination=this.parent(input.move_to);
+    const documents=ids.map(id=>this.stored(id).document);
+    if(destination&&documents.some(d=>d.id===destination||this.folderPath(destination).some(p=>p.id===d.id)))return invalid();
+    const changed=documents.filter(d=>d.folder_parent_id!==destination);
+    if(!changed.length)return;
+    const time=this.settings().time+ ++this.nextMutation;
+    for(const d of changed){d.folder_parent_id=destination;d.metadata.last_updated_at_unix_secs=time;}
+  }
+  bulkDelete(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["document_ids","force"].includes(k)))return invalid();
+    const ids=this.documentIds(input.document_ids),force=input.force??false;if(typeof force!=="boolean")return invalid();
+    const outcomes=ids.map(id=>{
+      try{this.deletionIds(id,force);return [id,{status:"success" as const,data:{id}}] as const;}
+      catch(error){if(!(error instanceof Error)||error.name!=="KnowledgeBaseError")throw error;const e=error as KnowledgeBaseError;return [id,{status:"failure" as const,error_code:e.status,error_status:e.code,error_message:e.message}] as const;}
+    });
+    for(const[id,result]of outcomes)if(result.status==="success"&&this.documents.has(id))this.deleteDocument(id,force);
+    return Object.fromEntries(outcomes);
+  }
+  listDependentAgents(ids:unknown,query:Record<string,unknown>={}){
+    const values=this.documentIds(ids);for(const id of values)this.stored(id);
+    const mode=query.dependent_type??"all",size=query.page_size??30;
+    if(!["all","direct","transitive"].includes(mode as string)||typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();
+    const offset=Number(query.cursor??0);if(!Number.isSafeInteger(offset))return invalid();
+    const agents=[...new Map(values.flatMap(id=>this.dependentAgents(id,mode as "all"|"direct"|"transitive")).map(a=>[a.id,a])).values()].sort((a,b)=>a.id.localeCompare(b.id));
+    const has_more=offset+size<agents.length;
+    return {agents:agents.slice(offset,offset+size),branches:[],has_more,next_cursor:has_more?String(offset+size):null};
+  }
+  agentKnowledgeSize(id:string){
+    const agent=this.agents().get(id);if(!agent)throw new KnowledgeBaseError(404,"agent_not_found","Agent not found");
+    const pages=new Set<string>();
+    for(const ref of this.refs(agent)){
+      const d=this.stored(ref.id).document;
+      for(const key of d.type==="folder"?this.descendants(d.id):[d.id])if(this.stored(key).document.type==="text")pages.add(key);
+    }
+    return {number_of_pages:pages.size};
   }
   listDocuments(query:Record<string,unknown>={}){
     const size=query.page_size??30;if(typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();
