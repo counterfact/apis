@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 269 now have authored
-behavior. The remaining 168 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 275 now have authored
+behavior. The remaining 162 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1786,3 +1786,40 @@ idempotent. Recursive branch/draft creation, merge/rebase and procedure operatio
 remain generated and uncounted. All reads return defensive copies, simulator
 instances isolate changes, and reset restores the fixtures. Error, ordering,
 null-update, snapshot and traffic-split conventions are local simulator behavior.
+
+
+## Agent merge proposal management
+
+Six proposal operations now persist local review metadata: collection create/list,
+detail read/PATCH, reviews and comments. Startup/reset seed `sim-merge-proposal`
+in `api/scenarios/agent-merge-proposals.ts`; contexts start empty.
+`emptyAgentMergeProposals` clears records and counters while preserving agents
+and branches. Instances isolate state and reads return defensive copies.
+
+Creation validates live source/target branches of the agent, rejects identical or
+archived branches and records the source tip version at creation. Later branch
+metadata changes do not rewrite that historical version reference. Reviewer IDs
+are inert references, deduplicated in first-seen order; no invitations or messages
+are sent and membership/permissions are not enforced. Triage-ticket linking
+returns 400 explicitly; no ticket changes occur.
+
+Status, exact source/target IDs and case-insensitive title/description search
+combine before pagination. Lists sort newest first with ascending ID ties.
+Decimal-offset cursors paginate 1–100 records (default 100); invalid queries
+return 400 and pages beyond the end are empty. Missing agents/proposals return
+404, including proposal reads after deleting their agent.
+
+Open proposals support metadata edits and closing. Omitted/null PATCH fields
+preserve values; empty reviewer lists clear requests. The local author closing
+a proposal records `withdrawn`; closing another author's fixture records
+`rejected`. Closed proposals reject edits/reviews with 409 but accept comments.
+A local user's latest review replaces their prior review; comments accumulate
+with independent IDs. Blank titles/comments and invalid mutations leave records
+and counters unchanged. These ID, time, null, ordering and error conventions are
+local simulator behavior.
+
+Proposal merge and branch merge/rebase remain generated and uncounted, pending
+shared local three-way configuration/version merge behavior. This is unfinished
+simulator implementation, not a Counterfact runtime blocker. No merge, rebase,
+AI review, deployment or provider processing occurs through these six operations.
+Contracts and request/response validation remain unchanged.
