@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Context as Root } from "../../_.context.js";
 import { defaultSettings } from "../../_.context.js";
 import type { VoiceResponseModel as Voice } from "../../../types/v1/components/schemas/VoiceResponseModel.js";
@@ -16,6 +17,61 @@ const fail = (status: number, code: string): never => {
 const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 export class Context {
+  nextSample = 0;
+  captchaRequests = new Map<string, { recording: Uint8Array; status: "pending" | "completed" }>();
+  verificationRequests = new Map<string, { files: {data: Uint8Array; filename: string; contentType: string}[]; extraText?: string; status: "pending" | "completed" }>();
+  private upload(input: unknown, document = false) {
+    if (!object(input) || !(input.data instanceof Uint8Array) ||
+        typeof input.filename !== "string" || !input.filename.trim() || input.filename.length > 255 ||
+        typeof input.contentType !== "string" || !(document ? ["application/pdf", "image/jpeg", "image/png"] : ["audio/mpeg"]).includes(input.contentType) ||
+        input.size !== input.data.byteLength || input.data.byteLength === 0 || input.data.byteLength > 10 * 1024 * 1024)
+      return fail(400, "invalid_upload");
+    return {data:new Uint8Array(input.data),filename:input.filename,contentType:input.contentType};
+  }
+  private uploads(input: unknown, document = false) {
+    if (!Array.isArray(input) || input.length === 0 || input.length > 20) return fail(400, "invalid_upload_files");
+    const files = input.map(f => this.upload(f, document));
+    if (files.reduce((n,f) => n + f.data.byteLength,0) > 10 * 1024 * 1024) return fail(400,"upload_size_exceeded");
+    return files;
+  }
+  addSamples(id: string, input: unknown) {
+    const voice=this.voice(id); this.idle(id);
+    if (!object(input) || Object.keys(input).some(k => !["files","remove_background_noise"].includes(k))) return fail(400,"invalid_sample_options");
+    if (input.remove_background_noise !== undefined && input.remove_background_noise !== false) return fail(400,"noise_removal_unsupported");
+    const files=this.uploads(input.files);
+    if ((voice.samples?.length ?? 0) + files.length > 20) return fail(409,"sample_limit_exceeded");
+    const audio=new Map(this.sampleAudio.get(id)), samples=structuredClone(voice.samples ?? []);
+    let next=this.nextSample;
+    const added=files.map(file => {
+      let sid:string; do {sid=`sim-pvc-uploaded-sample-${++next}`;} while(samples.some(s=>s.sample_id===sid));
+      const sample={sample_id:sid,file_name:file.filename,mime_type:file.contentType,size_bytes:file.data.byteLength,
+        hash:createHash("sha256").update(file.data).digest("hex"),remove_background_noise:false,has_isolated_audio:false,has_isolated_audio_preview:false};
+      samples.push(sample); audio.set(sid,file.data); return sample;
+    });
+    voice.samples=samples; this.sampleAudio.set(id,audio); this.nextSample=next;
+    return structuredClone(added);
+  }
+  submitCaptcha(id: string, input: unknown) {
+    const voice=this.voice(id); this.idle(id);
+    if (!object(input) || Object.keys(input).some(k=>k!=="recording")) return fail(400,"invalid_captcha_options");
+    const recording=this.upload(input.recording).data;
+    if (this.captchaRequests.get(id)?.status === "pending") return fail(409,"verification_pending");
+    if (!voice.fine_tuning) return fail(409,"verification_unavailable");
+    this.captchaRequests.set(id,{recording,status:"pending"});
+    voice.fine_tuning.verification_attempts_count=(voice.fine_tuning.verification_attempts_count ?? 0)+1;
+    return {status:"ok"};
+  }
+  requestVerification(id: string, input: unknown) {
+    const voice=this.voice(id); this.idle(id);
+    if (!object(input) || Object.keys(input).some(k=>!["files","extra_text"].includes(k)) ||
+        input.extra_text != null && (typeof input.extra_text !== "string" || input.extra_text.length>5000)) return fail(400,"invalid_verification_options");
+    const files=this.uploads(input.files,true);
+    if (this.verificationRequests.get(id)?.status === "pending") return fail(409,"verification_pending");
+    if (!voice.fine_tuning) return fail(409,"verification_unavailable");
+    this.verificationRequests.set(id,{files,extraText:input.extra_text as string | undefined,status:"pending"});
+    voice.fine_tuning.manual_verification_requested=true;
+    return {status:"ok"};
+  }
   sampleAudio = new Map<string, Map<string, Uint8Array>>();
   separation = new Map<string, Map<string, { audio: Uint8Array; duration: number }>>();
   training = new Map<string, { model: string; samples: import("../../../types/v1/components/schemas/SampleResponseModel.js").SampleResponseModel[]; audio: Uint8Array[]; language: string; status: "queued" | "completed" }>();
@@ -36,7 +92,7 @@ export class Context {
     if (!sample) return fail(404, "sample_not_found");
     return sample;
   }
-  purgeVoice(id: string) { this.sampleAudio.delete(id); this.separation.delete(id); this.training.delete(id); }
+  purgeVoice(id: string) { this.captchaRequests.delete(id); this.verificationRequests.delete(id); this.sampleAudio.delete(id); this.separation.delete(id); this.training.delete(id); }
   audio(id: string, sid: string) {
     this.sample(id, sid, false);
     const bytes = this.sampleAudio.get(id)?.get(sid);
@@ -61,7 +117,8 @@ export class Context {
     const sample = this.sample(id,sid);
     if (sample.speaker_separation?.status === "pending") return fail(409,"sample_busy");
     if (sample.speaker_separation?.status === "completed") return fail(409,"separation_already_completed");
-    const capture = {audio:this.audio(id,sid),duration:sample.duration_secs!};
+    if (sample.duration_secs == null) return fail(400,"sample_duration_unavailable");
+    const capture = {audio:this.audio(id,sid),duration:sample.duration_secs};
     let jobs=this.separation.get(id); if (!jobs) {jobs=new Map();this.separation.set(id,jobs);}
     jobs.set(sid,capture);
     sample.speaker_separation={voice_id:id,sample_id:sid,status:"pending"};
