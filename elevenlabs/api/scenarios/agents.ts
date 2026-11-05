@@ -30,3 +30,25 @@ export const agentAnalysisReferences: Scenario = ($) => {
     data_collection: [],
   };
 };
+
+/** Configure local widget metadata without starting a conversation or translating text. */
+export const agentWidgetConfiguration: Scenario = ($) => {
+  const agent = $.loadContext("/convai/agents").agents.get("sim-agent");
+  if (!agent) throw new Error("Run reset before agentWidgetConfiguration");
+  agent.configuration.platform_settings!.widget = {
+    bg_color: "#123456",
+    markdown_link_allowed_hosts: [{ hostname: "simulator.invalid" }],
+    language_presets: { es: { terms_text: "Local terms" } },
+  };
+  agent.configuration.conversation_config.language_presets = {
+    es: { overrides: { agent: { first_message: "Hola" } } },
+  };
+  agent.configuration.conversation_config.conversation = {
+    text_only: true,
+    file_input: {
+      enabled: false,
+      max_files_per_conversation: 2,
+      max_files_in_memory: 1,
+    },
+  };
+};

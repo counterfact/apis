@@ -1,3 +1,6 @@
+import type { GetAgentEmbedResponseModel as Embed } from "../../../types/v1/components/schemas/GetAgentEmbedResponseModel.js";
+import type { GetAgentLinkResponseModel as Link } from "../../../types/v1/components/schemas/GetAgentLinkResponseModel.js";
+import type { WidgetLanguagePresetResponse } from "../../../types/v1/components/schemas/WidgetLanguagePresetResponse.js";
 import type { GetAgentResponseModel as Agent } from "../../../types/v1/components/schemas/GetAgentResponseModel.js";
 import type { AgentSummaryResponseModel as Summary } from "../../../types/v1/components/schemas/AgentSummaryResponseModel.js";
 import type { GetAgentsPageResponseModel as Page } from "../../../types/v1/components/schemas/GetAgentsPageResponseModel.js";
@@ -68,6 +71,70 @@ export class Context {
   getAgent(id: string): Agent | undefined {
     const record = this.agents.get(id);
     return record ? structuredClone(record.configuration) : undefined;
+  }
+  getWidget(
+    id: string,
+    signature?: string | null,
+  ):
+    | { value: Embed; error?: never }
+    | {
+        error: "agent_not_found" | "unsupported_agent_signature";
+        value?: never;
+      } {
+    const agent = this.agents.get(id)?.configuration;
+    if (!agent) return { error: "agent_not_found" };
+    if (signature != null) return { error: "unsupported_agent_signature" };
+    const {
+      language_presets: widgetPresets,
+      custom_avatar_path: _,
+      language_selector: __,
+      ...widget
+    } = agent.platform_settings?.widget ?? {};
+    const conversation = agent.conversation_config;
+    const presets: Record<string, WidgetLanguagePresetResponse> = Object.create(null);
+    for (const language of [
+      ...new Set([
+        ...Object.keys(widgetPresets ?? {}),
+        ...Object.keys(conversation.language_presets ?? {}),
+      ]),
+    ].sort()) {
+      const {
+        text_contents_translation: _,
+        terms_translation: __,
+        ...preset
+      } = widgetPresets?.[language] ?? {};
+      const first =
+        conversation.language_presets?.[language]?.overrides.agent
+          ?.first_message;
+      presets[language] = {
+        ...preset,
+        ...(first !== undefined ? { first_message: first } : {}),
+      };
+    }
+    return {
+      value: structuredClone({
+        agent_id: id,
+        widget_config: {
+          ...widget,
+          language: conversation.agent?.language ?? "en",
+          first_message: conversation.agent?.first_message ?? "",
+          text_only: conversation.conversation?.text_only ?? false,
+          supports_text_only: widget.supports_text_only ?? true,
+          supported_language_overrides: Object.keys(
+            conversation.language_presets ?? {},
+          ).sort(),
+          language_presets: presets,
+          ...(conversation.conversation?.file_input
+            ? { file_input_config: conversation.conversation.file_input }
+            : {}),
+        },
+      }),
+    };
+  }
+  getLink(id: string): Result<Link> {
+    return this.agents.has(id)
+      ? { value: { agent_id: id, token: null } }
+      : { error: "agent_not_found" };
   }
   createAgent(input: unknown): Result<{ agent_id: string }> {
     if (!validBody(input, false)) return { error: "invalid_agent" };

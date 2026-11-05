@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 247 now have authored
-behavior. The remaining 190 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 249 now have authored
+behavior. The remaining 188 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1607,3 +1607,29 @@ comparisons; values must match the local numeric/string column types. Unsupporte
 columns and invalid filters return 400. These table, sharing, ordering and error
 rules are local simulator conventions. No universal audit capture or provider
 request occurs, and contracts/validation remain unchanged.
+
+
+## Agent widget and shareable-link metadata
+
+`GET /v1/convai/agents/{agent_id}/widget` reads the canonical agent widget settings,
+conversation language, first message, text-only mode and file-input configuration.
+Language presets combine stored widget text/terms with explicit conversation
+first-message overrides; internal translation caches are omitted. No translation
+runs. Supported language overrides are sorted conversation-preset keys. Omitted
+language/first-message/text-only values use `en`, an empty string and false;
+omitted `supports_text_only` uses true, the stored widget configuration default.
+Custom avatar paths and language-selector flags have no field in this response
+schema and are omitted. Other stored widget metadata is returned as a copied value.
+
+`GET /v1/convai/agents/{agent_id}/link` returns the current agent ID and `token: null`.
+The snapshot's link response has no URL field. No signed token, expiring link,
+conversation, or provider connection is created. Supplied `conversation_signature`
+values on widget reads return 400 explicitly; authentication and allowlist
+checks are not enforced. Missing agents return 404. Reads have no state effects,
+reflect duplication/deletion/reset, return defensive copies and isolate instances.
+
+Run `agentWidgetConfiguration` to add fictional styling, a Spanish first-message
+preset and text-only/file-input metadata to `sim-agent`; reset restores the base
+agent configuration. Fixtures and this setup action live in `api/scenarios/agents.ts`.
+Agent create/PATCH remain generated due to Counterfact #2613. Contracts and request
+and response validation remain unchanged.
