@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 404 operations retain their
+the stateful voices implementation. The remaining 400 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -355,7 +355,41 @@ live in `api/routes/workspace/webhooks/_.context.ts`; the root stays unchanged.
 The simulator stores configuration only: it makes no callback requests, checks
 no remote URLs, and simulates neither delivery, signing, retries, automatic
 disabling, authentication, nor admin permissions. Secrets are predictable test
-values. This brings stateful coverage to 33 of 437 operations.
+values. This brings stateful coverage to 37 of 437 operations.
+
+## Workspace auth connection configuration
+
+Four operations store local auth connections: `GET`/`POST
+`/v1/workspace/auth-connections` and `PATCH`/`DELETE
+`/v1/workspace/auth-connections/{auth_connection_id}`. Supported types are
+`basic_auth`, `bearer_auth`, and `oauth2_client_credentials`; other credential
+families return HTTP 400. An omitted creation `auth_type` is inferred only when
+one complete supported request shape matches. Responses always include the
+inferred discriminator. Mixed family fields and unknown fields return HTTP 400.
+
+Responses explicitly project the contract's public fields and omit passwords,
+bearer tokens, and client secrets. OAuth public configuration includes scopes,
+extra parameters, custom headers, and the Basic Auth header flag. Lists preserve
+insertion order; this contract defines no list filters or pagination. Status is
+always `active`, a local configuration default rather than credential verification.
+
+PATCH preserves omitted/null fields and accepts empty arrays/maps to clear OAuth
+options. It cannot change the credential family. Name, status, and token URL are
+not PATCH fields in this snapshot and return HTTP 400. An empty object is a no-op.
+Missing IDs return HTTP 404 with `detail.status: "auth_connection_not_found"`;
+invalid changes return HTTP 400 without altering state or consuming creation IDs.
+These validation, null, ordering, status, and error rules are local conventions.
+
+Startup and `reset` populate one fictional `sim-auth-connection` and restore the
+creation counter in `api/scenarios/auth-connections.ts`. IDs start at
+`sim-auth-connection-created-1`. Run `.scenario emptyAuthConnections` (or
+`app.scenario("emptyAuthConnections", "api")`) to clear this configuration and
+counter; `reset` restores the baseline. Responses are defensive copies and
+instances are isolated. State and business rules live in the separate
+`api/routes/workspace/auth-connections/_.context.ts`; the root context is unchanged.
+This is configuration storage only: no token requests, remote credential checks,
+OAuth flows, authentication, or permission enforcement occur. Use synthetic
+credentials only. Other credential types are intentionally unsupported.
 
 ## Development
 

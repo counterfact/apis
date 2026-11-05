@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/workspace/auth-connections/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { UpdateOAuth2ClientCredsRequest } from "../../../components/schemas/UpdateOAuth2ClientCredsRequest.js";
 import type { UpdateBasicAuthRequest } from "../../../components/schemas/UpdateBasicAuthRequest.js";
