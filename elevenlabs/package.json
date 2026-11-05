@@ -17,7 +17,7 @@
     "test:tools": "node --test scripts/test/*.test.mjs"
   },
   "dependencies": {
-    "counterfact": "3.2.2",
+    "counterfact": "^3.2.2",
     "saxes": "6.0.0"
   },
   "devDependencies": {
