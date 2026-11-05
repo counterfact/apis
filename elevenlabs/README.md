@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 373 now have authored
-behavior. The remaining 64 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 384 now have authored
+behavior. The remaining 53 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2663,3 +2663,57 @@ resource/project/legacy scenarios clear their related state. Reset restores all
 baseline fixtures and cancels pending work. Instances isolate every change.
 These IDs, markers, version increments, status/error and billing rules are local
 simulator conventions.
+
+## Voice samples and synthetic PVC training
+
+Eleven sample/PVC operations now share canonical voice sample metadata. Run
+`voiceSampleFixtures` to attach the independently decoded 8,340-byte MP3 silence
+fixture above to `sim-narrator` (`sim-regular-sample`) and a professional voice
+`sim-pvc-samples` (`sim-sample`). Startup/reset keep the original voices without
+samples. No upload, denoising, trimming, diarization, training, identity check,
+captcha verification, model execution or provider request occurs.
+
+Ordinary sample audio is a complete buffered `audio/mpeg` response. PVC sample
+preview and separated-speaker audio follow their JSON contracts with matching
+base64 bytes, `audio/mpeg` media type and 23040/44100-second duration. The visual
+waveform has twenty zero amplitudes for decoded silence. Noise removal true and
+actual trim changes return 400. Omitted/null trim values leave metadata alone;
+zero start and the exact full duration in milliseconds are accepted as no-ops.
+Response `trim_start`/`trim_end` metadata uses seconds as a local convention.
+Filename edits persist, while null filenames preserve the current name.
+
+Speaker separation moves from `not_started` to `pending`; run
+`completeVoiceSampleSeparation` to publish a single synthetic `sim-speaker` with
+copied captured silence. This is a fixed fixture, not detected speech. Repeated
+completion is inert; pending edits/restarts fail with 409. Completed separation
+cannot be restarted. Speaker selection replaces the selected-ID list after every
+ID is validated; null preserves selection and an empty list selects none. Training
+rejects any sample with an explicitly empty speaker selection. Sample
+metadata and audio are shared by regular and PVC endpoints. Sample deletion
+removes the canonical sample, its media and separation state through either path.
+
+Captcha GET returns a `text/plain` synthetic read-aloud challenge; the contract
+specifies no response content format. It does not mark a voice verified. Required
+multipart captcha submission, verification and sample upload remain generated
+under Counterfact #2607. Run `verifiedVoiceSampleFixtures` to explicitly allow
+local training of the sample fixture and mark the existing synthetic multilingual
+model trainable. This scenario preserves current samples and edited metadata.
+
+Training accepts only `eleven_multilingual_v2` (the default), with an existing
+trainable catalog entry, owned professional voice, local verification gate and
+at least one sample. It captures copied sample metadata/media/language and queues
+canonical fine-tuning state. Training has no minimum real-world dataset duration
+and consumes no character quota. Pending training blocks metadata/sample edits,
+sample deletion, separation and overlapping training. Run
+`completeVoiceSampleTraining` to publish `fine_tuned`, captured dataset duration
+and the high-quality model ID; repeated completion does nothing. This indicates
+only a completed local fixture action, not a trained usable voice or model.
+
+Missing voices/samples/speakers/media return 404; invalid or unsupported options
+return 400 before mutation; unmet gates or conflicting work return 409. Captured
+training metadata survives later sample edits/deletion. Voice deletion cancels
+pending work and removes all its sample media and retained processing captures.
+Reset clears processing/media maps and restores the baseline catalog/gates.
+Contexts start with empty containers, scenarios own fixtures and completion, reads
+copy metadata/media, and simulator instances isolate all state. These fixture IDs,
+challenge format, gates, statuses and transitions are local conventions.

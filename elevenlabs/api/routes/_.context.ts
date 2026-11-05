@@ -19,6 +19,7 @@ export const defaultSettings = (): VoiceSettingsResponseModel => ({
 });
 
 export class Context {
+  voiceSamples?: import("./voices/pvc/_.context.js").Context;
   voiceLibrary?: import("./shared-voices/_.context.js").Context;
   voices = new Map<string, VoiceResponseModel>();
   models = new Map<string, ModelResponseModel>();
@@ -161,6 +162,7 @@ export class Context {
   }
 
   deleteVoice(id: string) {
+    this.voiceSamples?.purgeVoice(id);
     return this.voices.delete(id);
   }
 }

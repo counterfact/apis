@@ -239,3 +239,5 @@ export const voiceDiscovery: Scenario = ($) => {
 };
 
 export {completeKnowledgeIndexes} from "./knowledge-base.js";
+
+export { voiceSampleFixtures, verifiedVoiceSampleFixtures, completeVoiceSampleSeparation, completeVoiceSampleTraining } from "./voice-samples.js";

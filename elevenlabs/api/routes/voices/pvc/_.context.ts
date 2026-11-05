@@ -16,6 +16,106 @@ const fail = (status: number, code: string): never => {
 const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 export class Context {
+  sampleAudio = new Map<string, Map<string, Uint8Array>>();
+  separation = new Map<string, Map<string, { audio: Uint8Array; duration: number }>>();
+  training = new Map<string, { model: string; samples: import("../../../types/v1/components/schemas/SampleResponseModel.js").SampleResponseModel[]; audio: Uint8Array[]; language: string; status: "queued" | "completed" }>();
+  challenge?: string;
+  private voice(id: string, professional = true) {
+    const voice = this.owner().voices.get(id);
+    if (!voice) return fail(404, "voice_not_found");
+    if (professional && voice.category !== "professional") return fail(409, "voice_not_professional");
+    if (voice.is_owner !== true) return fail(403, "voice_not_owned");
+    return voice;
+  }
+  private idle(id: string) {
+    if (this.training.get(id)?.status === "queued") return fail(409, "voice_training_pending");
+  }
+  private sample(id: string, sid: string, professional = true) {
+    const voice = this.voice(id, professional);
+    const sample = voice.samples?.find(s => s.sample_id === sid);
+    if (!sample) return fail(404, "sample_not_found");
+    return sample;
+  }
+  purgeVoice(id: string) { this.sampleAudio.delete(id); this.separation.delete(id); this.training.delete(id); }
+  audio(id: string, sid: string) {
+    this.sample(id, sid, false);
+    const bytes = this.sampleAudio.get(id)?.get(sid);
+    if (!bytes) return fail(404, "sample_audio_not_found");
+    return new Uint8Array(bytes);
+  }
+  preview(id: string, sid: string, removeNoise?: boolean) {
+    const sample = this.sample(id, sid);
+    if (removeNoise !== undefined && removeNoise !== false) return fail(400, "noise_removal_unsupported");
+    return { voice_id: id, sample_id: sid, audio_base_64: Buffer.from(this.audio(id,sid)).toString("base64"), media_type: "audio/mpeg", duration_secs: sample.duration_secs };
+  }
+  waveform(id: string, sid: string) {
+    this.sample(id,sid); this.audio(id,sid);
+    return {sample_id:sid, visual_waveform:new Array<number>(20).fill(0)};
+  }
+  speakers(id: string, sid: string) {
+    const sample = this.sample(id,sid);
+    return structuredClone(sample.speaker_separation ?? {voice_id:id,sample_id:sid,status:"not_started" as const});
+  }
+  separate(id: string, sid: string) {
+    this.idle(id);
+    const sample = this.sample(id,sid);
+    if (sample.speaker_separation?.status === "pending") return fail(409,"sample_busy");
+    if (sample.speaker_separation?.status === "completed") return fail(409,"separation_already_completed");
+    const capture = {audio:this.audio(id,sid),duration:sample.duration_secs!};
+    let jobs=this.separation.get(id); if (!jobs) {jobs=new Map();this.separation.set(id,jobs);}
+    jobs.set(sid,capture);
+    sample.speaker_separation={voice_id:id,sample_id:sid,status:"pending"};
+    return {status:"ok"};
+  }
+  speakerAudio(id: string,sid: string,speaker: string) {
+    const sample=this.sample(id,sid);
+    if(sample.speaker_separation?.status!=="completed") return fail(409,"separation_not_completed");
+    if(!sample.speaker_separation.speakers?.[speaker]) return fail(404,"speaker_not_found");
+    const captured=this.separation.get(id)?.get(sid);
+    if(!captured) return fail(404,"speaker_audio_not_found");
+    return {audio_base_64:Buffer.from(captured.audio).toString("base64"),media_type:"audio/mpeg",duration_secs:captured.duration};
+  }
+  updateSample(id: string,sid: string,input: unknown) {
+    this.idle(id); const sample=this.sample(id,sid);
+    if(sample.speaker_separation?.status==="pending") return fail(409,"sample_busy");
+    if(!object(input) || Object.keys(input).some(k=>!["file_name","remove_background_noise","selected_speaker_ids","trim_start_time","trim_end_time"].includes(k))) return fail(400,"unsupported_sample_options");
+    if(input.remove_background_noise!==undefined && input.remove_background_noise!==false) return fail(400,"noise_removal_unsupported");
+    if(input.file_name!=null && (typeof input.file_name!=="string" || !input.file_name.trim() || input.file_name.length>255)) return fail(400,"invalid_sample_name");
+    if(input.trim_start_time!=null && input.trim_start_time!==0 || input.trim_end_time!=null && input.trim_end_time!==sample.duration_secs!*1000) return fail(400,"trimming_unsupported");
+    const ids=input.selected_speaker_ids;
+    if(ids!=null && (!Array.isArray(ids) || ids.some(s=>typeof s!=="string" || !sample.speaker_separation?.speakers?.[s]) || sample.speaker_separation?.status!=="completed")) return fail(400,"invalid_selected_speakers");
+    const next=structuredClone(sample);
+    if(input.file_name!=null) next.file_name=input.file_name as string;
+    if(input.remove_background_noise!==undefined) next.remove_background_noise=false;
+    if(input.trim_start_time!=null) next.trim_start=0;
+    if(input.trim_end_time!=null) next.trim_end=sample.duration_secs;
+    if(ids!=null) next.speaker_separation!.selected_speaker_ids=[...new Set(ids as string[])];
+    this.voice(id).samples=this.voice(id).samples!.map(s=>s.sample_id===sid?next:s);
+    return {voice_id:id};
+  }
+  deleteSample(id: string,sid: string,professional=false) {
+    this.idle(id);this.sample(id,sid,professional);
+    this.voice(id,professional).samples=this.voice(id,professional).samples!.filter(s=>s.sample_id!==sid);
+    this.sampleAudio.get(id)?.delete(sid);this.separation.get(id)?.delete(sid);
+    return {status:"ok"};
+  }
+  captcha(id: string) {this.voice(id); if(!this.challenge) throw new Error("Run startup or reset"); return this.challenge;}
+  train(id: string,input: unknown) {
+    const voice=this.voice(id); this.idle(id);
+    if(!object(input) || Object.keys(input).some(k=>k!=="model_id") || input.model_id!=null && input.model_id!=="eleven_multilingual_v2") return fail(400,"unsupported_training_model");
+    if(!voice.samples?.length) return fail(409,"voice_has_no_samples");
+    if(!voice.fine_tuning?.is_allowed_to_fine_tune) return fail(409,"voice_not_verified");
+    if(voice.samples.some(s=>s.speaker_separation?.status==="pending")) return fail(409,"sample_busy");
+    if(voice.samples.some(s=>s.speaker_separation?.selected_speaker_ids?.length===0)) return fail(409,"sample_has_no_selected_speakers");
+    const model=this.owner().models.get("eleven_multilingual_v2");
+    if(!model) return fail(404,"model_not_found");
+    if(!model.can_be_finetuned) return fail(409,"model_not_trainable");
+    const capture={model:model.model_id,samples:structuredClone(voice.samples),audio:voice.samples.map(s=>this.audio(id,s.sample_id)),language:voice.fine_tuning.language!,status:"queued" as const};
+    this.training.set(id,capture);
+    voice.fine_tuning.state[model.model_id]="queued";
+    return {status:"ok"};
+  }
+
   root?: () => Root;
   nextVoice = 0;
   createdAt?: number;
@@ -100,6 +200,7 @@ export class Context {
     if (previous.category !== "professional")
       return fail(409, "voice_not_professional");
     if (previous.is_owner !== true) return fail(403, "voice_not_owned");
+    this.idle(id);
     const body = this.validate(input, false);
     const language =
       (body.language as string | undefined) ??

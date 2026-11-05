@@ -1,5 +1,12 @@
 import type { Routes } from "../../../../types/index.js";
 type Route = Routes["/voices"]["/pvc"]["/{voice_id}"]["/train"];
 export const POST: Route["POST"] = async ($) => {
-  return $.response.status(200).random();
+  try { return $.response.status(200).json($.context.train($.path.voice_id, $.body));
+  } catch(error) {
+    if(error instanceof Error && error.name === "PvcError") {
+      const e=error as Error & {status:number;code:string};
+      return $.x.response.status(e.status).json({detail:{status:e.code,message:e.message}});
+    }
+    throw error;
+  }
 };
