@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 286 now have authored
-behavior. The remaining 151 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 288 now have authored
+behavior. The remaining 149 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1901,3 +1901,36 @@ instances isolate state and reset restores all records. These cursor, ordering,
 availability and error rules are local conventions; contracts and request/response
 validation remain unchanged. Finite template/run responses passed a guarded public
 Dispatcher validation probe despite recursive schema families in the snapshot.
+
+
+## Shared voice discovery catalog
+
+`GET /v1/shared-voices` reads three fictional public-library voices, separate from
+the canonical owned voice collection. `GET /v1/voices/accents` reads their available
+accent catalog. Startup/reset populate both in `api/scenarios/voice-library.ts`;
+`emptyVoiceLibrary` clears them without changing owned voices. Context state starts
+empty, copies include nested language metadata, and instances isolate changes.
+Deleting an owned voice has no effect on public discovery.
+
+Scalar category, gender, age, accent, language, locale and owner filters match
+exact, case-sensitive stored fields; search checks name/description case-insensitively.
+Use-case and descriptive arrays match any supplied value and combine with other
+filters; an empty array matches nothing. Singleton and repeated query values work.
+A minimum notice-period filter treats absent notice metadata as zero days.
+`featured=true` and `reader_app_enabled=true` restrict results; false/omitted leave
+those filters inactive. Custom-rate and live-moderation inclusion switches default
+to including both kinds; false excludes the corresponding records. A custom rate
+is a nondefault rate multiplier or a nonnull fiat rate. Nullable numeric/boolean
+query values receive strict normalization for Counterfact #2612.
+
+The four sorts are descending created date, yearly usage, stored fictional trending
+score or clone count, with ascending voice-ID ties. Filters precede zero-based
+page pagination (size 1–100, default 30). Total count is the filtered count;
+last_sort_id is the final returned voice ID, or null for an empty page.
+Invalid query options return 400 without changing state. Accent queries filter by
+language and the two fixture model IDs, `eleven_multilingual_v2` and
+`eleven_flash_v2_5`; unknown model IDs return 400. Accent rows sort by full code.
+These matching, ordering, inclusion and error rules are local simulator conventions.
+Rates, usage, reader eligibility and trending values are synthetic metadata,
+not provider pricing or analytics. No previews, audio, billing, provider catalog
+fetch or voice import occurs. Shared-voice import remains generated.

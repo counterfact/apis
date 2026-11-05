@@ -19,6 +19,7 @@ export const defaultSettings = (): VoiceSettingsResponseModel => ({
 });
 
 export class Context {
+  voiceLibrary?: import("./shared-voices/_.context.js").Context;
   voices = new Map<string, VoiceResponseModel>();
   models = new Map<string, ModelResponseModel>();
   account?: {

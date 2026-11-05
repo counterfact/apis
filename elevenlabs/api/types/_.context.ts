@@ -41,6 +41,7 @@ import type { Context as FlowsContext } from "../routes/flows/_.context";
 import type { Context as HistoryContext } from "../routes/history/_.context";
 import type { Context as PronunciationDictionariesContext } from "../routes/pronunciation-dictionaries/_.context";
 import type { Context as ServiceAccountsContext } from "../routes/service-accounts/_.context";
+import type { Context as SharedVoicesContext } from "../routes/shared-voices/_.context";
 import type { Context as SpeechEngineContext } from "../routes/speech-engine/_.context";
 import type { Context as WorkspaceContext } from "../routes/workspace/_.context";
 import type { Context } from "../routes/_.context";
@@ -163,6 +164,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/service-accounts" | `/service-accounts/${string}`,
   ): ServiceAccountsContext;
+  loadContext(
+    path: "/shared-voices" | `/shared-voices/${string}`,
+  ): SharedVoicesContext;
   loadContext(
     path: "/speech-engine" | `/speech-engine/${string}`,
   ): SpeechEngineContext;

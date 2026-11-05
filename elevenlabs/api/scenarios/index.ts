@@ -1,3 +1,5 @@
+import { resetVoiceLibrary } from "./voice-library.js";
+export { emptyVoiceLibrary } from "./voice-library.js";
 import {resetAgentProcedures} from "./agent-procedures.js";
 export {emptyAgentProcedures,procedureFolderReferences} from "./agent-procedures.js";
 import {resetAgentMergeProposals} from "./agent-merge-proposals.js";
@@ -88,6 +90,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetVoiceLibrary($);
   resetAssets($);
   resetMusicFinetunes($);
   resetLegacyDubbing($);
