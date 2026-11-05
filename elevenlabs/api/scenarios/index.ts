@@ -112,7 +112,7 @@ export { alternateSettings } from "./settings.js";
 import { resetTags } from "./tags.js";
 export { emptyTags } from "./tags.js";
 import { resetUsage } from "./usage.js";
-export { emptyUsage } from "./usage.js";
+export { emptyUsage, legacyUsageWorkspace } from "./usage.js";
 export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 

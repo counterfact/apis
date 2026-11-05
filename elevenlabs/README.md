@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 393 now have authored
-behavior. The remaining 44 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 394 now have authored
+behavior. The remaining 43 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2883,3 +2883,36 @@ agent workflows, branch metadata and all ID counters untouched. Responses contai
 defensive workflow copies. Startup/reset own fixture population, contexts start
 empty, and instances isolate state. The endpoint remains legacy; it never saves
 or publishes an agent draft or version.
+
+
+## Deprecated character usage metrics
+
+`GET /v1/usage/character-stats` reads the same immutable synthetic credit ledger
+as modern workspace usage analytics. `start_unix` and `end_unix` are integer
+milliseconds, following the contract descriptions rather than its ambiguous
+seconds-looking examples. Both bounds are inclusive here; modern analytics keeps
+its existing start-inclusive/end-exclusive window. Only records inside the exact
+requested window contribute, even when its first bucket starts earlier.
+
+Defaults are current user `sim-user`, breakdown `none`, metric `credits` and UTC
+`day` buckets. Hour/day buckets align to UTC boundaries, weeks begin Monday and
+months begin on their first UTC day. `cumulative` returns one total bucket at the
+requested start. A positive integer `aggregation_bucket_size` in seconds overrides
+the interval with Unix-epoch-aligned fixed buckets. The axis includes every bucket
+intersecting the inclusive window, with zeroes for missing usage. Output is bounded
+to 10,000 timestamps and 100,000 numeric values; larger queries return 400.
+
+Breakdowns `voice`, `model`, `product_type` and workspace-only `user` use historical
+ledger identifiers, sorted by identifier. `none` always returns an `All` series,
+including zeroes for empty results; other breakdowns return no series when empty.
+`include_workspace_metrics=true` includes every ledger user. Unsupported dimensions
+and metrics return 400; credits do not imply characters, minutes, requests or price.
+No provider, model, billing or live usage recording runs. Voice/history deletion,
+quota changes and current generation requests do not alter this historical ledger.
+
+`legacyUsageWorkspace` replaces the ledger with the baseline plus another user's
+75-credit fixture; `emptyUsage` replaces it with an empty ledger. Full `reset`
+restores the shared baseline, current-user default and canonical ledger accessor.
+Contexts start empty, fixtures belong to scenarios, and responses and instances
+are independent. These bucket, scope, limits and error rules are local simulator
+conventions for this deprecated endpoint.

@@ -166,6 +166,64 @@ export class Context {
 
   usage: UsageRecord[] = [];
 
+  legacyCurrentUser?: string;
+
+  legacyUsage(q: Record<string, unknown>): import("../../../types/v1/components/schemas/UsageCharactersResponseModel.js").UsageCharactersResponseModel {
+    const invalid = (): never => {
+      throw Object.assign(new Error("Invalid or unsupported local legacy usage query"), {
+        name: "LegacyUsageError", status: 400, code: "invalid_legacy_usage_query",
+      });
+    };
+    if (Object.keys(q).some(k => !["start_unix", "end_unix", "include_workspace_metrics", "breakdown_type", "aggregation_interval", "aggregation_bucket_size", "metric"].includes(k))) return invalid();
+    const start = q.start_unix, end = q.end_unix;
+    if (typeof start !== "number" || typeof end !== "number" ||
+        !Number.isSafeInteger(start) || !Number.isSafeInteger(end) ||
+        start < 0 || end < start || end > 8_640_000_000_000_000) return invalid();
+    const workspace = q.include_workspace_metrics ?? false;
+    const breakdown = q.breakdown_type ?? "none", interval = q.aggregation_interval ?? "day";
+    const size = q.aggregation_bucket_size;
+    if (typeof workspace !== "boolean" || (q.metric ?? "credits") !== "credits" ||
+        typeof breakdown !== "string" || !["none", "voice", "model", "product_type", "user"].includes(breakdown) ||
+        (breakdown === "user" && !workspace) ||
+        typeof interval !== "string" || !["hour", "day", "week", "month", "cumulative"].includes(interval) ||
+        (size != null && (typeof size !== "number" || !Number.isSafeInteger(size) || size <= 0 || !Number.isSafeInteger(size * 1000)))) return invalid();
+    if (!workspace && !this.legacyCurrentUser) return invalid();
+    const day = 86_400_000;
+    const width = size != null ? Number(size) * 1000 : interval === "hour" ? 3_600_000 : interval === "day" ? day : interval === "week" ? 7 * day : null;
+    const bucket = (t: number): number => {
+      if (width !== null) return interval === "week" && size == null
+        ? Math.floor((t + 3 * day) / width) * width - 3 * day
+        : Math.floor(t / width) * width;
+      if (interval === "cumulative") return start;
+      const d = new Date(t); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.getTime();
+    };
+    const next = (t: number): number => {
+      if (width !== null) return t + width;
+      if (interval === "cumulative") return Infinity;
+      const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + 1); return d.getTime();
+    };
+    const time: number[] = [];
+    for (let t = bucket(start); t <= end;) {
+      if (time.length >= 10_000 || !Number.isFinite(t)) return invalid();
+      time.push(t);
+      const n = next(t);
+      if (n > end) break;
+      if (!Number.isFinite(n) || n <= t) return invalid();
+      t = n;
+    }
+    const dimension = breakdown === "voice" ? "voice_id" : breakdown === "user" ? "user_id" : breakdown as Group;
+    const selected = this.usage.filter(r => r.time >= start && r.time <= end && (workspace || r.user_id === this.legacyCurrentUser));
+    const labels = breakdown === "none" ? ["All"] : [...new Set(selected.map(r => r[dimension]))].sort();
+    if (labels.length * time.length > 100_000) return invalid();
+    const usage: Record<string, number[]> = Object.fromEntries(labels.map(label => [label, time.map(() => 0)]));
+    const indexes = new Map(time.map((t, i) => [t, i]));
+    for (const record of selected) {
+      const label = breakdown === "none" ? "All" : record[dimension];
+      usage[label][indexes.get(bucket(record.time))!] += record.credits;
+    }
+    return { time, usage };
+  }
+
   queryUsage(query: UsageQuery): UsageResult {
     const earliest = 1_577_836_800_000;
     if (![query.start_time, query.end_time].every((time) => Number.isSafeInteger(time) && time >= earliest)
