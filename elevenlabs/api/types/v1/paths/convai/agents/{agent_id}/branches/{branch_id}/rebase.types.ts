@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../../../routes/convai/agents/_.context.ts";
+import type { Context } from "../../../../../../../../routes/convai/agents/{agent_id}/branches/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../../../counterfact-types/index.ts";
 import type { Body_Rebase_a_branch_onto_main_v1_convai_agents__agent_id__branches__branch_id__rebase_post } from "../../../../../../components/schemas/Body_Rebase_a_branch_onto_main_v1_convai_agents__agent_id__branches__branch_id__rebase_post.js";
 import type { HTTPValidationError } from "../../../../../../components/schemas/HTTPValidationError.js";

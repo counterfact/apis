@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 262 now have authored
-behavior. The remaining 175 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 269 now have authored
+behavior. The remaining 168 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -579,8 +579,9 @@ name plus ` (copy)`, and assigns a fresh ID, creator/access metadata and time.
 New IDs are `sim-agent-created-N`; timestamps advance one second per successful
 creation or effective internal update from the fixed scenario baseline. Invalid
 duplicate names do not allocate IDs. Deletion returns empty 204; missing agents
-return 404. `force=true`, branch/version selectors, and requests for generated
-workflow elements return 400. There are no subagent cleanup or branch semantics.
+return 404. `force=true` and requests for generated workflow elements return 400.
+Branch/version selectors use the lifecycle records described below; missing
+selectors return 404. Subagent dependency cleanup is not simulated.
 
 The directly tested context helpers also support bounded configuration creation
 and partial updates for duplication and REPL use. Supported fields are name,
@@ -605,7 +606,8 @@ validation before the handler executes, even for finite minimal bodies
 Request validation stays enabled; contracts remain unchanged and bindings are
 regenerated normally.
 Use startup/reset fixtures and duplication for the supported HTTP lifecycle.
-Agent workflows, versions, deployment and execution endpoints remain generated.
+Agent workflow generation and execution endpoints remain generated.
+Version reads and deployment metadata use the lifecycle subset described below.
 
 ## Tool configuration and execution history
 
@@ -1742,3 +1744,45 @@ deletion returns an empty 204 response and removes only that asset. Existing Flo
 generation records are separate metadata and remain unchanged. Reads return copies,
 instances isolate changes and reset restores baseline. Search, cursor, tie ordering
 and error conventions are local behavior; contracts and validation remain unchanged.
+
+
+## Agent branch, version and deployment metadata
+
+Seven operations maintain local lifecycle metadata: branch list/detail/PATCH,
+version metadata reads, deployment list/POST and draft deletion. Startup/reset
+populate `sim-main-branch` (`main`), `sim-agent-feature`, two immutable version
+snapshots and a main-only traffic split in `api/scenarios/agent-lifecycle.ts`.
+Contexts start empty; `emptyAgentLifecycle` clears lifecycle records, allocation
+counters and configuration selectors while preserving canonical main metadata.
+Agent existence is checked live, so deleting an agent hides all its lifecycle
+records. Duplicates preserve configuration/references but omit the source agent's
+lifecycle selectors; they initially have no lifecycle records.
+
+Main branch identity/name come from canonical `StoredAgent.mainBranch` metadata.
+Renaming it updates analysis dependency projections immediately. The
+`agentMainBranchPreview` setup rename is also reflected by branch reads. Parent
+ancestry is stored explicitly and current parent names are projected live.
+`GET /v1/convai/agents/{agent_id}` accepts one branch or version selector. Default
+and main-branch reads expose live canonical configuration, including current
+analysis, knowledge-base, tool and MCP references. Version and feature reads
+expose copied historical snapshots. Reading a snapshot never replaces live state.
+Unknown or cross-agent branch/version IDs return 404; supplying both returns 400.
+
+Branch lists exclude archived records by default and sort by creation time then
+ID, ascending. `limit` is 2–100 (default 100), matching the snapshot's exclusive
+minimum. Commit-DAG comparison requests return 400 explicitly. PATCH supports
+name, description, archive and protection metadata, plus disabling auto-rebase;
+nulls preserve values and an empty description clears it. Names are unique within
+an agent. Main or currently live branches cannot be archived (409). Enabling
+automatic rebase returns 400; no version graph or provider job runs.
+
+Deployments store finite percentages from zero to 100, totaling 100 across distinct,
+existing, unarchived branches. Invalid splits leave history/counters unchanged.
+Each success deactivates prior history and records a synthetic increasing time/ID;
+only metadata changes, with no routing, calling, billing or execution. Lists sort
+newest first with descending ID ties and use page numbers from 1, page size 1–100
+(default 30). Draft deletion clears only the branch's local draft marker and is
+idempotent. Recursive branch/draft creation, merge/rebase and procedure operations
+remain generated and uncounted. All reads return defensive copies, simulator
+instances isolate changes, and reset restores the fixtures. Error, ordering,
+null-update, snapshot and traffic-split conventions are local simulator behavior.

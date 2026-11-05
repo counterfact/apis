@@ -1,3 +1,5 @@
+import { resetAgentLifecycle } from "./agent-lifecycle.js";
+export { emptyAgentLifecycle } from "./agent-lifecycle.js";
 import { resetAssets } from "./assets.js";
 export { emptyAssets } from "./assets.js";
 import { resetMusicFinetunes } from "./music-finetunes.js";
@@ -100,6 +102,7 @@ export const reset: Scenario = ($) => {
   resetServiceAccounts($);
   resetWorkspaceKeyPolicy($);
   resetAgents($);
+  resetAgentLifecycle($);
   resetAnalysisItems($);
   resetKnowledgeBase($);
   resetPhoneNumbers($);

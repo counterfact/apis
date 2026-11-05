@@ -60,6 +60,7 @@ function merge(base: ObjectValue, patch: ObjectValue): ObjectValue {
   return result;
 }
 export class Context {
+  lifecycle?: import("./{agent_id}/branches/_.context.js").Context;
   agents = new Map<string, StoredAgent>();
   nextAgentNumber = 0;
   nextMutationNumber = 0;
@@ -179,7 +180,8 @@ export class Context {
     let agent_id: string;
     do { agent_id = `sim-agent-created-${++this.nextAgentNumber}`; } while (this.agents.has(agent_id));
     const time = defaults.timeUnix + ++this.nextMutationNumber;
-    const configuration: Agent = { ...original, agent_id, name: input.name as string ?? `${original.name} (copy)`,
+    const {branch_id: _branch, version_id: _version, main_branch_id: _main, ...copied} = original;
+    const configuration: Agent = { ...copied, agent_id, name: input.name as string ?? `${original.name} (copy)`,
       metadata: { created_at_unix_secs: time, updated_at_unix_secs: time }, access_info: structuredClone(defaults.accessInfo) };
     this.agents.set(agent_id, { configuration, creatorUserId: defaults.userId });
     return { value: { agent_id } };

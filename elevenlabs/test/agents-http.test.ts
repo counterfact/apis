@@ -69,7 +69,8 @@ test("agent Dispatcher rejects unsupported selectors and invalid queries without
   const app = await createDispatcherHarness();
   const duplicate = (id: string, body: unknown) => app.request(`${path}/${id}/duplicate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const before = await (await app.request(path + "/sim-agent")).json();
-  for (const query of ["?branch_id=branch", "?version_id=version", "?include_procedure_generated_workflow_elements=true"]) assert.equal((await app.request(path + "/sim-agent" + query)).status, 400);
+  for (const query of ["?branch_id=branch", "?version_id=version"]) assert.equal((await app.request(path + "/sim-agent" + query)).status, 404);
+  assert.equal((await app.request(path + "/sim-agent?include_procedure_generated_workflow_elements=true")).status, 400);
   for (const query of ["?cursor=bad", "?page_size=0", "?page_size=101", "?sort_by=call_count_7d", "?archived=invalid"]) assert.equal((await app.request(path + query)).status, 400);
   assert.equal((await duplicate("sim-agent", { name: " " })).status, 400);
   assert.equal((await duplicate("missing", {})).status, 404);
