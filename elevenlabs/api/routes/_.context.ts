@@ -2,6 +2,7 @@ import type { VoiceResponseModel } from "../types/v1/components/schemas/VoiceRes
 import type { VoiceSettingsResponseModel } from "../types/v1/components/schemas/VoiceSettingsResponseModel.js";
 import type { GetVoicesV2ResponseModel } from "../types/v2/components/schemas/GetVoicesV2ResponseModel.js";
 import type { HTTP_GET_Query } from "../types/v2/paths/voices.types.js";
+import type { ModelResponseModel } from "../types/v1/components/schemas/ModelResponseModel.js";
 
 type VoiceListResult =
   | { page: GetVoicesV2ResponseModel; error?: never }
@@ -17,6 +18,11 @@ export const defaultSettings = (): VoiceSettingsResponseModel => ({
 
 export class Context {
   voices = new Map<string, VoiceResponseModel>();
+  models = new Map<string, ModelResponseModel>();
+
+  listModels() {
+    return structuredClone([...this.models.values()]);
+  }
 
   listVoices() {
     return structuredClone([...this.voices.values()]);

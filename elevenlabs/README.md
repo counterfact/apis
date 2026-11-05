@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 430 operations retain their
+the stateful voices implementation. The remaining 429 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -103,6 +103,27 @@ rules are not implemented.
 Restart or run `.scenario reset` to restore the fixtures. In programmatic use,
 call `app.scenario("reset", "api")`. All callers share state; it is not persisted.
 
+## Model discovery
+
+`GET /v1/models` returns a stable two-model catalog containing
+`eleven_multilingual_v2` and `eleven_flash_v2_5`. Voice fixtures reference an ID
+in this catalog. Responses include capabilities, languages, request limits,
+and rate fields, with defensive copies of the stored model data.
+
+Catalog values are synthetic local fixtures, including limits and rates; they
+are not current ElevenLabs product or pricing claims. This simulator does not
+synthesize audio or charge for requests. Authentication is not enforced.
+
+Startup and `reset` populate the catalog from `api/scenarios/models.ts`.
+Run `.scenario emptyModels` (or `app.scenario("emptyModels", "api")`) to return
+an empty catalog for model-picker testing. Run `reset` to restore both catalog
+and voice fixtures. Voice changes do not change the model catalog.
+
+Voice metadata editing remains generated. Its contract requires multipart form
+data, which the pinned Counterfact runtime's default body parser does not
+parse. That operation needs [runtime multipart support](https://github.com/counterfact/api-simulator/issues/2607)
+before it can be simulated faithfully.
+
 ## Development
 
 ```sh
@@ -113,7 +134,7 @@ npm test
 
 Generation reads both local contracts and preserves authored handlers.
 Tests verify spec provenance, version routing, and shared voice behavior over
-Counterfact’s Dispatcher, plus context state transitions and listing rules directly.
+Counterfact’s Dispatcher, plus context state transitions, model catalog isolation, and listing rules directly.
 `test-support/dispatcher.ts` loads the actual route, context, and scenario modules
 using Counterfact's public runtime exports. It reads both configured contracts,
 runs `startup`, shares state across V1/V2, and exposes `request(path, options)`
