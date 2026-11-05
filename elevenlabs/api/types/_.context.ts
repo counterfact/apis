@@ -5,6 +5,7 @@ import type { Context as ConvaiEnvironmentsContext } from "../routes/convai/envi
 import type { Context as ConvaiSecretsContext } from "../routes/convai/secrets/_.context";
 import type { Context as ConvaiSettingsContext } from "../routes/convai/settings/_.context";
 import type { Context as ConvaiTagsContext } from "../routes/convai/tags/_.context";
+import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.context";
 import type { Context as VoicesCollectionsContext } from "../routes/voices/collections/_.context";
 import type { Context as WorkspaceAnalyticsContext } from "../routes/workspace/analytics/_.context";
 import type { Context as WorkspaceAuthConnectionsContext } from "../routes/workspace/auth-connections/_.context";
@@ -33,6 +34,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/tags" | `/convai/tags/${string}`,
   ): ConvaiTagsContext;
+  loadContext(
+    path: "/convai/tools" | `/convai/tools/${string}`,
+  ): ConvaiToolsContext;
   loadContext(
     path: "/voices/collections" | `/voices/collections/${string}`,
   ): VoicesCollectionsContext;

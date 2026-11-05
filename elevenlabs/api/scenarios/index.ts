@@ -12,6 +12,8 @@ import { resetAuthConnections } from "./auth-connections.js";
 export { emptyAuthConnections } from "./auth-connections.js";
 import { resetWebhooks } from "./webhooks.js";
 export { emptyWebhooks } from "./webhooks.js";
+import { resetTools } from "./tools.js";
+export { emptyTools, toolDiscovery } from "./tools.js";
 import { resetAgents } from "./agents.js";
 export { emptyAgents } from "./agents.js";
 import { resetSecrets } from "./secrets.js";
@@ -31,6 +33,7 @@ export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
   resetAgents($);
+  resetTools($);
   resetSecrets($);
   resetEnvironments($);
   resetEnvironmentVariables($);

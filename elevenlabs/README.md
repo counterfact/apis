@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 65 now have authored
-behavior. The remaining 372 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 70 now have authored
+behavior. The remaining 367 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -606,6 +606,58 @@ Request validation stays enabled; contracts remain unchanged and bindings are
 regenerated normally.
 Use startup/reset fixtures and duplication for the supported HTTP lifecycle.
 Agent workflows, versions, deployment and execution endpoints remain generated.
+
+## Tool configuration and execution history
+
+Five operations now read and delete tool configuration: `GET /v1/convai/tools`,
+`GET`/`DELETE /v1/convai/tools/{tool_id}`, and `GET` on the tool's
+`dependent-agents` and `executions` subpaths. Startup and `reset` seed a fictional
+`sim-tool` client tool (`display_help`) and two synthetic historical execution
+records in `api/scenarios/tools.ts`. These are stored configuration and history:
+no tool calls, client events, callbacks, conversations, or network requests occur.
+Usage statistics are fixed fixture metadata, not counters updated by reads.
+
+Tool lists support case-sensitive name prefix search, creator (`@me` means
+`sim-user`), ownership, type and agent-reference filters. Creator takes precedence
+over ownership. Type arrays match any requested type. Agent-reference filters
+and dependent-agent reads derive current canonical
+`conversation_config.agent.prompt.tool_ids`; deleting or duplicating an agent
+changes the results immediately. Inline tools do not create tool-ID dependencies.
+Workflows, procedures, branches, permission lookups and environment-variable
+resolution are not simulated. The detail endpoint accepts `environment` but the
+client fixture has no environment-dependent values to resolve.
+
+Lists sort by `created_at` descending by default or `name`, with `asc`/`desc`
+direction and ascending tool-ID ties. Dependents sort by agent ID. Execution
+history sorts newest first with ascending execution-ID ties, and supports exact
+`is_error`, `agent_id`, `branch_id` and inclusive `start_time`/`end_time` filters.
+Historical agent IDs remain after an agent is deleted. All lists filter before
+pagination, default to 30 records, and accept page sizes from 1–100. Cursors are
+nonnegative decimal offsets; invalid cursors return 400 and offsets beyond the
+end produce empty pages. Invalid filters and reversed time bounds return 400.
+The installed runtime's nullable query text is normalized only for tool list
+`page_size` and execution `is_error`, `start_time`, and `end_time`.
+
+Missing tools return 404. Deletion returns 409 while canonical agents reference
+the tool. `force=true` returns 400 because branch cleanup is outside this slice.
+Successful deletion returns 200 with `{}` and removes only that tool and its
+execution records; agents and other tools remain unchanged. Deletion protection,
+errors, ordering, cursors and fixed metadata are local simulator conventions.
+Authentication and permissions are not enforced.
+
+`emptyTools` clears this group's tool map and execution ledger; `reset` restores
+them. `toolDiscovery` adds a second client tool and assigns `sim-tool` to the
+existing baseline agent, without creating an agent. These scenarios own all
+fixtures and metadata; there are no creation or mutation counters in this read
+and delete slice. The nested context starts empty, returns defensive copies,
+and uses a live scenario-wired accessor so agent map replacement is reflected.
+Instances isolate state. The small root context remains unchanged.
+
+Tool POST and PATCH retain generated behavior and are not counted as authored
+operations: their recursive request schemas share the installed validation
+blocker [#2613](https://github.com/counterfact/api-simulator/issues/2613).
+Validation remains enabled and bindings are generated normally. Use startup,
+reset and named fixtures for configuration setup.
 
 ## Development
 
