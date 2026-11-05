@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 255 now have authored
-behavior. The remaining 182 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 259 now have authored
+behavior. The remaining 178 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1691,3 +1691,27 @@ return 404. Deleting a dub removes its metadata and transcripts; reset restores
 both. No transcription, translation, media processing, billing or network call
 runs. These errors, cursor, tie and filter combination rules are local conventions.
 Multipart creation and audio retrieval remain generated and uncounted.
+
+
+## Music finetune metadata
+
+Four operations list, read, update and delete synthetic stored music finetune
+metadata. Startup/reset seed self-owned, workspace-created and curated records in
+`api/scenarios/music-finetunes.ts`; contexts start empty. No music generation,
+training, upload, provider call or billing occurs. Multipart creation remains
+generated and uncounted. Authentication is not enforced.
+
+Lists combine visibility and creator filters before sorting and decimal-offset
+cursor pagination (1–150 records, default 50). Sorting defaults to creation time
+descending, with ascending ID ties; name and ascending order are supported.
+Beyond-end pages are empty. Invalid options return 400; missing IDs return 404.
+Reads and mutation results are defensive copies. Only records created by `self`
+can be updated or deleted; other records return 403. This is a local ownership
+convention, without effective workspace permission calculation.
+
+PATCH replaces supplied tags, clears the genre on explicit null and preserves
+null/omitted name, tags and visibility. Names must be nonblank. Visibility can be
+private or workspace; updates never alter training status/progress. Invalid
+updates leave state unchanged. DELETE returns the removed metadata, and later
+reads and lists reflect removal. `emptyMusicFinetunes` clears records; reset
+restores the baseline, and simulator instances isolate their changes.
