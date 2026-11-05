@@ -1,16 +1,18 @@
 # ElevenLabs implementation status
 
-Counterfact 3.2.2 / runtime 0.4.2. 437 canonical operations: 431 authored, six generated. The pinned contracts and
+Counterfact 3.2.2 / runtime 0.4.2. 437 canonical operations: all authored, zero remaining. The pinned contracts and
 provenance hashes are unchanged. No request validation bypass or manual generated
 schema edits were introduced. V2 voice discovery shares the existing V1 voice
-store; all 37 newly authored operations below are V1 operations.
+store; all 43 newly authored operations below are V1 operations.
 
 | Coherent slice | New operations | Details |
 | --- | ---: | --- |
-| Voice creation, metadata editing, similarity | 3 | [Voice uploads](README.md#voice-uploads-after-the-321-upgrade) |
+| Voice creation, metadata editing, similarity | 3 | [Voice uploads](docs/voice-uploads.md) |
 | PVC samples, captcha and verification submissions | 3 | [PVC uploads](PVC_UPLOADS.md) |
 | Tool creation and configuration replacement | 2 | [Tool configuration](TOOL_CONFIGURATION.md) |
 | Agent-test definition creation and replacement | 2 | Canonical test/folder state; no model execution |
+| Agent creation/publication, branches and drafts | 4 | [Agent mutations](docs/agent-mutations.md) |
+| Test execution and resubmission | 2 | [Execution lifecycle](docs/test-execution.md) |
 | Conversation simulation and buffered events | 2 | [Simulation](CONVERSATION_SIMULATION.md) |
 | Asset uploads and production-order media | 2 | [Assets](UPLOADED_ASSETS.md) |
 | Agent avatars, hold audio and conversation files | 3 | [ConvAI media](CONVAI_MEDIA_UPLOADS.md) |
@@ -20,8 +22,8 @@ store; all 37 newly authored operations below are V1 operations.
 | Music training/upload/stems/video inputs | 4 | [Music](docs/music-inputs.md) |
 | Studio and AudioNative project/content ingestion | 3 | [Projects](PROJECT_INGESTION.md) |
 | Legacy and current Dubbing creation | 2 | [Dubbing](docs/dubbing-creation.md) |
-| Flows template run creation | 1 | Canonical queued runs, version snapshots and scenario completion |
-| Total | 37 | Each slice committed after focused checks |
+| Flows template run creation | 1 | [Flows run lifecycle](docs/flow-template-runs.md) |
+| Total | 43 | Each slice committed after focused checks |
 
 ## Compatibility and existing behavior
 
@@ -51,8 +53,8 @@ limits are explicit per slice rather than silently pretending to execute them.
 
 ## Remaining runtime issues and verification
 
-[Six generated operations](BLOCKED_OPERATIONS.md) are now unblocked by 0.4.2 and
-await implementation. #2626 and #2627 have published fixes. The remaining observations (#2631, #2632)
+All operations are authored; [the remaining set](BLOCKED_OPERATIONS.md) is empty.
+#2626 and #2627 have published fixes in runtime 0.4.2. The remaining observations (#2631, #2632)
 are recorded in [the issue index](COUNTERFACT_ISSUES.md). Error tags and explicit
 optional-body defaults keep supported simulator behavior usable without altering
 contracts or disabling validators.

@@ -12,7 +12,7 @@ workaround; multipart tests supply the runtime's public parsed MultipartFile sha
 
 | Issue | Reproduction and effect | Project behavior |
 | --- | --- | --- |
-| [#2626](https://github.com/counterfact/api-simulator/issues/2626) | Shared schema graphs expand until heap exhaustion; six full-contract agent mutation requests abort before their handlers. A synthetic graph has a successful small control and bounded failing larger control. | Fixed in 0.4.2. The same bounded depth-22 control now succeeds; all six full-contract requests validate. Their simulator behavior is being implemented. |
+| [#2626](https://github.com/counterfact/api-simulator/issues/2626) | Shared schema graphs expand until heap exhaustion; six full-contract agent mutation requests abort before their handlers. A synthetic graph has a successful small control and bounded failing larger control. | Fixed in 0.4.2. The same bounded depth-22 control now succeeds; all six full-contract requests validate. All six simulator behaviors are now authored and tested. |
 | [#2627](https://github.com/counterfact/api-simulator/issues/2627) | A scalar numeric query such as `count=3600junk` reaches the handler as 3600. | Fixed in 0.4.2: malformed suffixes and non-integer values for integer queries return 400; valid exponent conversion is preserved. No duplicate transport parser is added. |
 | [#2631](https://github.com/counterfact/api-simulator/issues/2631) | First new ModuleLoader preserves class identity; second and third fresh loaders over unchanged plain ESM files break context and custom-error instanceof checks. | Existing stable application error tags remain useful across loader instances; no claim that all class-identity cases are fixed. |
 | [#2632](https://github.com/counterfact/api-simulator/issues/2632) | Generated optional object request bodies omit undefined even though the runtime passes undefined for a valid absent body. | Context entry points explicitly supply meaningful defaults for omitted bodies. Contracts and generated files are not hand-edited. |
@@ -20,7 +20,7 @@ workaround; multipart tests supply the runtime's public parsed MultipartFile sha
 Multipart parsing/types, collection context bindings, version routing, malformed
 boolean rejection, nullable primitive conversion, array query normalization and
 optional-body runtime validation have upstream fixes in this pin. Tools, agent
-tests, conversation simulation and Flows request validation now work. The six newly unblocked operations awaiting implementation are recorded in
+tests, conversation simulation and Flows request validation now work. The complete operation status and historical evidence are recorded in
 [BLOCKED_OPERATIONS.md](BLOCKED_OPERATIONS.md).
 
 The original reports below describe 3.1.0 / 0.3.2 and are retained as historical

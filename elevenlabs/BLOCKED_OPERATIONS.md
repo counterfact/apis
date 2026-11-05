@@ -1,27 +1,22 @@
-# Remaining implementation backlog
+# Operation inventory
 
-Counterfact 3.2.2 and runtime 0.4.2 resolve the schema-memory blocker. The shared
-schema depth-22 reproducer now returns 200 under 256 MiB; malformed scalar numeric
-queries return 400. All six pending operations accept valid exact-template
-requests and reject invalid controls before handler entry. The draft control
-includes its required branch_id query and a valid start workflow node.
+All 437 canonical operations now have authored simulator handlers. There are no
+remaining generated, empty, missing or runtime-blocked operations. Counterfact
+3.2.2 and runtime 0.4.2 are pinned; contracts and validators remain unchanged.
 
-The contracts still contain 437 operations: 431 authored and six awaiting their
-behavior slices. None is currently classified as runtime-blocked. Validators and
-contracts are unchanged. The current inventory is checked by
-`npm run audit:operations -- --check-blockers` (the script/filename retain their
-historical names).
+The six operations formerly blocked in 0.4.1 now work: agent creation/PATCH,
+branch and draft creation, test execution and resubmission. Bounded valid requests
+reach their handlers and invalid controls return 400. Their behavior, ownership,
+history and failure atomicity have direct context and real Dispatcher tests.
 
-| Method | Path | Status |
-| --- | --- | --- |
-| PATCH | `/v1/convai/agents/{agent_id}` | Runtime validation works; implementation pending |
-| POST | `/v1/convai/agents/{agent_id}/branches` | Runtime validation works; implementation pending |
-| POST | `/v1/convai/agents/{agent_id}/drafts` | Runtime validation works; implementation pending |
-| POST | `/v1/convai/agents/{agent_id}/run-tests` | Runtime validation works; implementation pending |
-| POST | `/v1/convai/agents/create` | Runtime validation works; implementation pending |
-| POST | `/v1/convai/test-invocations/{test_invocation_id}/resubmit` | Runtime validation works; implementation pending |
+Run `npm run audit:operations -- --check-blockers` to verify exact agreement with
+[the empty remaining-operation manifest](blocked-operations.json). The historical
+script and filename are retained for continuity.
+[Implementation summary](IMPLEMENTATION_STATUS.md) maps all 43 newly authored
+operations to their focused slices and documentation.
 
-The evidence below describes earlier pinned releases, not 0.4.2.
+The notes below record earlier 3.1.0/0.3.2 and 3.2.1/0.4.1 observations only.
+They are not current blockers or compatibility instructions.
 
 ## Historical shared-schema expansion (runtime 0.4.1)
 
