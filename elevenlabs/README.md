@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 388 now have authored
-behavior. The remaining 49 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 390 now have authored
+behavior. The remaining 47 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1001,9 +1001,9 @@ and update conventions are local simulator behavior.
 
 ## Conversation records
 
-Nine conversation operations now use synthetic historical records: list, resolve,
+Eleven conversation operations now use synthetic historical records: list, resolve,
 detail, delete, lightweight summary, SIP-message history, feedback, tag assignment
-and tag removal. Startup/reset seed `sim-conversation` and `sim-conversation-old`
+and tag removal, audio retrieval and unused-file removal. Startup/reset seed `sim-conversation` and `sim-conversation-old`
 in `api/scenarios/conversations.ts`; `emptyConversations` clears these records,
 reference mappings, and SIP logs. Contexts initialize empty. Restart/reset restores
 all baseline state; simulator instances isolate changes. These are stored records,
@@ -1048,6 +1048,33 @@ return 204 without a body. Deleting a conversation removes its SIP logs and
 reference mappings, and subsequent operations return 404. Errors, pagination,
 filter bounds, current-vote semantics, reference mappings and ordering are local
 simulator conventions. Authentication/permissions are not enforced.
+
+`GET /v1/convai/conversations/{conversation_id}/audio` returns the verified
+8,340-byte synthetic silence fixture above as one complete ordinary `audio/mpeg`
+response. It is an attached response-track fixture, not a recording or rendering
+of the historical transcript; the original text-only metadata remains unchanged.
+`sim-conversation` has this fixture and reports `has_audio`/`has_response_audio`
+true; user/auxiliary audio flags are false. Detail and reference-resolution reads
+derive availability from the canonical retained-media map. The historical
+`sim-conversation-old` has no media and returns 409, as does any existing record
+without retained audio. Missing conversations return 404. The contract declares
+no audio query options; all supplied query keys return 400, including output-format
+and download options. No transcoding, streaming timing, network or provider call
+runs, and reads consume no quota or change state. Returned bytes are copies.
+
+`DELETE /v1/convai/conversations/{conversation_id}/files/{file_id}` removes an
+unused scenario file and returns its `file_id`. Startup/reset populate metadata
+for `sim-file-unused` and the historical attachment `sim-file-used`, scoped to
+`sim-conversation`. These are metadata fixtures, without uploaded file contents
+or hosted assets; their example.invalid URLs are placeholders. A file referenced
+by either transcript attachment field returns 409 without mutation. Missing,
+already deleted or other-conversation files return 404. Removing an unused file
+preserves transcript events, attachment metadata, audio and other files. Deleting
+the historical agent preserves conversation media/files. Deleting the conversation
+removes its retained audio and file metadata together with SIP/reference state.
+`emptyConversations` clears media/files, and full `reset` replaces and repopulates
+them. Instances isolate state. Multipart file upload remains generated under #2607.
+These availability, ownership, usage and error rules are local simulator conventions.
 
 ## Realtime conversation groups
 

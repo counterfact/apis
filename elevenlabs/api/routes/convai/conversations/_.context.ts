@@ -92,6 +92,8 @@ export class Context {
   }
 
   conversations = new Map<string, Conversation>();
+  audio = new Map<string, Uint8Array>();
+  files = new Map<string, Map<string, import("../../../types/v1/components/schemas/ConversationHistoryTranscriptFileInputResponseModel.js").ConversationHistoryTranscriptFileInputResponseModel>>();
   sipMessages = new Map<string, SIPLogMessage[]>();
   references = new Map<string, string>();
   workspaceId = "";
@@ -108,8 +110,28 @@ export class Context {
   getConversation(id: string, format = "json") {
     if (format !== "json") return invalid();
     const result = structuredClone(this.stored(id));
+    // The retained fixture is one response track, never a recording of the user.
+    result.has_audio = result.has_response_audio = (this.audio.get(id)?.length ?? 0) > 0;
+    result.has_user_audio = result.has_auxiliary_audio = false;
     result.tag_ids = this.tagIds(result);
     return result;
+  }
+  getAudio(id: string, query: Record<string, unknown> = {}) {
+    this.stored(id);
+    if (Object.keys(query).length) return invalid();
+    const audio = this.audio.get(id);
+    if (!audio?.length) throw new ConversationError(409, "conversation_audio_unavailable", "No synthetic audio is retained for this conversation");
+    return new Uint8Array(audio);
+  }
+  deleteFile(id: string, fileId: string) {
+    const conversation = this.stored(id);
+    const files = this.files.get(id);
+    if (!files?.has(fileId)) throw new ConversationError(404, "conversation_file_not_found", "Conversation file not found");
+    if (conversation.transcript.some(turn => turn.file_input?.file_id === fileId || turn.file_inputs?.some(file => file.file_id === fileId))) {
+      throw new ConversationError(409, "conversation_file_in_use", "Historical transcript attachments cannot be removed");
+    }
+    files.delete(fileId);
+    return {file_id: fileId};
   }
   resolveConversation(agentId: string, reference: string) {
     let url: URL;
@@ -216,6 +238,8 @@ export class Context {
   deleteConversation(id: string) {
     this.stored(id);
     this.conversations.delete(id);
+    this.audio.delete(id);
+    this.files.delete(id);
     this.sipMessages.delete(id);
     for (const [key, value] of this.references) if (value === id) this.references.delete(key);
     return {};

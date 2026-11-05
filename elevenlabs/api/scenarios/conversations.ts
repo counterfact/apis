@@ -2,6 +2,8 @@ import type { Scenario } from "../types/index.js";
 export const emptyConversations: Scenario = ($) => {
   const context = $.loadContext("/convai/conversations");
   context.conversations = new Map();
+  context.audio = new Map();
+  context.files = new Map();
   context.smartMatches=new Map();context.analysisFixtures=new Map();context.analysisFixtureVersions=new Map();context.analysisDefinitions=()=>new Map([...$.loadContext("/convai/analysis-items").items].map(([id,r])=>[id,r.item.current_version_id]));context.agents=()=>$.loadContext("/convai/agents").agents;
   $.loadContext("/convai/analytics").conversations=()=>context;
   $.loadContext("/convai/users").conversations = () => context.conversations;
@@ -25,6 +27,16 @@ export const resetConversations: Scenario = ($) => {
       has_audio: false, has_user_audio: false, has_response_audio: false, has_auxiliary_audio: false, tag_ids: [], transcript: []}],
   ]);
   context.references = new Map([["sim-agent\nhttps://simulator.zendesk.com/agent/tickets/12345", "sim-conversation"], ["sim-agent\nhttps://simulator.slack.com/archives/C123/p1735689602000000", "sim-conversation"]]);
+  // Same independently decoded synthetic MP3 silence as bounded-speech.ts.
+  const audio = new Uint8Array(417 * 20);
+  for (let n = 0; n < 20; n++) audio.set([255, 251, 144, 100], n * 417);
+  context.audio.set("sim-conversation", audio);
+  context.conversations.get("sim-conversation")!.has_audio = true;
+  context.conversations.get("sim-conversation")!.has_response_audio = true;
+  const used = {file_id:"sim-file-used", original_filename:"synthetic-used.txt", mime_type:"text/plain", file_url:"https://example.invalid/synthetic-used.txt"};
+  const unused = {file_id:"sim-file-unused", original_filename:"synthetic-unused.txt", mime_type:"text/plain", file_url:"https://example.invalid/synthetic-unused.txt"};
+  context.files.set("sim-conversation", new Map([[used.file_id, used], [unused.file_id, unused]]));
+  context.conversations.get("sim-conversation")!.transcript[0].file_inputs = [structuredClone(used)];
   context.sipMessages = new Map([["sim-conversation", [
     {call_id: "sim-conversation-call-1", phone_numbers: ["+15005550002"], local_address: "192.0.2.10:5060", remote_address: "198.51.100.10:5060", transport: "udp", raw_message: "INVITE sip:sim@example.invalid SIP/2.0\r\n", error_message: "", direction: "in", created_at_unix_micro: 1_735_689_602_000_000},
     {call_id: "sim-conversation-call-2", phone_numbers: ["+15005550002"], local_address: "192.0.2.10:5060", remote_address: "198.51.100.10:5060", transport: "udp", raw_message: "SIP/2.0 200 OK\r\n", error_message: "", direction: "out", created_at_unix_micro: 1_735_689_603_000_000},
