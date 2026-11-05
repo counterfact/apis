@@ -1,3 +1,5 @@
+import { resetAgentTests } from "./agent-tests.js";
+export { emptyAgentTests } from "./agent-tests.js";
 import { resetSpeechEngines } from "./speech-engines.js";
 export { emptySpeechEngines } from "./speech-engines.js";
 import { resetMcpServers } from "./mcp-servers.js";
@@ -60,6 +62,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetAgentTests($);
   resetSpeechEngines($);
   resetMcpServers($);
   resetTriageTickets($);

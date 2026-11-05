@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 180 now have authored
-behavior. The remaining 257 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 189 now have authored
+behavior. The remaining 248 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1279,6 +1279,46 @@ ascending. Decimal-offset cursors paginate after filtering/sorting, with page si
 1–100 (default 30); invalid query options return 400 and offsets beyond the end
 return an empty page. These sorting, merge, ID, timestamp and error conventions
 are local simulator behavior. Authentication and permissions are not enforced.
+
+## Agent test definitions and folders
+
+Nine `/v1/convai/agent-testing` operations now manage scenario-seeded definitions:
+list, detail, delete, summary batches, folder create/read/rename/delete, and bulk
+move. Startup and `reset` populate three finite fictional LLM, tool and simulation
+definitions plus one folder in `api/scenarios/agent-tests.ts`; `emptyAgentTests`
+clears definitions, folders and allocation counters. Context state starts empty.
+Definitions are inert metadata: no model evaluation, conversation simulation,
+tool execution or provider connection occurs.
+
+Lists support case-insensitive name search, test `types`, parent folder filtering
+(`root` selects the root), creator IDs (`@me` selects the fixture user), and
+`sharing_mode=shared_with_me` (records created by the other fixture user).
+All stored records are visible in this local model; permissions are not enforced.
+Without `types`, folders are included unless `include_folders=false`; explicit
+`types` takes precedence. Records sort newest first with ascending ID ties;
+`folders_first` groups folders before this ordering. Decimal-offset cursors apply
+after filters and sorting, with page size 1–100 (default 30). Unknown parent
+folders return 404; invalid options return 400. The list boundary narrowly
+normalizes nullable boolean and single array values for Counterfact #2612/#2615.
+
+Folder paths and direct child counts reflect current hierarchy. Folder reads
+include the folder itself in its path; test summaries include their parent path.
+Renaming a folder updates descendant paths. Bulk moves require nonempty unique
+IDs and validate every source/destination before changing state; moving a folder
+into itself or its descendants returns 400. Null/omitted `move_to` selects root.
+No-op moves and unchanged renames preserve timestamps. Nonempty folder deletion
+returns 409 unless `force=true`, which removes the complete subtree. Test deletion
+and bulk move return HTTP 200 with `{}`; folder deletion returns empty HTTP 204.
+Missing records return 404. Summary batches omit unknown IDs, reject duplicate
+IDs, preserve requested key insertion order, and accept an empty list.
+
+Reads return defensive copies; instances are isolated. IDs use
+`sim-test-folder-created-N`, and mutation times advance from the scenario clock.
+These IDs, ordering, filters, sharing, path and error rules are local conventions.
+Test create and PUT remain generated and uncounted because their recursive
+request schemas hit [Counterfact #2613](https://github.com/counterfact/api-simulator/issues/2613).
+Finite detail responses validate normally; the guarded request probe is recorded
+in `COUNTERFACT_ISSUES.md`. Request and response validation remain enabled.
 
 ## Development
 

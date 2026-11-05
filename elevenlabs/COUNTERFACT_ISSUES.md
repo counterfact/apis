@@ -39,3 +39,21 @@ reaches a public Dispatcher handler as a string. Repeated values remain arrays.
 The conversation context normalizes only its six supported array query filters
 from a string to a singleton list, validates list items, and preserves repeated
 values. Request and response validation remain enabled.
+
+## Agent-test recursive request schemas
+
+The same [#2613](https://github.com/counterfact/api-simulator/issues/2613) family
+affects `POST /v1/convai/agent-testing/create` and the recursive request schemas
+of `PUT /v1/convai/agent-testing/{test_id}`. A guarded public Dispatcher probe
+loaded the unchanged V1 contract and registered a finite custom handler, with
+request/response validation enabled. The finite create body was
+`{"type":"llm","name":"Local probe","success_condition":"Clear response"}`.
+The subprocess used a 256 MB heap, 256 KB stack and 12-second timeout; it aborted
+with `SIGABRT` and heap exhaustion before returning a result. This was not a
+provider or model call. Create and PUT remain generated and uncounted.
+
+A separate guarded probe against the same contract returned HTTP 200 for
+`GET /v1/convai/agent-testing/{test_id}` with the handler called and a finite
+`{"id":"probe","name":"Local","type":"llm","chat_history":[]}` response.
+The management subset uses finite scenario definitions, keeps validation enabled,
+and does not run recursive create/PUT probes as part of normal tests.
