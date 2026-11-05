@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 200 now have authored
-behavior. The remaining 237 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 210 now have authored
+behavior. The remaining 227 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1418,3 +1418,32 @@ are retained for review. Jev is not called by the simulator or its tests.
 Some upstream paths have sibling wildcard parameters with different names
 (agent branches, knowledge-base documents, pronunciation dictionaries, and
 voice generation). Counterfact may report routing ambiguities in those areas.
+
+## Productions order metadata
+
+Ten nonmultipart Productions operations now keep order metadata in memory: create,
+list, detail, rename, media metadata, item upsert/removal, submission, deliverables
+and language discovery. Startup/reset seed one open order
+`prodorder_00000000000000000000000000` with media
+`prodmedia_00000000000000000000000000`. Context state starts empty; fixtures and
+restoration live in `api/scenarios/productions.ts`.
+
+Create accepts a JSON object (including `{}`) and returns a deterministic contract-shaped
+ID. An absent optional body is affected by Counterfact #2614. PATCH and item upsert
+use the contract's `{ "request": ... }` wrapper. Items reference media belonging
+to that order; missing orders, media or items return 404. Empty orders cannot be
+submitted (400), and submitted orders cannot be edited or submitted again (409).
+Quotes and totals remain null: no pricing, charging or production is performed.
+
+Listing supports status (single or repeated query values), inclusive creation-date
+bounds, page size 1–100 and nonnegative offset. Results sort by creation date
+descending, then ID. Invalid filters return 400. Language discovery uses a small
+synthetic English-to-Spanish catalog, not the provider's current catalog.
+
+`emptyProductionOrders` clears orders and restores counters/catalog.
+`completeProductionOrders` changes submitted records to done and supplies one
+synthetic deliverable metadata record. Sandbox orders also progress only through
+this explicit scenario, keeping tests deterministic. Media and deliverable URLs
+use `simulator.invalid` and do not serve files. Reads return defensive copies;
+instances are isolated. Multipart media registration remains generated and is
+not counted, pending Counterfact #2607. No media is fetched, uploaded or processed.
