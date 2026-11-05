@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 395 operations retain their
+the stateful voices implementation. The remaining 390 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -417,7 +417,43 @@ counters in `api/scenarios/tags.ts`. Run `.scenario emptyTags` (or
 `app.scenario("emptyTags", "api")`) to clear tags and reset creation numbering.
 Business rules live in `api/routes/convai/tags/_.context.ts`; the root context
 is unchanged. Conversation assignment, ownership checks, authentication, and
-permissions are not simulated. Stateful coverage is now 42 of 437 operations.
+permissions are not simulated. Stateful coverage is now 47 of 437 operations.
+
+## Environment variable configuration
+
+Five operations store environment variables: `GET`/`POST
+`/v1/convai/environment-variables` and `GET`/`PATCH`/`DELETE
+`/v1/convai/environment-variables/{env_var_id}`. String values must be nonempty;
+secret and auth connection values store `secret_id` and `auth_connection_id`
+references, respectively. Creation requires a production value and a unique,
+case-sensitive label. A duplicate label returns HTTP 409. PATCH merges the
+supplied environment values, preserves omitted values, and removes values set
+to null, except production. Each value must match the stored variable type.
+An empty values object is a no-op. Invalid requests return HTTP 400 atomically;
+missing IDs return HTTP 404. Successful deletion returns empty HTTP 204.
+
+Lists preserve insertion order and support exact `label`, `type`, and
+`environment` filters combined before pagination. Environment filtering also
+projects each values map to that environment. Page size defaults to 100 with
+a 1–100 range. Cursors are nonnegative integer offsets; malformed cursors
+return HTTP 400 and offsets beyond the end return an empty page. These ordering,
+cursor, label comparison, and empty error-response rules are local conventions.
+
+Startup and `reset` populate a fictional string variable in
+`api/scenarios/environment-variables.ts`; `emptyEnvironmentVariables` clears
+variables and resets allocation and metadata. IDs start at
+`sim-environment-variable-created-1`. Creation timestamps advance from a fixed
+scenario baseline; updates advance from a separate fixed baseline. Contexts
+start empty, return defensive copies, and isolate instances. Business rules
+live in `api/routes/convai/environment-variables/_.context.ts`; the root context
+is unchanged, and the variable map is available for scenario-wired relationships.
+
+This is reference configuration storage only. The simulator does not resolve
+secrets, validate referenced auth connections or environment names, make network
+requests, enforce permissions, or track variable usage by tools, agents, MCP
+servers, or initiation webhooks. Deletion does not enforce those usage conflicts.
+Use synthetic values and references only. The environment registry remains
+generated separately.
 
 ## Development
 
