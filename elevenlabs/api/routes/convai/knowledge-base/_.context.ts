@@ -1,3 +1,5 @@
+import type { RAGDocumentIndexResponseModel as Index } from "../../../types/v1/components/schemas/RAGDocumentIndexResponseModel.js";
+import type { KnowledgeBaseDocumentChunkResponseModel as Chunk } from "../../../types/v1/components/schemas/KnowledgeBaseDocumentChunkResponseModel.js";
 import type { GetKnowledgeBaseTextResponseModel as Text } from "../../../types/v1/components/schemas/GetKnowledgeBaseTextResponseModel.js";
 import type { GetKnowledgeBaseFolderResponseModel as Folder } from "../../../types/v1/components/schemas/GetKnowledgeBaseFolderResponseModel.js";
 import type { GetKnowledgeBaseSummaryTextResponseModel as TextSummary } from "../../../types/v1/components/schemas/GetKnowledgeBaseSummaryTextResponseModel.js";
@@ -14,6 +16,9 @@ export class KnowledgeBaseError extends Error {
 const invalid=():never=>{throw new KnowledgeBaseError(400,"invalid_knowledge_base_request","Invalid knowledge base request");};
 export class Context {
   documents=new Map<string,StoredDocument>();
+  indexes=new Map<string,Map<Index["model"],{index:Index;chunks:Chunk[]}>>();
+  nextIndexId=1;
+  maxIndexBytes=0;
   agents:()=>Map<string,StoredAgent>=()=>new Map();
   nextId=1;
   nextMutation=0;
@@ -57,7 +62,7 @@ export class Context {
     this.unsupportedSync(input);const name=input.name==null?d.name:this.name(input.name);
     if(input.content!=null&&(typeof input.content!=="string"||d.type!=="text"))return invalid();
     const content=input.content==null?undefined:html(input.content as string);
-    if(name!==d.name||content!==undefined&&d.type==="text"&&content!==d.extracted_inner_html){d.name=name;if(content!==undefined&&d.type==="text"){d.extracted_inner_html=content;d.metadata.size_bytes=Buffer.byteLength(input.content as string,"utf8");}d.metadata.last_updated_at_unix_secs=this.settings().time+ ++this.nextMutation;}
+    if(name!==d.name||content!==undefined&&d.type==="text"&&content!==d.extracted_inner_html){d.name=name;if(content!==undefined&&d.type==="text"){if(content!==d.extracted_inner_html)this.indexes.delete(id);d.extracted_inner_html=content;d.metadata.size_bytes=Buffer.byteLength(input.content as string,"utf8");}d.metadata.last_updated_at_unix_secs=this.settings().time+ ++this.nextMutation;}
     return this.getDocument(id);
   }
   private deletionIds(id:string,force:boolean){
@@ -68,7 +73,7 @@ export class Context {
   deleteDocument(id:string,force:boolean){
     const ids=this.deletionIds(id,force);
     const removed=new Set(ids);for(const a of this.agents().values()){const prompt=a.configuration.conversation_config.agent?.prompt;if(prompt?.knowledge_base)prompt.knowledge_base=prompt.knowledge_base.filter(r=>!removed.has(r.id));}
-    for(const k of ids)this.documents.delete(k);return {};
+    for(const k of ids){this.documents.delete(k);this.indexes.delete(k);}return {};
   }
   private documentIds(value:unknown):string[]{
     if(!Array.isArray(value)||value.length<1||value.length>20||value.some(id=>typeof id!=="string")||new Set(value).size!==value.length)return invalid();
@@ -115,6 +120,63 @@ export class Context {
       for(const key of d.type==="folder"?this.descendants(d.id):[d.id])if(this.stored(key).document.type==="text")pages.add(key);
     }
     return {number_of_pages:pages.size};
+  }
+  private model(value:unknown):Index["model"] {
+    if(value!=="e5_mistral_7b_instruct"&&value!=="multilingual_e5_large_instruct")return invalid();return value;
+  }
+  private indexPage(query:Record<string,unknown>){
+    const size=query.page_size??30;if(typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();
+    const offset=Number(query.cursor??0);if(!Number.isSafeInteger(offset))return invalid();return {size,offset};
+  }
+  listIndexes(id:string){this.stored(id);return {indexes:structuredClone([...(this.indexes.get(id)?.values()??[])].map(r=>r.index).sort((a,b)=>a.model.localeCompare(b.model)))};}
+  computeIndex(id:string,input:unknown){
+    const document=this.stored(id).document;if(!object(input)||Object.keys(input).some(k=>k!=="model"))return invalid();const model=this.model(input.model);
+    const existing=this.indexes.get(id)?.get(model);if(existing)return structuredClone(existing.index);
+    const index:Index={id:`sim-kb-index-created-${this.nextIndexId++}`,model,status:document.type==="folder"?"cannot_index_folder":"created",progress_percentage:0,document_model_index_usage:{used_bytes:0}};
+    let indexes=this.indexes.get(id);if(!indexes){indexes=new Map();this.indexes.set(id,indexes);}indexes.set(model,{index,chunks:[]});return structuredClone(index);
+  }
+  deleteIndex(id:string,indexId:string){
+    this.stored(id);const indexes=this.indexes.get(id),entry=[...(indexes??[])].find(([,r])=>r.index.id===indexId);
+    if(!entry)throw new KnowledgeBaseError(404,"knowledge_base_index_not_found","Knowledge base index not found");
+    indexes!.delete(entry[0]);if(!indexes!.size)this.indexes.delete(id);return structuredClone(entry[1].index);
+  }
+  batchIndexes(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>k!=="items")||!Array.isArray(input.items)||input.items.length<1||input.items.length>100)return invalid();
+    const ids=new Set<string>();
+    for(const item of input.items){if(!object(item)||Object.keys(item).some(k=>!["document_id","model","create_if_missing"].includes(k))||typeof item.document_id!=="string"||typeof item.create_if_missing!=="boolean"||ids.has(item.document_id))return invalid();this.model(item.model);ids.add(item.document_id);}
+    return Object.fromEntries(input.items.map(item=>{
+      const request=item as {document_id:string;model:Index["model"];create_if_missing:boolean};
+      try{this.stored(request.document_id);const existing=this.indexes.get(request.document_id)?.get(request.model);if(!existing&&!request.create_if_missing)throw new KnowledgeBaseError(404,"knowledge_base_index_not_found","Knowledge base index not found");
+        return [request.document_id,{status:"success" as const,data:existing?structuredClone(existing.index):this.computeIndex(request.document_id,{model:request.model})}];
+      }catch(error){if(!(error instanceof Error)||error.name!=="KnowledgeBaseError")throw error;const e=error as KnowledgeBaseError;return [request.document_id,{status:"failure" as const,error_code:e.status,error_status:e.code,error_message:e.message}];}
+    }));
+  }
+  ragOverview(){
+    const models:Index["model"][]=["e5_mistral_7b_instruct","multilingual_e5_large_instruct"];
+    const usage=models.map(model=>({model,used_bytes:[...this.indexes.values()].reduce((n,indexes)=>n+(indexes.get(model)?.index.document_model_index_usage.used_bytes??0),0)}));
+    return {total_used_bytes:usage.reduce((n,m)=>n+m.used_bytes,0),total_max_bytes:this.maxIndexBytes,models:usage};
+  }
+  listChunks(id:string,query:Record<string,unknown>){
+    this.stored(id);const model=this.model(query.embedding_model),{size,offset}=this.indexPage(query),chunks=this.indexes.get(id)?.get(model)?.chunks??[];
+    return {chunks:structuredClone(chunks.slice(offset,offset+size)),next_cursor:offset+size<chunks.length?String(offset+size):null};
+  }
+  getChunk(id:string,chunkId:string,model?:unknown){
+    this.stored(id);const selected=this.model(model??"e5_mistral_7b_instruct"),chunk=this.indexes.get(id)?.get(selected)?.chunks.find(c=>c.id===chunkId);
+    if(!chunk)throw new KnowledgeBaseError(404,"knowledge_base_chunk_not_found","Knowledge base chunk not found");return structuredClone(chunk);
+  }
+  searchContent(query:Record<string,unknown>){
+    const {size,offset}=this.indexPage(query);if(typeof query.query!=="string"||!query.query.trim())return invalid();
+    const types=query.types==null?null:typeof query.types==="string"?[query.types]:query.types;if(types!==null&&(!Array.isArray(types)||types.some(v=>!["text","folder","file","url"].includes(v))))return invalid();
+    const tokens=query.query.toLowerCase().match(/[\p{L}\p{N}]+/gu)??[];if(!tokens.length)return invalid();
+    const oneEdit=(a:string,b:string)=>{if(Math.abs(a.length-b.length)>1)return false;let i=0,j=0,edits=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++edits>1)return false;if(a.length<=b.length)j++;if(a.length>=b.length)i++;}return edits+(i<a.length||j<b.length?1:0)<=1;};
+    const results=[...this.documents.values()].flatMap(r=>{
+      if(r.document.type!=="text"||types&&!(types as string[]).includes("text"))return [];
+      const content=r.document.extracted_inner_html.replaceAll("&lt;","<").replaceAll("&gt;",">").replaceAll("&quot;",'"').replaceAll("&#39;", "'").replaceAll("&amp;","&");
+      const words:string[]=content.toLowerCase().match(/[\p{L}\p{N}]+/gu)??[];
+      const score=tokens.reduce((sum,t)=>sum+(words.includes(t)?1:t.length>=4&&words.some(w=>oneEdit(t,w))?0.75:0),0)/tokens.length;
+      return score?[{document:this.summary(r.document.id),search_snippet:null,score}]:[];
+    }).sort((a,b)=>b.score-a.score||a.document.id.localeCompare(b.document.id));
+    return {results:results.slice(offset,offset+size),next_cursor:offset+size<results.length?String(offset+size):null};
   }
   listDocuments(query:Record<string,unknown>={}){
     const size=query.page_size??30;if(typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();

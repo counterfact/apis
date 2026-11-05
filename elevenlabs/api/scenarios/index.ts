@@ -138,3 +138,5 @@ export const voiceDiscovery: Scenario = ($) => {
     created_at_unix: 1_735_689_603,
   });
 };
+
+export {completeKnowledgeIndexes} from "./knowledge-base.js";

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 132 now have authored
-behavior. The remaining 305 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 140 now have authored
+behavior. The remaining 297 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1020,6 +1020,42 @@ convention, with no PDF extraction or remote processing. Unknown agents or stale
 document references return 404. Startup/reset and `emptyKnowledgeBase` wire the
 singular-agent size context to live knowledge-base state; reset restores the same
 baseline and `knowledgeBaseReferences` provides a referenced-text setup.
+
+## Knowledge base retrieval and index metadata
+
+Eight retrieval operations now share local document state: content search, chunk
+list/detail, RAG overview, document index list/create/delete, and batch index
+lookup/create. Startup/reset seed one fictional completed index for `sim-kb-text`
+with two chunks. Index usage is synthetic metadata, initially 15 bytes; the
+1,000,000-byte maximum is a fixture, not a product limit or enforced quota.
+Both supported model names have independent index and chunk state.
+
+Index creation is idempotent per document/model and stores `created` with zero
+progress and usage. No background processing, embeddings or AI calls occur.
+Run `.scenario completeKnowledgeIndexes` to replace queued local-text requests
+with a completed synthetic index and one full-content chunk per request. Folder
+requests store `cannot_index_folder`; the completion scenario leaves them alone.
+Batch requests return independent success/failure results keyed by document ID;
+repeating a document ID in one batch returns 400 to avoid ambiguous result keys.
+`create_if_missing=false` returns a per-item 404 when that model has no index.
+Deleting an index returns its final metadata and removes its chunks; repeating
+the deletion returns 404. Chunk detail defaults to `e5_mistral_7b_instruct`.
+
+Chunk lists paginate with decimal-offset cursors (1–100 items, default 30),
+return defensive copies and are empty for models without chunks. Content edits
+invalidate every index and chunk for that document; metadata-only edits preserve
+them. Document/subtree deletion removes associated indexes and chunks. Overview
+usage sums stored model usage. Empty/reset scenarios clear/restore all this state.
+
+Content search reads current local text, independent of index completion. It
+compares case-insensitive letter/number tokens. Exact token matches score 1;
+query tokens of at least four characters also match words with one insertion,
+deletion or substitution and score 0.75. Scores average over query tokens;
+positive-score documents sort by score descending, then ID ascending. Search
+snippets are null. Type filters and decimal-offset pagination apply before
+returning results; blank/punctuation-only queries and invalid options return 400.
+These algorithms, identifiers, statuses and index lifecycle are simulator
+conventions, without remote retrieval or model execution.
 
 ## Development
 
