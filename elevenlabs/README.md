@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 429 operations retain their
+the stateful voices implementation. The remaining 427 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -124,6 +124,32 @@ data, which the pinned Counterfact runtime's default body parser does not
 parse. That operation needs [runtime multipart support](https://github.com/counterfact/api-simulator/issues/2607)
 before it can be simulated faithfully.
 
+## Account and subscription discovery
+
+`GET /v1/user` returns the fictional `sim-user` in `sim-workspace`.
+`GET /v1/user/subscription` returns the same quota and plan fields plus extended
+subscription fields, including an empty invoice list. Both responses read shared
+in-memory account state and return defensive copies. The profile's embedded
+subscription omits the extended invoice and promotion fields.
+
+Startup and `reset` populate the identity and subscription in
+`api/scenarios/account.ts`. Run `.scenario quotaExhausted` (or
+`app.scenario("quotaExhausted", "api")`) to set character usage to the limit in
+both endpoints. Run `reset` to restore baseline usage, voices, and models.
+
+As a local convention, every current simulator voice occupies one voice slot:
+deleting a voice or running `voiceDiscovery` changes `voice_slots_used` in both
+account responses. Other counters and limits are synthetic fixtures. Quota
+exhaustion only changes account data; it does not enforce limits on other
+operations. The fixed creation and reset timestamps do not advance with time.
+These fixtures do not represent ElevenLabs plans, prices, or billing behavior.
+Authentication, billing, and audio generation are not simulated.
+
+The shared runtime currently dispatches V1-only handlers through the V2 prefix
+too (for example, `/v2/user`), even though those paths are absent from the V2
+contract. Use the documented V1 paths for account and model discovery; contract
+selection does not currently enforce route availability by version.
+
 ## Development
 
 ```sh
@@ -134,7 +160,8 @@ npm test
 
 Generation reads both local contracts and preserves authored handlers.
 Tests verify spec provenance, version routing, and shared voice behavior over
-Counterfact’s Dispatcher, plus context state transitions, model catalog isolation, and listing rules directly.
+Counterfact’s Dispatcher, plus context state transitions, model catalog isolation,
+account quota and voice-slot consistency, and listing rules directly.
 `test-support/dispatcher.ts` loads the actual route, context, and scenario modules
 using Counterfact's public runtime exports. It reads both configured contracts,
 runs `startup`, shares state across V1/V2, and exposes `request(path, options)`

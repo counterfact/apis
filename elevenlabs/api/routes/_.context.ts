@@ -3,6 +3,8 @@ import type { VoiceSettingsResponseModel } from "../types/v1/components/schemas/
 import type { GetVoicesV2ResponseModel } from "../types/v2/components/schemas/GetVoicesV2ResponseModel.js";
 import type { HTTP_GET_Query } from "../types/v2/paths/voices.types.js";
 import type { ModelResponseModel } from "../types/v1/components/schemas/ModelResponseModel.js";
+import type { UserResponseModel } from "../types/v1/components/schemas/UserResponseModel.js";
+import type { ExtendedSubscriptionResponseModel } from "../types/v1/components/schemas/ExtendedSubscriptionResponseModel.js";
 
 type VoiceListResult =
   | { page: GetVoicesV2ResponseModel; error?: never }
@@ -19,6 +21,28 @@ export const defaultSettings = (): VoiceSettingsResponseModel => ({
 export class Context {
   voices = new Map<string, VoiceResponseModel>();
   models = new Map<string, ModelResponseModel>();
+  account?: {
+    profile: Omit<UserResponseModel, "subscription">;
+    subscription: ExtendedSubscriptionResponseModel;
+  };
+
+  getSubscription(): ExtendedSubscriptionResponseModel {
+    if (!this.account) throw new Error("Account state is not initialized; run startup or reset");
+    return {
+      ...structuredClone(this.account.subscription),
+      // Local convention: every voice in this simulator occupies one slot.
+      voice_slots_used: this.voices.size,
+    };
+  }
+
+  getUser(): UserResponseModel {
+    const {
+      open_invoices, has_open_invoices, next_invoice, pending_change,
+      has_used_starter_coupon_on_account, has_used_creator_coupon_on_account,
+      is_eligible_for_starter_promo, ...subscription
+    } = this.getSubscription();
+    return { ...structuredClone(this.account!.profile), subscription };
+  }
 
   listModels() {
     return structuredClone([...this.models.values()]);
