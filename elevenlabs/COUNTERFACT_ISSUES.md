@@ -57,3 +57,23 @@ A separate guarded probe against the same contract returned HTTP 200 for
 `{"id":"probe","name":"Local","type":"llm","chat_history":[]}` response.
 The management subset uses finite scenario definitions, keeps validation enabled,
 and does not run recursive create/PUT probes as part of normal tests.
+
+## Test invocation execution requests
+
+The same [#2613](https://github.com/counterfact/api-simulator/issues/2613) request
+validation failure affects `POST /v1/convai/agents/{agent_id}/run-tests` and
+`POST /v1/convai/test-invocations/{test_invocation_id}/resubmit`. Their optional
+configuration override references recursive input schemas. Finite requests with
+the override omitted throw `RangeError` in `json-schema-traverse` before the
+handler runs. Both remain generated and uncounted.
+
+Corrected public-runtime probes register each canonical template in `Registry`
+and dispatch a concrete path against the unchanged V1 contract, with explicit
+`application/json` responses and request/response validation enabled. Registering
+a concrete literal instead skips exact template contract lookup and cannot
+establish feasibility. Resource limits were 256 MB heap, 256 KB stack and a
+12-second subprocess timeout. A same-contract invocation PATCH control returns
+200 and invokes its handler for `{"name":"Local"}`, while `{"name":42}` returns
+400 before invoking it. These controls identify the request failure; they do not
+establish a response-generation bug. This is the same cause as the existing
+issue; no duplicate response-generation issue is asserted.

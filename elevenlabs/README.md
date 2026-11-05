@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 333 now have authored
-behavior. The remaining 104 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 334 now have authored
+behavior. The remaining 103 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2050,8 +2050,21 @@ prices and a historical mixed-version run; summary totals sum recorded values,
 with null when none are known. Final USD totals are separate historical metadata,
 not inferred from partial provider charging components. No billing occurs.
 Reset restores baseline. These ordering, matching, cost and cancellation rules are
-local simulator conventions. Invocation PATCH/resubmit and test execution remain
-generated and uncounted; contracts and validation are unchanged.
+local simulator conventions.
+
+`PATCH /v1/convai/test-invocations/{test_invocation_id}` persists a user-provided
+name; null restores the generated title in list responses. Names must be nonblank
+and at most 140 characters, a local convention. Renaming preserves run results,
+historical agent/test names, costs, creation time and cancellation state. History
+can be renamed after its live agent or test is deleted. Missing invocation IDs
+return 404; invalid requests return 400 without changes. Reset restores baseline
+names, and instances isolate edits.
+
+Run-tests and resubmit remain generated and uncounted because their recursive
+configuration-override request schemas trigger Counterfact #2613 before the
+handler runs, even when no override is supplied. A guarded exact-template public
+Dispatcher probe confirmed both failures; finite invocation PATCH controls pass
+and invalid name bodies return 400. Contracts and validation remain unchanged.
 
 ## Local LLM usage estimates
 

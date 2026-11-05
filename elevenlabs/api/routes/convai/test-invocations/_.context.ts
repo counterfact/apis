@@ -20,6 +20,18 @@ const invalid = (): never => {
   throw new InvocationError(400, "invalid_test_invocation_query");
 };
 export class Context {
+  update(id: string, input: unknown) {
+    const record = this.record(id);
+    if (input === null || typeof input !== "object" || Array.isArray(input) ||
+        Object.keys(input).some(key => key !== "name") ||
+        !Object.hasOwn(input, "name")) return invalid();
+    const name = (input as { name: unknown }).name;
+    if (name !== null && (typeof name !== "string" || !name.trim() || name.length > 140))
+      return invalid();
+    record.value.name = name as string | null;
+    return this.get(id);
+  }
+
   records = new Map<string, StoredInvocation>();
   mutationTime?: number;
   private record(id: string) {
