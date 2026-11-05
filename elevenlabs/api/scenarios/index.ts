@@ -47,6 +47,8 @@ import {resetFlowGenerations} from "./flows.js";
 export {emptyFlowGenerations,startFlowGenerations,completeFlowGenerations,failFlowGenerations} from "./flows.js";
 import {resetProductionOrders} from "./productions.js";
 export {emptyProductionOrders,completeProductionOrders} from "./productions.js";
+import { resetAudioNative } from "./audio-native.js";
+export { emptyAudioNative, completeAudioNative } from "./audio-native.js";
 import { resetStudioProjects } from "./studio-projects.js";
 export { emptyStudioProjects, completeStudioConversions } from "./studio-projects.js";
 import { resetAgentTests } from "./agent-tests.js";
@@ -129,6 +131,7 @@ export const reset: Scenario = ($) => {
   resetFlowTemplates($);
   resetProductionOrders($);
   resetStudioProjects($);
+  resetAudioNative($);
   resetAgentTests($);
   resetSpeechEngines($);
   resetMcpServers($);

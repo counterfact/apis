@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 386 now have authored
-behavior. The remaining 51 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 388 now have authored
+behavior. The remaining 49 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2747,3 +2747,35 @@ voice slots. No target HTTP API or authentication is simulated. Unknown options
 and invalid values return 400. Empty context containers, scenario-owned policies,
 reset and separate instances keep all state local and isolated. These ID, slot,
 permission and status conventions describe this bounded simulation.
+
+
+## Local AudioNative article publication
+
+Two AudioNative operations read player settings and update content from a URL.
+Startup/reset configure `sim-project` with an exact local article mapping at
+`https://simulator.invalid/articles/local`. The scenario supplies the article
+text; no URL fetching, HTML extraction, model or provider request occurs. Unknown
+URLs return 400, and missing canonical Studio projects return 404. Other existing
+Studio projects return disabled player settings until explicitly configured.
+Multipart player creation and file imports remain generated under #2607.
+
+URL updates replace live Studio chapters with one article chapter containing the
+title, author and fixture text, separated by newlines. Omitted/null title and
+author use scenario defaults; empty strings are accepted metadata. Updates also
+work after a Studio blank-content reset. Canonical Studio dependency, quality,
+2,000-character and pending-conversion checks apply before mutation. Concurrent
+updates and Studio edits return 409. These rules are local simulator conventions.
+
+`completeAudioNative` completes only the Native publication queue, using Studio's
+bounded silence conversion and immutable snapshots. Unrelated Studio conversions
+remain pending. Published snapshots stay readable while replacement content is
+processing, and repeated completion is inert. Settings retain null audio paths
+and URLs; the simulator does not host player assets. Studio snapshot routes serve
+the copied media. Deleting the canonical project removes its conversions and
+snapshots; Native completion discards its missing project's publication.
+
+`emptyAudioNative` removes player configuration, article mappings and Native
+publication work. Existing canonical Studio conversion jobs remain pending and
+can finish through `completeStudioConversions`; no disabled player is republished.
+Full `reset` clears both groups and restores the baseline. Context containers
+start empty, scenarios own all fixtures, and separate instances isolate state.

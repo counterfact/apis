@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../routes/_.context.ts";
+import type { Context } from "../../../../routes/audio-native/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../counterfact-types/index.ts";
 import type { Body_Update_audio_native_content_from_URL_v1_audio_native_content_post } from "../../components/schemas/Body_Update_audio_native_content_from_URL_v1_audio_native_content_post.js";
 import type { AudioNativeEditContentResponseModel } from "../../components/schemas/AudioNativeEditContentResponseModel.js";
