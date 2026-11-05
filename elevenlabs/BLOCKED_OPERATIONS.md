@@ -26,7 +26,7 @@ it does not establish whether an absent body has meaningful business behavior.
 | POST | `/v1/audio-isolation/stream` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
 | POST | `/v1/audio-native` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
 | POST | `/v1/audio-native/{project_id}/content` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Optional | Optional wire body, but update requires article file; absent body cannot perform a content update. [Evidence](#multipart-parser) |
-| PUT | `/v1/convai/agent-testing/{test_id}` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Recursive PUT request schema shares the agent-test create schema family; guarded create probe exhausted its heap and aborted with SIGABRT. See evidence limitations. [Evidence](#agent-test-guarded-abort) |
+| PUT | `/v1/convai/agent-testing/{test_id}` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Exact-template guarded PUT probe aborted with SIGABRT before its synchronous handler-entry marker ran; the saved evidence does not establish the abort cause. [Evidence](#agent-test-guarded-abort) |
 | POST | `/v1/convai/agent-testing/create` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Required | Guarded recursive request probe aborted with SIGABRT and heap exhaustion before a result; see agent-test evidence limitations. [Evidence](#agent-test-guarded-abort) |
 | PATCH | `/v1/convai/agents/{agent_id}` | [#2613](https://github.com/counterfact/api-simulator/issues/2613) | Optional | Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal. [Evidence](#agent-tool-recursive-requests) |
 | POST | `/v1/convai/agents/{agent_id}/avatar` | [#2607](https://github.com/counterfact/api-simulator/issues/2607) | Required | Required multipart input; installed runtime uses default koa-bodyparser without multipart support. [Evidence](#multipart-parser) |
@@ -136,8 +136,19 @@ The guarded create probe used
 `{"type":"llm","name":"Local probe","success_condition":"Clear response"}`.
 It exhausted its 256 MB heap and aborted with SIGABRT before returning a result,
 under the bounds above. This observation is an abort, not a caught RangeError
-or a returned HTTP status; the PUT classification also relies on its recursive
-request schema as documented in [COUNTERFACT_ISSUES.md](COUNTERFACT_ISSUES.md#agent-test-recursive-request-schemas).
+or a returned HTTP status.
+
+A separate guarded PUT probe registered `/convai/agent-testing/{test_id}` and
+dispatched `/convai/agent-testing/probe` with the finite synthetic JSON body
+`{"name":"Local probe","type":"llm","success_condition":"Clear response"}`.
+It used the unchanged V1 contract, enabled request and response validation, and
+the same 256 MB heap, 256 KB stack and 12-second subprocess timeout. It aborted
+with SIGABRT before the handler's synchronous `HANDLER_ENTERED` output marker
+ran; stdout was empty. The saved stderr tail contains native frames only, so
+this PUT observation establishes neither heap exhaustion as its cause nor a
+caught RangeError. It directly establishes an abort before handler execution,
+without relying solely on similarity to the create schema.
+
 A separate exact-contract GET agent-test control reached its handler and returned
 200 with a finite JSON response. No model or provider was called.
 

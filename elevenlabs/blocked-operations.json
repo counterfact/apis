@@ -135,7 +135,7 @@
         "application/json": null
       },
       "evidence": "agent-test-guarded-abort",
-      "reason": "Recursive PUT request schema shares the agent-test create schema family; guarded create probe exhausted its heap and aborted with SIGABRT. See evidence limitations."
+      "reason": "Exact-template guarded PUT probe aborted with SIGABRT before its synchronous handler-entry marker ran; the saved evidence does not establish the abort cause."
     },
     {
       "version": "v1",

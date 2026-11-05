@@ -50,7 +50,17 @@ request/response validation enabled. The finite create body was
 `{"type":"llm","name":"Local probe","success_condition":"Clear response"}`.
 The subprocess used a 256 MB heap, 256 KB stack and 12-second timeout; it aborted
 with `SIGABRT` and heap exhaustion before returning a result. This was not a
-provider or model call. Create and PUT remain generated and uncounted.
+provider or model call.
+
+A separate guarded PUT probe registered the exact template
+`/convai/agent-testing/{test_id}` and dispatched `/convai/agent-testing/probe`
+with `{"name":"Local probe","type":"llm","success_condition":"Clear response"}`.
+It used the unchanged V1 contract, enabled request/response validation and the
+same resource bounds. It aborted with `SIGABRT` before the handler's synchronous
+`HANDLER_ENTERED` output marker ran, with empty stdout. The saved stderr tail
+contains native frames only; it does not establish heap exhaustion as the PUT
+abort cause or a caught `RangeError`. This is direct pre-handler abort evidence
+for PUT. Create and PUT remain generated and uncounted.
 
 A separate guarded probe against the same contract returned HTTP 200 for
 `GET /v1/convai/agent-testing/{test_id}` with the handler called and a finite
@@ -94,8 +104,8 @@ throws RangeError: Maximum call stack size exceeded in json-schema-traverse
 before its custom handler is called. The probes use explicit JSON request and
 response media, enabled validation, finite synthetic bodies, a 256 MB heap, a
 256 KB stack and a 12-second subprocess timeout. They differ from the agent-test
-heap-exhaustion/SIGABRT result above; neither result establishes a response
-generation failure. [The blocker inventory](BLOCKED_OPERATIONS.md#additional-exact-template-probes)
+create heap-exhaustion/SIGABRT and PUT pre-handler SIGABRT observations above.
+None of these results establishes a response-generation failure. [The blocker inventory](BLOCKED_OPERATIONS.md#additional-exact-template-probes)
 records the five bodies and the exact registration/control protocol.
 
 All 43 remaining generated operations are accounted for in
