@@ -60,6 +60,8 @@ function merge(base: ObjectValue, patch: ObjectValue): ObjectValue {
   return result;
 }
 export class Context {
+  knowledgeBase?:()=>import("../knowledge-base/_.context.js").Context;
+  queryKnowledgeBase(id:string,input:unknown,branchId?:string|null){if(!this.knowledgeBase)throw new Error("Run startup or reset");return this.knowledgeBase().queryAgent(id,input,branchId);}
   lifecycle?: import("./{agent_id}/branches/_.context.js").Context;
   agents = new Map<string, StoredAgent>();
   nextAgentNumber = 0;

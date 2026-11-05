@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 305 now have authored
-behavior. The remaining 132 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 313 now have authored
+behavior. The remaining 124 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2150,3 +2150,66 @@ Contexts start empty; startup/reset seed ancestry and reset the version counter 
 settings; `branchMergeReferences` adds a published feature procedure version and
 atomic list conflicts. Reset removes created versions and restores main, feature,
 procedure references and branch-local drafts. Simulator instances remain isolated.
+
+
+## Synthetic knowledge sources and agent retrieval
+
+Eight source/retrieval operations now share canonical knowledge-base records:
+URL creation, crawl create/list/detail/cancel, URL refresh, file-source URL reads,
+and agent RAG queries. The simulator never fetches a web page, follows a link,
+extracts a file, embeds text, rewrites a query or calls a provider.
+All source content and retrieval rankings are explicit scenario fixtures.
+
+Startup/reset configure `https://simulator.invalid/guide` and its `/faq` child
+as synthetic source pages while preserving the original two-document baseline.
+URL creation accepts only configured HTTP(S) URLs with no credentials or fragment;
+unknown sources return 400 before allocation. Custom names and existing parent
+folders are supported. URL and scenario-file records participate in existing
+list/detail/summary/content/search/move/delete/index operations; text-only PATCH
+content and synthetic page-size estimates retain their existing rules.
+
+Crawl creation validates options before creating a queued job and root folder.
+Discovery uses configured pages at the seed URL and beneath its path, seed first
+then URL order, limited by `max_pages` (1–10,000, default 1000). Explicit
+`sitemap_urls` select configured fixture pages instead, with duplicate URLs
+removed. `max_depth` is validated but is a deprecated no-op in the contract.
+Nonempty pattern/exclusion settings, auto-discovery and automatic synchronization
+return 400 explicitly. Run `completeKnowledgeCrawls` to populate URL children
+from the current fixtures and finish queued jobs; missing sources/root folders
+produce failed status. Repeating completion leaves terminal jobs unchanged.
+
+Crawl lists show all stored local-user jobs newest first with ID ties and
+1–100-item decimal-offset pagination. `include_job_ids` accepts singleton/repeated
+values; all stored jobs are already included, so it introduces no duplicates.
+Cancellation retains cancelled job metadata, deletes its root subtree and any
+associated documents moved elsewhere, clears their indexes/source links and
+canonical agent references, and is idempotent. Missing jobs return 404.
+
+`knowledgeSourceRevision` replaces the guide's fixture content. Refreshing a URL
+then updates escaped HTML, UTF-8 size and timestamp and invalidates its indexes.
+Unchanged refreshes preserve timestamps/indexes; non-URL refreshes return 400.
+`knowledgeSourceFiles` adds `sim-kb-file` and its fixed synthetic download URL.
+`source-file-url` accepts file records only; its `simulator.invalid` URL is an
+opaque fixture and does not provide an actual signed download service. Multipart
+file creation/update remain generated under Counterfact #2607.
+
+`knowledgeSourceRetrieval` assigns the text fixture to the canonical main agent,
+enables its RAG settings and provides exact query `guide` with two fictional
+chunk distances (0.1 and 0.4). Unconfigured queries return no chunks. Retrieval
+uses the selected branch (live canonical main by default), current KB membership,
+folder descendants, auto-usage records and completed indexes. Historical branch
+configuration stays separate. Stale/missing chunks cannot consume result limits.
+Rankings sort by distance then document/chunk ID; model, distance, chunk-count
+and aggregate character limits filter results. Oversized next chunks stop the
+result. The query is echoed unchanged and no conversation/state is created.
+
+Agent defaults apply unless `use_agent_defaults=false`, which enables neutral
+scenario defaults (distance 0.6, 20 chunks, 50,000 characters) while retaining the
+agent embedding model. Explicit nonnegative integer length/count overrides,
+including zero, take precedence. Agent RAG disabled returns no chunks with agent
+defaults; prompt-only references are excluded. Configured query rewriting returns
+400 because no rewriting occurs. Unknown agents/branches return 404 and invalid
+requests return 400. Responses are copies; reset clears jobs, added documents,
+rankings, file URLs and counters, restores source fixtures, and isolates instances.
+These matching, ranking, fixture URL and lifecycle rules are local conventions;
+request/response validation and contracts remain unchanged.

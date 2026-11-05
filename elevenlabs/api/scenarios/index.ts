@@ -53,7 +53,7 @@ import { resetWorkspaceKeyPolicy } from "./workspace-key-policy.js";
 export { emptyWorkspaceKeyPolicy } from "./workspace-key-policy.js";
 export { emptyBatchCalls, completeBatchCalls } from "./batch-calling.js";
 import { resetKnowledgeBase } from "./knowledge-base.js";
-export { emptyKnowledgeBase, knowledgeBaseReferences } from "./knowledge-base.js";
+export { emptyKnowledgeBase, knowledgeBaseReferences, knowledgeSourceRevision, knowledgeSourceFiles, completeKnowledgeCrawls, knowledgeSourceRetrieval } from "./knowledge-base.js";
 import { resetAnalysisItems } from "./analysis-items.js";
 export { emptyAnalysisItems } from "./analysis-items.js";
 import { resetWorkspaceMembers } from "./workspace-members.js";
