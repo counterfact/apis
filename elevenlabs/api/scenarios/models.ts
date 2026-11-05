@@ -26,6 +26,7 @@ export const resetModels: Scenario = ($) => {
       {model_id:"eleven_ttv_v3",name:"Simulator Voice Design v3",maximum_text_length_per_request:1000,character_cost_multiplier:1},
       {model_id:"eleven_text_to_sound_v2",name:"Simulator Sound Effect v2",maximum_text_length_per_request:2000,character_cost_multiplier:1},
       {model_id:"eleven_english_sts_v2",name:"Simulator Speech Conversion v2",maximum_text_length_per_request:2000,character_cost_multiplier:1},
+      {model_id:"scribe_v1",name:"Simulator Scribe v1",maximum_text_length_per_request:2000,character_cost_multiplier:0},
       {model_id:"music_v1",name:"Simulator Music v1",maximum_text_length_per_request:2000,character_cost_multiplier:0},
     ].map((model) => [
       model.model_id,
@@ -34,7 +35,7 @@ export const resetModels: Scenario = ($) => {
         name: model.name,
         description: "Local model discovery fixture; no audio is synthesized.",
         can_be_finetuned: false,
-        can_do_text_to_speech: model.model_id !== "eleven_english_sts_v2" && !model.model_id.includes("ttv") && model.model_id !== "eleven_text_to_sound_v2" && model.model_id !== "music_v1",
+        can_do_text_to_speech: model.model_id !== "eleven_english_sts_v2" && !model.model_id.includes("ttv") && model.model_id !== "eleven_text_to_sound_v2" && model.model_id !== "music_v1" && model.model_id !== "scribe_v1",
         can_do_voice_conversion: model.model_id === "eleven_english_sts_v2",
         can_use_style: true,
         can_use_speaker_boost: true,

@@ -1,0 +1,41 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {createScenarioRunner} from "../test-support/scenarios.js";
+import {createDispatcherHarness} from "../test-support/dispatcher.js";
+import * as scenarios from "../api/scenarios/index.js";
+const file=()=>{const data=new Uint8Array(417*20);for(let n=0;n<20;n++)data.set([255,251,144,100],n*417);return {data,filename:"silence.mp3",contentType:"audio/mpeg",size:data.length};};
+const duration=20*(1152/44100);
+const near=(actual:number,expected:number)=>assert.ok(Math.abs(actual-expected)<1e-12,`${actual} != ${expected}`);
+test("speech input contexts retain copies, validate atomically, and follow scenario reset",async()=>{
+ const r=await createScenarioRunner();await r.run(scenarios.startup);
+ const c=r.loadContext("/speech-to-text"),records=r.loadContext("/speech-to-text/transcripts");
+ const result=c.transcribe({model_id:"scribe_v1",file:file(),timestamps_granularity:"character",diarize:true});
+ assert.equal(result.text,"Synthetic simulator transcript.");near(result.audio_duration_secs!,duration);assert.equal(result.words[0].speaker_id,"speaker_0");assert.ok(result.words[0].characters!.length);
+ const id=result.transcription_id;result.words[0].text="mutated";const stored=records.get(id!);assert.ok("words" in stored);assert.equal(stored.words[0].text,"Synthetic");
+ const count=records.records.size,n=c.nextTranscript;
+ for(const body of [{model_id:"missing",file:file()},{model_id:"scribe_v1",file:file(),webhook:true},{model_id:"scribe_v1",file:{...file(),size:1}},{model_id:"scribe_v1",file:file(),use_multi_channel:true},{model_id:"scribe_v1",file:{...file(),data:file().data.slice(0,417),size:417}}])assert.throws(()=>c.transcribe(body));
+ assert.equal(records.records.size,count);assert.equal(c.nextTranscript,n);
+ const transient=c.transcribe({model_id:"scribe_v1",file:file(),timestamps_granularity:"none"},{enable_logging:false});assert.equal(transient.transcription_id,undefined);assert.deepEqual(transient.words,[]);assert.equal(records.records.size,count);
+ await r.run(scenarios.emptyStoredTranscripts);c.transcribe({model_id:"scribe_v1",file:file()});assert.equal(records.records.size,1);
+ const align=r.loadContext("/forced-alignment"),aligned=align.align({file:file(),text:"Hi 🌎!"});assert.equal(aligned.characters.map((v:any)=>v.text).join(""),"Hi 🌎!");assert.equal(aligned.characters.length,5);assert.equal(aligned.loss,.125);assert.deepEqual(aligned.words.map((v:any)=>v.text),["Hi","🌎!"]);near(aligned.characters.at(-1)!.end,duration);assert.throws(()=>align.align({file:file(),text:"  "}));assert.throws(()=>align.align({file:file(),text:"x".repeat(2001)}));
+ await r.run(scenarios.reset);assert.equal(records.records.size,2);assert.equal(c.nextTranscript,0);
+ r.context.models.clear();assert.throws(()=>c.transcribe({model_id:"scribe_v1",file:file()}),{code:"model_not_found"});
+});
+test("validated Dispatcher transcribes uploads and exposes retention, deletion, reset and isolation",async()=>{
+ const h=await createDispatcherHarness();const subscription=await(await h.request("/v1/user/subscription")).json();const send=(body:Record<string,unknown>,query="")=>h.requestMultipart("/v1/speech-to-text"+query,body);
+ const response=await send({model_id:"scribe_v1",file:file()});assert.equal(response.status,200,await response.clone().text());assert.match(response.headers.get("content-type")!,/application\/json/);const body=await response.json();
+ assert.equal(body.text,"Synthetic simulator transcript.");assert.equal(body.language_code,"eng");assert.equal(body.language_probability,1);near(body.audio_duration_secs,duration);assert.equal(body.words.map((w:any)=>w.text).join(""),body.text);near(body.words.at(-1).end,duration);
+ const path="/v1/speech-to-text/transcripts/"+body.transcription_id;assert.deepEqual(await(await h.request(path)).json(),body);
+ const other=await createDispatcherHarness();assert.equal((await other.request(path)).status,404);assert.equal((await h.request(path,{method:"DELETE"})).status,200);assert.equal((await h.request(path)).status,404);
+ const transient=await send({model_id:"scribe_v1",file:file()},"?enable_logging=false");assert.equal(transient.status,200);assert.equal((await transient.json()).transcription_id,undefined);
+ const chars=await send({model_id:"scribe_v1",file:file(),timestamps_granularity:"character",diarize:true});assert.equal(chars.status,200);const charbody=await chars.json();assert.equal(charbody.words[0].characters[0].text,"S");assert.equal(charbody.words[0].speaker_id,"speaker_0");
+ for(const input of [{file:file()},{model_id:"scribe_v1"},{model_id:"scribe_v1",file:file(),webhook:true},{model_id:"scribe_v1",file:file(),language_code:"es"},{model_id:"scribe_v1",file:file(),source_url:"https://example.invalid/audio.mp3"},{model_id:"scribe_v1",file:{...file(),data:new Uint8Array([1]),size:1}}])assert.equal((await send(input)).status,400);
+ assert.equal((await send({model_id:"missing",file:file()})).status,404);await h.scenario("reset");assert.equal((await h.request("/v1/speech-to-text/transcripts/"+charbody.transcription_id)).status,404);assert.equal((await h.request("/v1/speech-to-text/transcripts/sim-transcript-single")).status,200);
+ assert.deepEqual(await(await h.request("/v1/user/subscription")).json(),subscription);await h.scenario("emptyModels");assert.equal((await send({model_id:"scribe_v1",file:file()})).status,404);
+});
+test("validated Dispatcher forced alignment preserves supplied text with synthetic timing and loss",async()=>{
+ const h=await createDispatcherHarness();const send=(body:Record<string,unknown>)=>h.requestMultipart("/v1/forced-alignment",body);
+ const response=await send({file:file(),text:" Hello  world!\n"});assert.equal(response.status,200,await response.clone().text());const body=await response.json();assert.equal(body.characters.map((c:any)=>c.text).join("")," Hello  world!\n");assert.equal(body.characters[0].start,0);near(body.characters.at(-1).end,duration);assert.equal(body.loss,.125);assert.deepEqual(body.words.map((w:any)=>w.text),["Hello","world!"]);assert.ok(body.words.every((w:any)=>w.loss===body.loss&&w.end>w.start));assert.deepEqual(await(await send({file:file(),text:" Hello  world!\n"})).json(),body);
+ for(const input of [{text:"Hi"},{file:file()},{file:file(),text:" "},{file:{...file(),contentType:"text/plain"},text:"Hi"}])assert.equal((await send(input)).status,400);
+ assert.equal((await h.request("/v1/speech-to-text/transcripts/sim-transcript-single")).status,200);
+});

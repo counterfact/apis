@@ -1,3 +1,4 @@
+import {resetSpeechInput} from "./speech-input.js";
 import { resetAudioTransformations } from "./audio-transformations.js";
 import { resetConversationSimulation } from "./conversation-simulation.js";
 import { resetVoiceUploads } from "./voice-uploads.js";
@@ -124,6 +125,7 @@ export const reset: Scenario = ($) => {
   emptySyntheticCredentials($);
   resetTestInvocations($);
   resetStoredTranscripts($);
+  resetSpeechInput($);
   resetIsolationHistory($);
   resetVoiceLibrary($);
   resetAssets($);

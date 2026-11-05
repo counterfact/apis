@@ -54,6 +54,7 @@ import type { Context as AudioIsolationContext } from "../routes/audio-isolation
 import type { Context as AudioNativeContext } from "../routes/audio-native/_.context";
 import type { Context as DubbingContext } from "../routes/dubbing/_.context";
 import type { Context as FlowsContext } from "../routes/flows/_.context";
+import type { Context as ForcedAlignmentContext } from "../routes/forced-alignment/_.context";
 import type { Context as HistoryContext } from "../routes/history/_.context";
 import type { Context as MusicContext } from "../routes/music/_.context";
 import type { Context as PronunciationDictionariesContext } from "../routes/pronunciation-dictionaries/_.context";
@@ -62,6 +63,7 @@ import type { Context as SharedVoicesContext } from "../routes/shared-voices/_.c
 import type { Context as SingleUseTokenContext } from "../routes/single-use-token/_.context";
 import type { Context as SoundGenerationContext } from "../routes/sound-generation/_.context";
 import type { Context as SpeechEngineContext } from "../routes/speech-engine/_.context";
+import type { Context as SpeechToTextContext } from "../routes/speech-to-text/_.context";
 import type { Context as TextToDialogueContext } from "../routes/text-to-dialogue/_.context";
 import type { Context as TextToSpeechContext } from "../routes/text-to-speech/_.context";
 import type { Context as TextToVoiceContext } from "../routes/text-to-voice/_.context";
@@ -227,6 +229,9 @@ interface LoadContextDefinitions {
   ): AudioNativeContext;
   loadContext(path: "/dubbing" | `/dubbing/${string}`): DubbingContext;
   loadContext(path: "/flows" | `/flows/${string}`): FlowsContext;
+  loadContext(
+    path: "/forced-alignment" | `/forced-alignment/${string}`,
+  ): ForcedAlignmentContext;
   loadContext(path: "/history" | `/history/${string}`): HistoryContext;
   loadContext(path: "/music" | `/music/${string}`): MusicContext;
   loadContext(
@@ -248,6 +253,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/speech-engine" | `/speech-engine/${string}`,
   ): SpeechEngineContext;
+  loadContext(
+    path: "/speech-to-text" | `/speech-to-text/${string}`,
+  ): SpeechToTextContext;
   loadContext(
     path: "/text-to-dialogue" | `/text-to-dialogue/${string}`,
   ): TextToDialogueContext;

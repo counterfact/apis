@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../counterfact-types/index.ts";
-import type { Context } from "../../../routes/_.context.ts";
+import type { Context } from "../../../routes/speech-to-text/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../counterfact-types/index.ts";
 import type { Body_Speech_to_Text_v1_speech_to_text_post } from "../../multipart/v1/components/schemas/Body_Speech_to_Text_v1_speech_to_text_post.js";
 import type { SpeechToTextChunkResponseModel } from "../components/schemas/SpeechToTextChunkResponseModel.js";

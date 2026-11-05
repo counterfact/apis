@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../counterfact-types/index.ts";
-import type { Context } from "../../../routes/_.context.ts";
+import type { Context } from "../../../routes/forced-alignment/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../counterfact-types/index.ts";
 import type { Body_Create_forced_alignment_v1_forced_alignment_post } from "../../multipart/v1/components/schemas/Body_Create_forced_alignment_v1_forced_alignment_post.js";
 import type { ForcedAlignmentResponseModel } from "../components/schemas/ForcedAlignmentResponseModel.js";
