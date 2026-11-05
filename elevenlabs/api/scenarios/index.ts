@@ -1,3 +1,5 @@
+import {resetAgentProcedures} from "./agent-procedures.js";
+export {emptyAgentProcedures,procedureFolderReferences} from "./agent-procedures.js";
 import {resetAgentMergeProposals} from "./agent-merge-proposals.js";
 export {emptyAgentMergeProposals} from "./agent-merge-proposals.js";
 import { resetAgentLifecycle } from "./agent-lifecycle.js";
@@ -105,6 +107,7 @@ export const reset: Scenario = ($) => {
   resetWorkspaceKeyPolicy($);
   resetAgents($);
   resetAgentLifecycle($);
+  resetAgentProcedures($);
   resetAgentMergeProposals($);
   resetAnalysisItems($);
   resetKnowledgeBase($);

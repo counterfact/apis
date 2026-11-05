@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 275 now have authored
-behavior. The remaining 162 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 282 now have authored
+behavior. The remaining 155 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1782,7 +1782,7 @@ Each success deactivates prior history and records a synthetic increasing time/I
 only metadata changes, with no routing, calling, billing or execution. Lists sort
 newest first with descending ID ties and use page numbers from 1, page size 1–100
 (default 30). Draft deletion clears only the branch's local draft marker and is
-idempotent. Recursive branch/draft creation, merge/rebase and procedure operations
+idempotent. Recursive branch/draft creation, merge/rebase and procedure compilation
 remain generated and uncounted. All reads return defensive copies, simulator
 instances isolate changes, and reset restores the fixtures. Error, ordering,
 null-update, snapshot and traffic-split conventions are local simulator behavior.
@@ -1823,3 +1823,51 @@ shared local three-way configuration/version merge behavior. This is unfinished
 simulator implementation, not a Counterfact runtime blocker. No merge, rebase,
 AI review, deployment or provider processing occurs through these six operations.
 Contracts and request/response validation remain unchanged.
+
+
+## Branch procedure metadata and drafts
+
+Seven procedure operations now store local content and draft metadata: create/list,
+detail read/delete and draft read/PATCH/delete. Startup/reset seed published
+`sim-procedure` on `sim-main-branch` in `api/scenarios/agent-procedures.ts`.
+The feature snapshot inherits the same published version; its drafts stay branch-local.
+Contexts start empty; `emptyAgentProcedures` clears procedure state and published
+references, preserving agents and unrelated configuration. Instances isolate state.
+
+Published references remain visible in agent default/main reads and historical
+version snapshots. Procedure draft edits and working-set removals do not publish
+an agent version or alter those references. Lists overlay unpublished drafts and
+omit working-set removals by default; `agent_version_id` selects a published
+snapshot of that branch. Procedure detail reads return the published HEAD body
+unless the procedure has never been published, in which case its draft is returned
+with a null version. Explicit procedure-version reads require branch membership;
+combining agent/procedure versions requires matching references. Unknown or
+cross-branch records return 404. Reads return defensive copies.
+
+Creation accepts an object or explicit JSON null for defaults; absent optional
+bodies remain affected by Counterfact #2614. Draft PATCH requires name, content
+and type, matching the unchanged contract. Omitted/null triggers preserve the
+previous trigger; an empty trigger clears it. The documented `description` alias
+is accepted; conflicting nonnull trigger/description values return 400. All three
+types store opaque text.
+No compilation, inference, generated workflow, reference extraction or execution
+runs. The optional referenced-resource arrays are omitted rather than asserting
+that opaque content has no dependencies. Procedure compilation remains generated
+and uncounted as unfinished simulator implementation.
+
+Folder parents must be existing folders in the same working set. Removal cascades
+to descendants and rejects known outside handoffs with 409. Explicit scenario
+handoff metadata describes the baseline; changing content invalidates that metadata.
+If any outside procedure has nonempty content without verified reference metadata,
+removal returns 409 `procedure_reference_analysis_required`, including single
+procedure removal. This conservative local rule avoids claiming reference safety
+without compilation. Empty content is known to have no handoffs. The
+`procedureFolderReferences` setup adds a folder, child and explicit outside handoff
+for testing cascades and conflicts. Invalid operations preserve state and counters.
+
+Deleting one procedure draft restores its published metadata (or removes a new
+unpublished procedure). Deleting the branch draft also clears all procedure drafts
+and working-set removals through context-owned business logic. Archived branches
+reject procedure mutations. IDs, ordering by procedure ID, errors, draft/publication separation
+and reference safety rules are local simulator conventions. No provider, network,
+credential resolution, billing or tool execution occurs; validation stays enabled.

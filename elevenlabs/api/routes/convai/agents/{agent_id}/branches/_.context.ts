@@ -307,7 +307,10 @@ export class Context {
     ]);
     return { traffic_percentage_branch_id_map: structuredClone(splits) };
   }
+  clearProcedureDrafts?: (agentId: string, branchId: string) => void;
   deleteDraft(id: string, branchId: string) {
+    this.branch(id, branchId);
+    this.clearProcedureDrafts?.(id, branchId);
     this.branch(id, branchId).draftCreatedAt = null;
     return {};
   }
