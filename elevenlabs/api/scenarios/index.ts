@@ -26,7 +26,7 @@ export { emptyPvcVoices } from "./pvc-voices.js";
 import { resetVoiceLibrary } from "./voice-library.js";
 export { emptyVoiceLibrary } from "./voice-library.js";
 import {resetAgentProcedures} from "./agent-procedures.js";
-export {emptyAgentProcedures,procedureFolderReferences} from "./agent-procedures.js";
+export {emptyAgentProcedures,procedureFolderReferences,procedureCompilationDraft} from "./agent-procedures.js";
 import {resetAgentMergeProposals} from "./agent-merge-proposals.js";
 export {emptyAgentMergeProposals} from "./agent-merge-proposals.js";
 import { resetAgentLifecycle } from "./agent-lifecycle.js";

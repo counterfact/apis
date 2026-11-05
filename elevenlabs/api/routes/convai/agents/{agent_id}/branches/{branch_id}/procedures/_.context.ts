@@ -1,3 +1,6 @@
+import { isDeepStrictEqual } from "node:util";
+import type { AgentWorkflowResponseModel as Workflow } from "../../../../../../../types/v1/components/schemas/AgentWorkflowResponseModel.js";
+import type { CompileProceduresValidationErrorResponseModel as CompilationErrors } from "../../../../../../../types/v1/components/schemas/CompileProceduresValidationErrorResponseModel.js";
 import type { Context as Lifecycle } from "../../_.context.js";
 import type { ProcedureAtVersionResponseModel as Procedure } from "../../../../../../../types/v1/components/schemas/ProcedureAtVersionResponseModel.js";
 import type { ProcedureDraftResponseModel as Draft } from "../../../../../../../types/v1/components/schemas/ProcedureDraftResponseModel.js";
@@ -29,7 +32,32 @@ const fail = (status: number, code: string): never => {
 const invalid = (): never => fail(400, "invalid_procedure_request");
 const object = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
+export type CompilationFixture = {
+  agentId: string;
+  branchId: string;
+  procedures: Draft[];
+  workflow: Workflow;
+};
 export class Context {
+  compilationFixtures: CompilationFixture[] = [];
+  /** Exact synthetic input lookup only; this legacy dry-run never saves state. */
+  compile(agentId: string, branchId: string):
+    | { ok: true; workflow: Workflow }
+    | ({ ok: false } & CompilationErrors) {
+    const rows = this.all(agentId, branchId);
+    const procedures = [...rows].sort(([a], [b]) => a.localeCompare(b)).map(([, row]) => {
+      const { version_id: _, ...draft } = row.value as Procedure;
+      return draft;
+    });
+    const fixture = this.compilationFixtures.find((f) =>
+      f.agentId === agentId && f.branchId === branchId &&
+      isDeepStrictEqual(f.procedures, procedures));
+    if (fixture) return { ok: true, workflow: structuredClone(fixture.workflow) };
+    return { ok: false, errors: Object.fromEntries(
+      (procedures.length ? procedures.map((p) => p.procedure_id) : ["$procedures"])
+        .map((id) => [id, [{ path: "content", message: "No synthetic compilation fixture matches the current procedure set." }]]),
+    ) };
+  }
   versions = new Map<string, StoredVersion>();
   working = new Map<string, Map<string, Working | null>>();
   nextProcedure = 0;

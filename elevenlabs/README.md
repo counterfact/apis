@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 392 now have authored
-behavior. The remaining 45 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 393 now have authored
+behavior. The remaining 44 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2857,3 +2857,29 @@ fixtures, including a live timeout that differs from its stored main version.
 Reset removes this optional setup and restores the baseline. Contexts start empty,
 scenarios own fixtures, and separate instances isolate changes. The multipart
 upload operation remains generated under Counterfact #2607.
+
+## Legacy procedure compile dry-run
+
+`POST /v1/convai/agents/{agent_id}/branches/{branch_id}/procedures/compile`
+returns a finite synthetic workflow for an exact scenario-configured procedure
+set. Startup/reset configure the baseline published support procedure on both
+fixture branches. The `procedureCompilationDraft` scenario configures an explicit
+main-branch draft and its distinct workflow, including a support node whose prompt
+is that fixture's declared content. No AI, provider calls or free-form semantic
+compilation runs; these outputs are local fixtures, not generated interpretations.
+
+Compilation reads the selected branch's current published membership (including
+live main-branch configuration) and overlays its working drafts and deletions.
+Historical snapshots and unrelated branch drafts do not leak into the selection.
+Fixtures are scoped to agent and branch and compare the complete procedure set,
+including IDs, content, names, types, triggers and folder membership; published
+version IDs are not compilation inputs. Altered or unconfigured sets return 400
+with per-procedure `errors`; an empty unconfigured set uses the local
+`$procedures` key. Missing agents or branches return 404. These error conventions
+are synthetic simulator behavior.
+
+Successful and failed dry-runs leave procedure drafts, versions, references,
+agent workflows, branch metadata and all ID counters untouched. Responses contain
+defensive workflow copies. Startup/reset own fixture population, contexts start
+empty, and instances isolate state. The endpoint remains legacy; it never saves
+or publishes an agent draft or version.

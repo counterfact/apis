@@ -5,6 +5,7 @@ export const emptyAgentProcedures: Scenario = ($) => {
   );
   const lifecycle = $.loadContext("/convai/agents/{agent_id}/branches");
   c.lifecycle = lifecycle;
+  c.compilationFixtures = [];
   c.versions = new Map();
   c.working = new Map();
   c.nextProcedure = 0;
@@ -48,6 +49,23 @@ export const resetAgentProcedures: Scenario = ($) => {
     lifecycle.versions.get(versionId)!.configuration.procedures = {
       "sim-procedure": structuredClone(ref),
     };
+  }
+  for (const fixtureBranch of [branchId, "sim-agent-feature"]) {
+    c.compilationFixtures.push({
+      agentId: "sim-agent", branchId: fixtureBranch,
+      procedures: [{ procedure_id: "sim-procedure", name: "Published support",
+        content: "Stored local support instructions.", type: "free_form",
+        trigger: "When support is requested", folder_parent_id: null }],
+      workflow: {
+        nodes: {
+          start: { type: "start", position: { x: 0, y: 0 }, edge_order: ["enter"] },
+          support: { type: "override_agent", position: { x: 0, y: 100 }, edge_order: ["finish"], conversation_config: {}, additional_prompt: "Stored local support instructions.", additional_knowledge_base: [], additional_tool_ids: [], label: "Published support", entry_behavior: "auto" },
+          end: { type: "end", position: { x: 0, y: 200 }, edge_order: [], outcome: "success" },
+        },
+        edges: { enter: { source: "start", target: "support", forward_condition: { type: "unconditional", label: null }, backward_condition: null, reroutes: [] }, finish: { source: "support", target: "end", forward_condition: { type: "unconditional", label: null }, backward_condition: null, reroutes: [] } },
+        prevent_subagent_loops: false,
+      },
+    });
   }
 };
 
@@ -94,4 +112,30 @@ export const procedureFolderReferences: Scenario = ($) => {
   };
   lifecycle.versions.get("sim-agent-version-main")!.configuration.procedures =
     structuredClone(refs);
+};
+
+/** Synthetic configured draft and exact outcome, with no semantic content analysis. */
+export const procedureCompilationDraft: Scenario = ($) => {
+  const c = $.loadContext("/convai/agents/{agent_id}/branches/{branch_id}/procedures");
+  c.updateDraft("sim-agent", "sim-main-branch", "sim-procedure", {
+    name: "Draft support", content: "Configured local support draft.",
+    type: "free_form", trigger: "When support is requested",
+  });
+  c.compilationFixtures = c.compilationFixtures.filter((f) =>
+    f.branchId !== "sim-main-branch" || f.procedures[0]?.name !== "Draft support");
+  c.compilationFixtures.push({
+    agentId: "sim-agent", branchId: "sim-main-branch",
+    procedures: [{ procedure_id: "sim-procedure", name: "Draft support",
+      content: "Configured local support draft.", type: "free_form",
+      trigger: "When support is requested", folder_parent_id: null }],
+    workflow: {
+      nodes: {
+        start: { type: "start", position: { x: 0, y: 0 }, edge_order: ["enter"] },
+        support: { type: "override_agent", position: { x: 0, y: 100 }, edge_order: ["finish"], conversation_config: {}, additional_prompt: "Configured local support draft.", additional_knowledge_base: [], additional_tool_ids: [], label: "Draft support", entry_behavior: "auto" },
+        end: { type: "end", position: { x: 0, y: 300 }, edge_order: [], outcome: "success" },
+      },
+      edges: { enter: { source: "start", target: "support", forward_condition: { type: "unconditional", label: null }, backward_condition: null, reroutes: [] }, finish: { source: "support", target: "end", forward_condition: { type: "unconditional", label: null }, backward_condition: null, reroutes: [] } },
+      prevent_subagent_loops: false,
+    },
+  });
 };
