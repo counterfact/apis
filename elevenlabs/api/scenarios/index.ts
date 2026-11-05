@@ -1,3 +1,5 @@
+import { resetBatchCalls } from "./batch-calling.js";
+export { emptyBatchCalls, completeBatchCalls } from "./batch-calling.js";
 import { resetKnowledgeBase } from "./knowledge-base.js";
 export { emptyKnowledgeBase, knowledgeBaseReferences } from "./knowledge-base.js";
 import { resetAnalysisItems } from "./analysis-items.js";
@@ -56,6 +58,7 @@ export const reset: Scenario = ($) => {
   resetAnalysisItems($);
   resetKnowledgeBase($);
   resetPhoneNumbers($);
+  resetBatchCalls($);
   resetTools($);
   resetSecrets($);
   resetEnvironments($);

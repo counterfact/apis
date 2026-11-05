@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 140 now have authored
-behavior. The remaining 297 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 147 now have authored
+behavior. The remaining 290 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1056,6 +1056,54 @@ snippets are null. Type filters and decimal-offset pagination apply before
 returning results; blank/punctuation-only queries and invalid options return 400.
 These algorithms, identifiers, statuses and index lifecycle are simulator
 conventions, without remote retrieval or model execution.
+
+## Batch call records
+
+Seven `/v1/convai/batch-calling` operations now persist synthetic batch records:
+submit, workspace list, detail, delete, cancel, retry and CSV export.
+Startup/reset seed `sim-batch`, a historical record with one completed and one
+failed recipient, in `api/scenarios/batch-calling.ts`. Context state starts empty.
+`emptyBatchCalls` clears records and ID counters; `reset` restores them.
+Each simulator instance is isolated. Reads return defensive copies.
+
+Submission requires an existing agent and outbound-capable imported phone ID,
+nonempty call name and 1–10,000 E.164-style phone recipients. Explicit recipient
+IDs must be nonempty and unique, including against allocated IDs. Omitted IDs use
+`sim-batch-created-N-recipient-M`; batch IDs use `sim-batch-created-N`.
+Requests are validated before counters or records change. Submitted batches remain
+pending until `.scenario completeBatchCalls` explicitly marks active recipients
+completed. This scenario creates no conversation records or calls; its completion
+is fictional. There is no timer, dispatch, provider connection or actual scheduling.
+
+Only phone recipients, UTC (or omitted timezone), the default branch and no
+environment selection are supported. WhatsApp, explicit branches/environments,
+recipient initiation data and machine detection return 400. Ringing/recording and
+concurrency fields are stored configuration only. Omitted schedule times use the
+scenario clock; supplied nonnegative times are metadata and do not trigger work.
+
+Cancel accepts pending/in-progress batches and marks all recipients cancelled,
+as stated by the contract; repeating cancellation is a no-op. Other terminal
+batches return 409. Retry accepts terminal batches with failed recipients, resets
+only those recipients to pending and clears their prior conversation references;
+completed recipients and their references remain. The contract's recipient enum
+has no separate no-response state, so only stored `failed` outcomes are retryable.
+Retry rechecks the live agent and outbound phone; missing sources return 409.
+Scheduled count remains total recipient count; dispatched and finished counters
+reflect current recipient outcomes rather than cumulative retry attempts.
+No eligible recipients or a nonterminal retry returns 409.
+
+Lists sort newest first with ascending ID ties. `agent_id` filters before
+pagination; `limit` is 1–1000 (default 100), and `last_doc` is the prior page's
+final batch ID. Unknown cursors return 400; empty pages return null `next_doc`.
+CSV export requires a terminal batch, uses `text/csv`, includes
+`recipient_id,phone_number,status,conversation_id`, and preserves recipient order.
+Values are quoted with escaped quotes and CRLF row endings. Optional positive
+`limit` previews the first recipients; its nullable integer query receives the
+same narrow normalization documented for Counterfact #2612.
+Deleting a batch returns 204 and removes its recipient records while preserving
+conversation history. Unknown batch IDs return 404. Error codes, ID allocation,
+pagination, counter projections and lifecycle restrictions above are local
+simulator conventions. Authentication and permissions are not enforced.
 
 ## Development
 
