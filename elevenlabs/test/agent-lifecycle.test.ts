@@ -91,11 +91,19 @@ test("agent lifecycle context preserves canonical references and validates metad
     false,
   );
   const duplicate = agents.duplicateAgent("sim-agent", {});
-  assert.equal(
-    agents.getAgent(duplicate.value!.agent_id)!.branch_id,
-    undefined,
+  const copied = agents.getAgent(duplicate.value!.agent_id)!;
+  assert.ok(copied.branch_id);
+  assert.equal(c.list(duplicate.value!.agent_id, {}).results.length, 1);
+  assert.deepEqual(
+    c.select(copied.agent_id, { version_id: copied.version_id }),
+    copied,
   );
-  assert.deepEqual(c.list(duplicate.value!.agent_id, {}).results, []);
+  assert.equal(
+    r
+      .loadContext("/convai/agents/{agent_id}/branches/{branch_id}/procedures")
+      .get(copied.agent_id, copied.branch_id!, "sim-procedure").name,
+    "Published support",
+  );
   agents.deleteAgent("sim-agent");
   assert.throws(() => c.list("sim-agent", {}));
   await r.run(scenarios.reset);

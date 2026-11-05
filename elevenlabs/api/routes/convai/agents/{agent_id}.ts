@@ -32,7 +32,38 @@ export const GET: Route["GET"] = async ($) => {
   }
 };
 export const PATCH: Route["PATCH"] = async ($) => {
-  return $.response.status(200).random();
+  if ($.query.include_procedure_generated_workflow_elements === true)
+    return $.x.response
+      .status(400)
+      .json({
+        detail: {
+          status: "unsupported_agent_selector",
+          message: "Generated workflows are not simulated",
+        },
+      });
+  try {
+    const result = $.context.updateAgent(
+      $.path.agent_id,
+      $.body,
+      $.query.branch_id,
+    );
+    if (result.error)
+      return $.x.response
+        .status(result.error === "agent_not_found" ? 404 : 400)
+        .json({ detail: { status: result.error, message: result.error } });
+    return $.response.status(200).json(result.value);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      ["LifecycleError", "ProcedureError"].includes(error.name)
+    ) {
+      const e = error as Error & { status: number; code: string };
+      return $.x.response
+        .status(e.status)
+        .json({ detail: { status: e.code, message: e.code } });
+    }
+    throw error;
+  }
 };
 export const DELETE: Route["DELETE"] = async ($) => {
   if ($.query.force)

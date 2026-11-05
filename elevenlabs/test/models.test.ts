@@ -5,20 +5,37 @@ import { reset, startup } from "../api/scenarios/index.js";
 import { runScenario } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
 
-const expectedIds = ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v3", "eleven_multilingual_ttv_v2", "eleven_ttv_v3", "eleven_text_to_sound_v2", "eleven_english_sts_v2", "scribe_v1", "music_v1"];
+const expectedIds = [
+  "eleven_multilingual_v2",
+  "eleven_flash_v2_5",
+  "eleven_v3",
+  "eleven_multilingual_ttv_v2",
+  "eleven_ttv_v3",
+  "eleven_text_to_sound_v2",
+  "eleven_english_sts_v2",
+  "scribe_v1",
+  "music_v1",
+  "eleven_v4_turbo",
+];
 
 test("model catalog starts empty, isolates returned objects, and reset restores fixtures", async () => {
   const context = new Context();
   assert.deepEqual(context.listModels(), []);
   await runScenario(context, startup);
   const models = context.listModels();
-  assert.deepEqual(models.map((model) => model.model_id), expectedIds);
+  assert.deepEqual(
+    models.map((model) => model.model_id),
+    expectedIds,
+  );
   models[0].languages[0].name = "Changed outside context";
   models[0].model_rates.character_cost_multiplier = 99;
   models.pop();
-  assert.equal(context.listModels().length, 9);
+  assert.equal(context.listModels().length, expectedIds.length);
   assert.equal(context.listModels()[0].languages[0].name, "English");
-  assert.equal(context.listModels()[0].model_rates.character_cost_multiplier, 1);
+  assert.equal(
+    context.listModels()[0].model_rates.character_cost_multiplier,
+    1,
+  );
   context.models.clear();
   assert.deepEqual(context.listModels(), []);
   await runScenario(context, reset);

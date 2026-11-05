@@ -39,7 +39,7 @@ test("agent context starts empty and supports independent CRUD, copies and deter
 test("agent context validates atomically and preserves metadata and allocation on failure", () => {
   const c = new Context();
   c.defaults = defaults();
-  for (const body of [{}, { conversation_config: null }, { conversation_config: {}, name: " " }, { conversation_config: { agent: { prompt: { tool_ids: [1] } } } }, { conversation_config: {}, workflow: {} }, { conversation_config: {}, extra: true }]) assert.equal(c.createAgent(body).error, "invalid_agent");
+  for (const body of [{}, { conversation_config: null }, { conversation_config: {}, name: " " }, { conversation_config: { agent: { prompt: { tool_ids: [1] } } } }, { conversation_config: {}, workflow: {nodes:{}} }, { conversation_config: {}, extra: true }]) assert.equal(c.createAgent(body).error, "invalid_agent");
   const id = c.createAgent(input()).value!.agent_id;
   assert.equal(id, "sim-agent-created-1");
   const before = c.getAgent(id);

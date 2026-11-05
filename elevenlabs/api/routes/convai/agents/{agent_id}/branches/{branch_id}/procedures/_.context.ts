@@ -61,6 +61,7 @@ export class Context {
   versions = new Map<string, StoredVersion>();
   working = new Map<string, Map<string, Working | null>>();
   nextProcedure = 0;
+  nextPublishedVersion = 0;
   lifecycle?: Lifecycle;
   private branch(agentId: string, branchId: string, mutate = false) {
     if (!this.lifecycle) throw new Error("Run startup or reset");
@@ -306,6 +307,144 @@ export class Context {
       return fail(404, "procedure_not_found");
     this.changes(branchId).delete(id);
     return {};
+  }
+  validReferences(agentId:string,refs:unknown): boolean {
+    if(!object(refs))return false;
+    for(const [id,ref] of Object.entries(refs)) {
+      if(!object(ref)||ref.procedure_id!==id||typeof ref.version_id!=="string")return false;
+      const published=this.versions.get(ref.version_id);
+      if(!published||published.agentId!==agentId||published.value.procedure_id!==id)return false;
+      if(published.value.folder_parent_id!=null) {
+        const parent=refs[published.value.folder_parent_id];
+        if(!object(parent)||typeof parent.version_id!=="string"||this.versions.get(parent.version_id)?.value.type!=="folder")return false;
+      }
+    }
+    return true;
+  }
+  prepareClone(
+    sourceAgentId: string,
+    agentId: string,
+    branchId: string,
+    base: Record<string, Ref>,
+  ) {
+    const refs: Record<string, Ref> = {},
+      additions = new Map<string, StoredVersion>();
+    let number = this.nextPublishedVersion;
+    for (const [id, ref] of Object.entries(base)) {
+      const source = ref.version_id
+        ? this.versions.get(ref.version_id)
+        : undefined;
+      if (
+        !source ||
+        source.agentId !== sourceAgentId ||
+        source.value.procedure_id !== id
+      )
+        return fail(404, "procedure_version_not_found");
+      let versionId: string;
+      do {
+        versionId = `sim-procedure-version-created-${++number}`;
+      } while (this.versions.has(versionId) || additions.has(versionId));
+      const copy = structuredClone(source);
+      copy.agentId = agentId;
+      copy.branchId = branchId;
+      copy.value.version_id = versionId;
+      additions.set(versionId, copy);
+      const { content: _, ...value } = copy.value;
+      Object.defineProperty(refs, id, {
+        value,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    }
+    return {
+      refs,
+      apply: () => {
+        for (const [id, value] of additions) this.versions.set(id, value);
+        this.nextPublishedVersion = number;
+      },
+    };
+  }
+  /** Prepare immutable procedure versions without changing counters or drafts. */
+  preparePublication(
+    agentId: string,
+    sourceBranchId: string,
+    targetBranchId: string,
+    base: Record<string, Ref>,
+    explicit: unknown,
+    includeWorking: boolean,
+  ) {
+    this.branch(agentId, sourceBranchId);
+    const refs: Record<string, Ref> = {},
+      additions = new Map<string, StoredVersion>();
+    let number = this.nextPublishedVersion;
+    if (explicit != null && !object(explicit)) return invalid();
+    const selected = explicit != null ? explicit : base;
+    for (const [id, raw] of Object.entries(selected)) {
+      if (
+        !object(raw) ||
+        raw.procedure_id !== id ||
+        typeof raw.version_id !== "string" ||
+        (explicit != null &&
+          Object.keys(raw).some(
+            (k) => !["procedure_id", "version_id"].includes(k),
+          ))
+      )
+        return invalid();
+      const version = this.versions.get(raw.version_id);
+      if (
+        !version ||
+        version.agentId !== agentId ||
+        version.value.procedure_id !== id
+      )
+        return fail(404, "procedure_version_not_found");
+      const { content: _, ...ref } = version.value;
+      Object.defineProperty(refs, id, {
+        value: structuredClone(ref),
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    }
+    if (explicit == null && includeWorking)
+      for (const [id, row] of this.changes(sourceBranchId)) {
+        if (row === null) {
+          delete refs[id];
+          continue;
+        }
+        let versionId: string;
+        do {
+          versionId = `sim-procedure-version-created-${++number}`;
+        } while (this.versions.has(versionId) || additions.has(versionId));
+        const value = { ...structuredClone(row.value), version_id: versionId };
+        additions.set(versionId, {
+          agentId,
+          branchId: targetBranchId,
+          value,
+          handoffs: [...row.handoffs],
+          referencesKnown: row.referencesKnown,
+        });
+        const { content: _, ...ref } = value;
+        Object.defineProperty(refs, id, {
+          value: ref,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      }
+    for (const ref of Object.values(refs))
+      if (
+        ref.folder_parent_id != null &&
+        refs[ref.folder_parent_id]?.type !== "folder"
+      )
+        return fail(409, "procedure_parent_not_folder");
+    return {
+      refs,
+      apply: () => {
+        for (const [key, value] of additions) this.versions.set(key, value);
+        this.nextPublishedVersion = number;
+      },
+    };
   }
   clearBranchDrafts(agentId: string, branchId: string) {
     this.branch(agentId, branchId);

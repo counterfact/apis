@@ -9,6 +9,15 @@ export const emptyAgentLifecycle: Scenario = ($) => {
   c.history = new Map();
   c.nextDeployment = 0;
   c.nextVersion = 0;
+  c.nextBranch = 0;
+  c.drafts = new Map();
+  c.defaults = {
+    timeUnix: 1735689600,
+    mainName: "main",
+    initialDescription: "Initial agent configuration",
+  };
+  c.validateConfiguration = (configuration) =>
+    agents.validateDependencies(configuration);
   for (const a of agents.agents.values()) {
     delete a.configuration.branch_id;
     delete a.configuration.version_id;

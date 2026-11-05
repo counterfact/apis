@@ -3,11 +3,60 @@ import type { Scenario } from "../types/index.js";
 export const emptyAgents: Scenario = ($) => {
   const context = $.loadContext("/convai/agents");
   context.agents = new Map();
-  context.nextMedia=0;context.mediaDefaults={maxBytes:1024*1024,maxName:255,maxDuration:180};
+  context.resources = () => ({
+    voices: $.context.voices,
+    models: $.context.models,
+  });
+  context.nextMedia = 0;
+  context.mediaDefaults = {
+    maxBytes: 1024 * 1024,
+    maxName: 255,
+    maxDuration: 180,
+  };
   context.nextAgentNumber = 0;
   context.nextMutationNumber = 0;
-  context.defaults = { name: "New agent", voiceId: "sim-narrator", userId: "sim-user", timeUnix: 1_735_689_600,
-    accessInfo: { is_creator: true, creator_name: "Simulator", creator_email: "sim@example.invalid", role: "admin", access_source: "creator" } };
+  context.defaults = {
+    name: "New agent",
+    voiceId: "sim-narrator",
+    userId: "sim-user",
+    timeUnix: 1_735_689_600,
+    conversationConfig: {
+      agent: {
+        first_message: "",
+        language: "en",
+        prompt: {
+          prompt: "",
+          llm: "gemini-3.5-flash",
+          temperature: 0,
+          max_tokens: -1,
+          tool_ids: [],
+          tools: [],
+        },
+      },
+      tts: {
+        voice_id: "sim-narrator",
+        model_id: "eleven_v4_turbo",
+        agent_output_audio_format: "pcm_16000",
+        stability: 0.5,
+        similarity_boost: 0.8,
+        speed: 1,
+      },
+    },
+    workflow: {
+      nodes: {
+        start: { type: "start", position: { x: 0, y: 0 }, edge_order: [] },
+      },
+      edges: {},
+      prevent_subagent_loops: false,
+    },
+    accessInfo: {
+      is_creator: true,
+      creator_name: "Simulator",
+      creator_email: "sim@example.invalid",
+      role: "admin",
+      access_source: "creator",
+    },
+  };
 };
 
 export const resetAgents: Scenario = ($) => {

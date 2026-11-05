@@ -28,6 +28,7 @@ export const resetModels: Scenario = ($) => {
       {model_id:"eleven_english_sts_v2",name:"Simulator Speech Conversion v2",maximum_text_length_per_request:2000,character_cost_multiplier:1},
       {model_id:"scribe_v1",name:"Simulator Scribe v1",maximum_text_length_per_request:2000,character_cost_multiplier:0},
       {model_id:"music_v1",name:"Simulator Music v1",maximum_text_length_per_request:2000,character_cost_multiplier:0},
+      {model_id:"eleven_v4_turbo",name:"Simulator Conversational Turbo v4",maximum_text_length_per_request:10000,character_cost_multiplier:1},
     ].map((model) => [
       model.model_id,
       {

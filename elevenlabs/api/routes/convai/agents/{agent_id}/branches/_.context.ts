@@ -1,4 +1,4 @@
-import type { StoredAgent } from "../../_.context.js";
+import { applyAgentSettings } from "../../_.context.js";import type { StoredAgent } from "../../_.context.js";
 import type { GetAgentResponseModel as Agent } from "../../../../../types/v1/components/schemas/GetAgentResponseModel.js";
 import type { AgentBranchResponse as Branch } from "../../../../../types/v1/components/schemas/AgentBranchResponse.js";
 import type { AgentVersionMetadata as Version } from "../../../../../types/v1/components/schemas/AgentVersionMetadata.js";
@@ -34,6 +34,307 @@ export class Context {
   nextDeployment = 0;
   nextVersion = 0;
   agents?: () => Map<string, StoredAgent>;
+  drafts = new Map<string, { configuration: Agent; parentVersionId: string }>();
+  nextBranch = 0;
+  defaults?: { timeUnix: number; mainName: string; initialDescription: string };
+  validateConfiguration?: (configuration: Agent) => boolean;
+  procedures?: () => import("./{branch_id}/procedures/_.context.js").Context;
+  private time(id: string) {
+    if (!this.defaults) throw new Error("Run startup or reset");
+    return (
+      Math.max(
+        this.defaults.timeUnix,
+        this.agent(id).configuration.metadata.updated_at_unix_secs,
+        ...[...this.versions.values()]
+          .filter((v) => v.metadata.agent_id === id)
+          .map((v) => v.metadata.time_committed_secs),
+        ...[...this.branches.values()]
+          .filter(
+            (b) => b.metadata.agent_id === id && b.draftCreatedAt !== null,
+          )
+          .map((b) => b.draftCreatedAt!),
+      ) + 1
+    );
+  }
+  private allocateBranch() {
+    let number = this.nextBranch,
+      id: string;
+    do {
+      id = `sim-agent-branch-created-${++number}`;
+    } while (this.branches.has(id));
+    return { number, id };
+  }
+  private allocateVersion() {
+    let number = this.nextVersion,
+      id: string;
+    do {
+      id = `sim-agent-version-created-${++number}`;
+    } while (this.versions.has(id));
+    return { number, id };
+  }
+  private settings(base: Agent, input: unknown) {
+    const candidate = applyAgentSettings(base, input);
+    if (!candidate || this.validateConfiguration?.(candidate) === false)
+      return invalid();
+    return candidate;
+  }
+  initializeAgent(id: string, record: StoredAgent, sourceAgentId?: string) {
+    const configuration = structuredClone(record.configuration);
+    if (record.mainBranch && this.branches.has(record.mainBranch.id)) return;
+    if (!this.defaults) throw new Error("Run startup or reset");
+    const branch = this.allocateBranch(),
+      version = this.allocateVersion(),
+      time = configuration.metadata.created_at_unix_secs;
+    const procedures = sourceAgentId
+      ? this.procedures?.().prepareClone(
+          sourceAgentId,
+          id,
+          branch.id,
+          configuration.procedures ?? {},
+        )
+      : undefined;
+    if (procedures) configuration.procedures = procedures.refs;
+    procedures?.apply();
+    record.mainBranch = { id: branch.id, name: this.defaults.mainName };
+    configuration.branch_id = branch.id;
+    configuration.main_branch_id = branch.id;
+    configuration.version_id = version.id;
+    const metadata: Version = {
+      id: version.id,
+      agent_id: id,
+      branch_id: branch.id,
+      version_description: this.defaults.initialDescription,
+      seq_no_in_branch: 1,
+      time_committed_secs: time,
+      parents: {},
+      access_info: structuredClone(configuration.access_info),
+    };
+    this.branches.set(branch.id, {
+      metadata: {
+        id: branch.id,
+        name: this.defaults.mainName,
+        agent_id: id,
+        description: "",
+        created_at: time,
+        last_committed_at: time,
+        is_archived: false,
+        protection_status: "writer_perms_required",
+        auto_rebase: false,
+        access_info: structuredClone(configuration.access_info),
+      },
+      tip: version.id,
+      draftCreatedAt: null,
+      parentBranchId: null,
+    });
+    this.versions.set(version.id, {
+      metadata,
+      configuration: structuredClone(configuration),
+    });
+    record.configuration = configuration;
+    let deploymentNumber=this.nextDeployment,deploymentId:string;
+    do { deploymentId=`sim-deployment-created-${++deploymentNumber}`; } while([...this.history.values()].flat().some(h=>h.id===deploymentId));
+    this.history.set(id,[{id:deploymentId,traffic_percentage_branch_id_map:{[branch.id]:100},deployed_at_unix_secs:time,is_active:true,source:sourceAgentId?"duplicate":"manual",access_info:structuredClone(configuration.access_info)}]);
+    this.nextDeployment=deploymentNumber;
+    this.nextBranch = branch.number;
+    this.nextVersion = version.number;
+  }
+  saveDraft(id: string, branchId: string, input: unknown) {
+    const branch = this.branch(id, branchId);
+    if (branch.metadata.is_archived) return fail(409, "branch_archived");
+    if (
+      !object(input) ||
+      !object(input.conversation_config) ||
+      !object(input.platform_settings) ||
+      !object(input.workflow) ||
+      typeof input.name !== "string"
+    )
+      return invalid();
+    const candidate = this.settings(
+      this.select(id, { branch_id: branchId }),
+      input,
+    );
+    const time = this.time(id);
+    this.drafts.set(branchId, {
+      configuration: candidate,
+      parentVersionId: branch.tip,
+    });
+    branch.draftCreatedAt = time;
+    return {};
+  }
+  publish(id: string, branchId: string, input: unknown = {}) {
+    const branch = this.branch(id, branchId);
+    if (branch.metadata.is_archived) return fail(409, "branch_archived");
+    if (
+      !object(input) ||
+      Object.keys(input).some(
+        (k) =>
+          ![
+            "name",
+            "tags",
+            "conversation_config",
+            "platform_settings",
+            "workflow",
+            "version_description",
+            "procedures",
+          ].includes(k),
+      ) ||
+      (input.version_description != null &&
+        typeof input.version_description !== "string")
+    )
+      return invalid();
+    const { version_description, procedures, ...settings } = input;
+    const base =
+      this.drafts.get(branchId)?.configuration ??
+      this.select(id, { branch_id: branchId });
+    const candidate = this.settings(base, settings);
+    const prepared = this.procedures?.().preparePublication(
+      id,
+      branchId,
+      branchId,
+      candidate.procedures ?? {},
+      procedures,
+      true,
+    );
+    if (prepared) candidate.procedures = prepared.refs;
+    else if (procedures != null) return invalid();
+    const version = this.allocateVersion(),
+      time = this.time(id),
+      previous = this.versions.get(branch.tip)!;
+    candidate.branch_id = branchId;
+    candidate.main_branch_id = this.agent(id).mainBranch?.id;
+    candidate.version_id = version.id;
+    candidate.metadata.updated_at_unix_secs = time;
+    const metadata: Version = {
+      id: version.id,
+      agent_id: id,
+      branch_id: branchId,
+      version_description: (version_description as string) ?? "",
+      seq_no_in_branch: previous.metadata.seq_no_in_branch + 1,
+      time_committed_secs: time,
+      parents: { in_branch_parent_id: branch.tip },
+      access_info: structuredClone(candidate.access_info),
+    };
+    // All validation and detached preparation precede these state changes.
+    prepared?.apply();
+    this.versions.set(version.id, {
+      metadata,
+      configuration: structuredClone(candidate),
+    });
+    branch.tip = version.id;
+    branch.metadata.last_committed_at = time;
+    branch.draftCreatedAt = null;
+    this.nextVersion = version.number;
+    this.drafts.delete(branchId);
+    this.clearProcedureDrafts?.(id, branchId);
+    if (this.agent(id).mainBranch?.id === branchId)
+      this.agent(id).configuration = structuredClone(candidate);
+    return structuredClone(candidate);
+  }
+  createBranch(id: string, input: unknown) {
+    this.agent(id);
+    if (
+      !object(input) ||
+      Object.keys(input).some(
+        (k) =>
+          ![
+            "parent_version_id",
+            "name",
+            "description",
+            "conversation_config",
+            "platform_settings",
+            "workflow",
+            "include_draft",
+          ].includes(k),
+      ) ||
+      typeof input.parent_version_id !== "string" ||
+      typeof input.name !== "string" ||
+      !input.name.trim() ||
+      input.name.length > 140 ||
+      typeof input.description !== "string" ||
+      input.description.length > 4096 ||
+      (input.include_draft !== undefined &&
+        typeof input.include_draft !== "boolean")
+    )
+      return invalid();
+    this.version(id, input.parent_version_id);
+    const parent = this.versions.get(input.parent_version_id)!,
+      source = this.branch(id, parent.metadata.branch_id);
+    if (source.metadata.is_archived) return fail(409, "branch_archived");
+    if (
+      [...this.branches.values()].some(
+        (b) => b.metadata.agent_id === id && this.branchName(b) === input.name,
+      )
+    )
+      return fail(409, "branch_name_conflict");
+    if (input.include_draft === true && source.tip !== input.parent_version_id)
+      return fail(409, "draft_parent_not_tip");
+    const {
+      parent_version_id,
+      name,
+      description,
+      include_draft,
+      workflow,
+      ...settings
+    } = input;
+    const candidate = this.settings(parent.configuration, {
+      ...settings,
+      ...(workflow == null ? {} : { workflow }),
+    });
+    const branch = this.allocateBranch(),
+      version = this.allocateVersion(),
+      time = this.time(id);
+    const prepared =
+      input.include_draft === true
+        ? this.procedures?.().preparePublication(
+            id,
+            source.metadata.id,
+            branch.id,
+            candidate.procedures ?? {},
+            undefined,
+            true,
+          )
+        : undefined;
+    if (prepared) candidate.procedures = prepared.refs;
+    candidate.branch_id = branch.id;
+    candidate.version_id = version.id;
+    candidate.main_branch_id = this.agent(id).mainBranch?.id;
+    candidate.metadata.updated_at_unix_secs = time;
+    const metadata: Version = {
+      id: version.id,
+      agent_id: id,
+      branch_id: branch.id,
+      version_description: description as string,
+      seq_no_in_branch: 1,
+      time_committed_secs: time,
+      parents: { out_of_branch_parent_id: parent.metadata.id },
+      access_info: structuredClone(candidate.access_info),
+    };
+    prepared?.apply();
+    this.versions.set(version.id, {
+      metadata,
+      configuration: structuredClone(candidate),
+    });
+    this.branches.set(branch.id, {
+      metadata: {
+        id: branch.id,
+        name: name as string,
+        agent_id: id,
+        description: description as string,
+        created_at: time,
+        last_committed_at: time,
+        is_archived: false,
+        protection_status: "writer_perms_required",
+        auto_rebase: false,
+        access_info: structuredClone(candidate.access_info),
+      },
+      tip: version.id,
+      draftCreatedAt: null,
+      parentBranchId: source.metadata.id,
+    });
+    this.nextBranch = branch.number;
+    this.nextVersion = version.number;
+    return { created_branch_id: branch.id, created_version_id: version.id };
+  }
   private agent(id: string) {
     return this.agents?.().get(id) ?? fail(404, "agent_not_found");
   }
@@ -422,6 +723,7 @@ export class Context {
   deleteDraft(id: string, branchId: string) {
     this.branch(id, branchId);
     this.clearProcedureDrafts?.(id, branchId);
+    this.drafts.delete(branchId);
     this.branch(id, branchId).draftCreatedAt = null;
     return {};
   }

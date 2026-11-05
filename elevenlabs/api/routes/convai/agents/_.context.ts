@@ -14,7 +14,12 @@ import type { BatchFailureResponseModel as Failure } from "../../../types/v1/com
 import type { ResourceAccessInfo } from "../../../types/v1/components/schemas/ResourceAccessInfo.js";
 import type { HTTP_GET_Query as Query } from "../../../types/v1/paths/convai/agents.types.js";
 
-type Result<T> = { value: T; error?: never } | { error: "invalid_agent" | "agent_not_found" | "invalid_agent_query"; value?: never };
+type Result<T> =
+  | { value: T; error?: never }
+  | {
+      error: "invalid_agent" | "agent_not_found" | "invalid_agent_query";
+      value?: never;
+    };
 export type MainBranch = { id: string; name: string };
 export type StoredAgent = {
   configuration: Agent;
@@ -24,7 +29,8 @@ export type StoredAgent = {
 };
 type ObjectValue = Record<string, unknown>;
 const object = (value: unknown): value is ObjectValue => typeof value === "object" && value !== null && !Array.isArray(value);
-const keys = (value: ObjectValue, allowed: string[]) => Object.keys(value).every(key => allowed.includes(key));
+const keys = (value: ObjectValue, allowed: string[]) =>
+  Object.keys(value).every((key) => allowed.includes(key));
 const text = (value: unknown): value is string => typeof value === "string" && !!value.trim();
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(text);
 const optional = (value: ObjectValue, key: string, check: (v: unknown) => boolean) => value[key] === undefined || check(value[key]);
@@ -32,29 +38,155 @@ const models = ["gemini-3.5-flash", "gemini-2.5-flash", "gpt-4o", "gpt-4o-mini"]
 
 // The configuration subset is deliberately explicit; other fields fail rather
 // than being stored as if workflows, versioning or server-side tools ran.
-function validConfig(value: unknown): boolean {
+export function validConversationConfig(value: unknown): boolean {
   if (!object(value) || !keys(value, ["agent", "tts"])) return false;
-  if (value.tts !== undefined && (!object(value.tts) || !keys(value.tts, ["voice_id"]) || !optional(value.tts, "voice_id", text))) return false;
+  if (
+    value.tts !== undefined &&
+    (!object(value.tts) ||
+      !keys(value.tts, [
+        "voice_id",
+        "model_id",
+        "agent_output_audio_format",
+        "stability",
+        "similarity_boost",
+        "speed",
+        "optimize_streaming_latency",
+        "expressive_mode",
+        "pronunciation_dictionary_locators",
+      ]) ||
+      !optional(value.tts, "voice_id", text) ||
+      !optional(value.tts, "model_id", v => ["eleven_turbo_v2","eleven_turbo_v2_5","eleven_flash_v2","eleven_flash_v2_5","eleven_multilingual_v2","eleven_v3_conversational","eleven_v4","eleven_v4_turbo"].includes(String(v))) ||
+      !optional(value.tts, "agent_output_audio_format", (v) =>
+        [
+          "pcm_16000",
+          "pcm_22050",
+          "pcm_24000",
+          "pcm_44100",
+          "pcm_48000",
+          "ulaw_8000",
+        ].includes(String(v)),
+      ) ||
+      !optional(
+        value.tts,
+        "stability",
+        (v) => typeof v === "number" && v >= 0 && v <= 1,
+      ) ||
+      !optional(
+        value.tts,
+        "similarity_boost",
+        (v) => typeof v === "number" && v >= 0 && v <= 1,
+      ) ||
+      !optional(
+        value.tts,
+        "speed",
+        (v) => typeof v === "number" && v >= 0.7 && v <= 1.2,
+      ) ||
+      !optional(
+        value.tts,
+        "optimize_streaming_latency",
+        (v) => Number.isInteger(v) && Number(v) >= 0 && Number(v) <= 4,
+      ) ||
+      !optional(value.tts, "expressive_mode", (v) => typeof v === "boolean") ||
+      !optional(
+        value.tts,
+        "pronunciation_dictionary_locators",
+        (v) => Array.isArray(v) && v.length === 0,
+      ))
+  )
+    return false;
   if (value.agent === undefined) return true;
   const agent = value.agent;
-  if (!object(agent) || !keys(agent, ["first_message", "language", "prompt"]) || !optional(agent, "first_message", v => typeof v === "string") || !optional(agent, "language", text)) return false;
+  if (
+    !object(agent) ||
+    !keys(agent, ["first_message", "language", "prompt"]) ||
+    !optional(agent, "first_message", (v) => typeof v === "string") ||
+    !optional(agent, "language", text)
+  )
+    return false;
   if (agent.prompt === undefined) return true;
   const prompt = agent.prompt;
-  return object(prompt) && keys(prompt, ["prompt", "llm", "temperature", "max_tokens", "tool_ids", "tools"]) &&
-    optional(prompt, "prompt", v => typeof v === "string") && optional(prompt, "llm", v => typeof v === "string" && models.includes(v)) &&
-    optional(prompt, "temperature", v => v === null || typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1) &&
-    optional(prompt, "max_tokens", v => typeof v === "number" && Number.isInteger(v) && (v === -1 || v > 0)) &&
-    optional(prompt, "tool_ids", strings) && optional(prompt, "tools", v => Array.isArray(v) && v.every(validTool));
+  return (
+    object(prompt) &&
+    keys(prompt, [
+      "prompt",
+      "llm",
+      "temperature",
+      "max_tokens",
+      "tool_ids",
+      "tools",
+    ]) &&
+    optional(prompt, "prompt", (v) => typeof v === "string") &&
+    optional(
+      prompt,
+      "llm",
+      (v) => typeof v === "string" && models.includes(v),
+    ) &&
+    optional(
+      prompt,
+      "temperature",
+      (v) =>
+        v === null ||
+        (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1),
+    ) &&
+    optional(
+      prompt,
+      "max_tokens",
+      (v) =>
+        typeof v === "number" && Number.isInteger(v) && (v === -1 || v > 0),
+    ) &&
+    optional(prompt, "tool_ids", strings) &&
+    optional(prompt, "tools", (v) => Array.isArray(v) && v.every(validTool))
+  );
 }
 function validTool(value: unknown): boolean {
-  return object(value) && keys(value, ["type", "name", "description", "expects_response", "response_timeout_secs"]) && value.type === "client" && text(value.name) && typeof value.description === "string" &&
-    optional(value, "expects_response", v => typeof v === "boolean") && optional(value, "response_timeout_secs", v => typeof v === "number" && Number.isFinite(v) && (v >= 1 && v <= 120 || v === -1 && value.expects_response === true));
+  return (
+    object(value) &&
+    keys(value, [
+      "type",
+      "name",
+      "description",
+      "expects_response",
+      "response_timeout_secs",
+    ]) &&
+    value.type === "client" &&
+    text(value.name) &&
+    typeof value.description === "string" &&
+    optional(value, "expects_response", (v) => typeof v === "boolean") &&
+    optional(
+      value,
+      "response_timeout_secs",
+      (v) =>
+        typeof v === "number" &&
+        Number.isFinite(v) &&
+        ((v >= 1 && v <= 120) || (v === -1 && value.expects_response === true)),
+    )
+  );
 }
-const validPlatform = (value: unknown) => object(value) && keys(value, ["archived"]) && optional(value, "archived", v => typeof v === "boolean");
+export const validPlatformSettings = (value: unknown) =>
+  object(value) &&
+  keys(value, ["archived"]) &&
+  optional(value, "archived", (v) => typeof v === "boolean");
 function validBody(value: unknown, patch: boolean): value is ObjectValue {
-  return object(value) && keys(value, ["conversation_config", "platform_settings", "name", "tags"]) &&
-    (patch ? value.conversation_config == null || validConfig(value.conversation_config) : validConfig(value.conversation_config)) &&
-    (value.platform_settings == null || validPlatform(value.platform_settings)) && (value.name == null || text(value.name)) && (value.tags == null || strings(value.tags));
+  return (
+    object(value) &&
+    keys(value, [
+      "conversation_config",
+      "platform_settings",
+      "name",
+      "tags",
+      "workflow",
+    ]) &&
+    (patch
+      ? value.conversation_config == null ||
+        validConversationConfig(value.conversation_config)
+      : validConversationConfig(value.conversation_config)) &&
+    (value.platform_settings == null ||
+      validPlatformSettings(value.platform_settings)) &&
+    (value.name == null || text(value.name)) &&
+    (value.tags == null || strings(value.tags)) &&
+    (value.workflow === undefined ||
+      normalizeWorkflow(value.workflow) !== undefined)
+  );
 }
 // Merge only validated fixed configuration objects. Arrays replace atomically;
 // the sole nested nullable value, temperature, is preserved as an explicit null.
@@ -64,6 +196,96 @@ function merge(base: ObjectValue, patch: ObjectValue): ObjectValue {
     result[key] = object(value) ? merge(object(result[key]) ? result[key] : {}, value) : structuredClone(value);
   }
   return result;
+}
+/** Inert authored start/end workflows only; no execution or generated elements. */
+export function normalizeWorkflow(
+  value: unknown,
+): Agent["workflow"] | undefined {
+  if (
+    !object(value) ||
+    !keys(value, ["nodes", "edges", "prevent_subagent_loops"]) ||
+    !optional(value, "prevent_subagent_loops", (v) => typeof v === "boolean")
+  )
+    return undefined;
+  const nodes = value.nodes ?? { start: { type: "start" } },
+    edges = value.edges ?? {};
+  if (
+    !object(nodes) ||
+    !Object.keys(nodes).length ||
+    !object(edges) ||
+    Object.keys(edges).length
+  )
+    return undefined;
+  const normalized: Record<string, unknown> = {};
+  for (const [id, node] of Object.entries(nodes)) {
+    if (
+      !text(id) ||
+      !object(node) ||
+      !keys(node, ["type", "position", "edge_order", "outcome"]) ||
+      !["start", "end"].includes(String(node.type)) ||
+      !optional(
+        node,
+        "position",
+        (v) =>
+          object(v) &&
+          keys(v, ["x", "y"]) &&
+          typeof v.x === "number" &&
+          Number.isFinite(v.x) &&
+          typeof v.y === "number" &&
+          Number.isFinite(v.y),
+      ) ||
+      !optional(
+        node,
+        "edge_order",
+        (v) => Array.isArray(v) && v.length === 0,
+      ) ||
+      !optional(
+        node,
+        "outcome",
+        (v) =>
+          node.type === "end" && ["success", "failure"].includes(String(v)),
+      )
+    )
+      return undefined;
+    Object.defineProperty(normalized, id, {
+      value: {
+        ...structuredClone(node),
+        position: structuredClone(node.position ?? { x: 0, y: 0 }),
+        edge_order: [],
+        ...(node.type === "end" ? { outcome: node.outcome ?? "success" } : {}),
+      },
+      enumerable: true,
+    });
+  }
+  return {
+    nodes: normalized,
+    edges: {},
+    prevent_subagent_loops: value.prevent_subagent_loops ?? false,
+  } as Agent["workflow"];
+}
+/** Detached candidate shared by mutation and ad-hoc configuration consumers. */
+export function applyAgentSettings(
+  base: Agent,
+  input: unknown,
+): Agent | undefined {
+  if (!validBody(input, true)) return undefined;
+  const candidate = structuredClone(base);
+  if (input.name != null) candidate.name = input.name as string;
+  if (input.tags != null)
+    candidate.tags = structuredClone(input.tags as string[]);
+  if (input.conversation_config != null)
+    candidate.conversation_config = merge(
+      candidate.conversation_config as ObjectValue,
+      input.conversation_config as ObjectValue,
+    );
+  if (input.platform_settings != null)
+    candidate.platform_settings = merge(
+      (candidate.platform_settings as ObjectValue) ?? {},
+      input.platform_settings as ObjectValue,
+    );
+  if (input.workflow !== undefined)
+    candidate.workflow = normalizeWorkflow(input.workflow);
+  return candidate;
 }
 export class Context {
   nextMedia = 0;
@@ -423,10 +645,32 @@ export class Context {
   knowledgeBase?:()=>import("../knowledge-base/_.context.js").Context;
   queryKnowledgeBase(id:string,input:unknown,branchId?:string|null){if(!this.knowledgeBase)throw new Error("Run startup or reset");return this.knowledgeBase().queryAgent(id,input,branchId);}
   lifecycle?: import("./{agent_id}/branches/_.context.js").Context;
+  resources?: () => {
+    voices: Map<string, unknown>;
+    models: Map<string, unknown>;
+  };
+  validateDependencies(configuration: Agent) {
+    const resources = this.resources?.(), tts = configuration.conversation_config.tts;
+    if (resources && ((!tts?.voice_id || !resources.voices.has(tts.voice_id)) || (tts.model_id && !resources.models.has(tts.model_id)))) return false;
+    return !configuration.procedures || (this.lifecycle?.procedures?.().validReferences(configuration.agent_id,configuration.procedures) ?? false);
+  }
+  /** Detached candidate including canonical live resource and published procedure checks. */
+  prepareConfiguration(base:Agent,input:unknown): Agent | undefined {
+    const candidate=applyAgentSettings(base,input);
+    return candidate && this.validateDependencies(candidate) ? candidate : undefined;
+  }
   agents = new Map<string, StoredAgent>();
   nextAgentNumber = 0;
   nextMutationNumber = 0;
-  defaults?: { name: string; voiceId: string; userId: string; timeUnix: number; accessInfo: ResourceAccessInfo };
+  defaults?: {
+    name: string;
+    voiceId: string;
+    userId: string;
+    timeUnix: number;
+    accessInfo: ResourceAccessInfo;
+    conversationConfig?: Agent["conversation_config"];
+    workflow?: Agent["workflow"];
+  };
 
   private settings() {
     if (!this.defaults) throw new Error("Agent defaults are not initialized; run startup or reset");
@@ -515,45 +759,108 @@ export class Context {
   createAgent(input: unknown): Result<{ agent_id: string }> {
     if (!validBody(input, false)) return { error: "invalid_agent" };
     const defaults = this.settings();
-    let agent_id: string;
-    do { agent_id = `sim-agent-created-${++this.nextAgentNumber}`; } while (this.agents.has(agent_id));
-    const time = defaults.timeUnix + ++this.nextMutationNumber;
-    const configuration = {
-      agent_id, name: input.name ?? defaults.name,
-      conversation_config: merge({ tts: { voice_id: defaults.voiceId } }, input.conversation_config as ObjectValue),
-      platform_settings: input.platform_settings ?? {}, tags: input.tags ?? [],
-      metadata: { created_at_unix_secs: time, updated_at_unix_secs: time }, access_info: defaults.accessInfo,
-    } as Agent;
-    this.agents.set(agent_id, { configuration: structuredClone(configuration), creatorUserId: defaults.userId });
+    const candidate = applyAgentSettings(
+      {
+        agent_id: "",
+        name: defaults.name,
+        conversation_config: structuredClone(
+          defaults.conversationConfig ?? {
+            tts: { voice_id: defaults.voiceId },
+          },
+        ),
+        platform_settings: {},
+        tags: [],
+        workflow: structuredClone(defaults.workflow),
+        metadata: { created_at_unix_secs: 0, updated_at_unix_secs: 0 },
+        access_info: structuredClone(defaults.accessInfo),
+      },
+      input,
+    )!;
+    if (!this.validateDependencies(candidate))
+      return { error: "invalid_agent" };
+    let number = this.nextAgentNumber,
+      agent_id: string;
+    do {
+      agent_id = `sim-agent-created-${++number}`;
+    } while (this.agents.has(agent_id));
+    const time = defaults.timeUnix + this.nextMutationNumber + 1;
+    candidate.agent_id = agent_id;
+    candidate.metadata = {
+      created_at_unix_secs: time,
+      updated_at_unix_secs: time,
+    };
+    const record = { configuration:candidate,creatorUserId:defaults.userId };
+    this.lifecycle?.initializeAgent(agent_id,record);
+    this.agents.set(agent_id,record);
+    this.nextAgentNumber = number;
+    this.nextMutationNumber++;
     return { value: { agent_id } };
   }
-  updateAgent(id: string, input: unknown): Result<Agent> {
+  updateAgent(
+    id: string,
+    input: unknown = {},
+    branchId?: string | null,
+  ): Result<Agent> {
     const record = this.agents.get(id);
     if (!record) return { error: "agent_not_found" };
-    if (!validBody(input, true)) return { error: "invalid_agent" };
-    const candidate = structuredClone(record.configuration);
-    if (input.name != null) candidate.name = input.name as string;
-    if (input.tags != null) candidate.tags = structuredClone(input.tags as string[]);
-    if (input.conversation_config != null) candidate.conversation_config = merge(candidate.conversation_config as ObjectValue, input.conversation_config as ObjectValue);
-    if (input.platform_settings != null) candidate.platform_settings = merge(candidate.platform_settings as ObjectValue ?? {}, input.platform_settings as ObjectValue);
-    if (JSON.stringify(candidate) !== JSON.stringify(record.configuration)) candidate.metadata.updated_at_unix_secs = this.settings().timeUnix + ++this.nextMutationNumber;
+    if (this.lifecycle && record.mainBranch)
+      return {
+        value: this.lifecycle.publish(
+          id,
+          branchId ?? record.mainBranch.id,
+          input,
+        ),
+      };
+    if (!object(input)) return { error: "invalid_agent" };
+    const { version_description, procedures, ...settings } = input;
+    if (version_description != null || procedures != null)
+      return { error: "invalid_agent" };
+    const candidate = this.prepareConfiguration(record.configuration, settings);
+    if (!candidate)
+      return { error: "invalid_agent" };
+    if (JSON.stringify(candidate) !== JSON.stringify(record.configuration))
+      candidate.metadata.updated_at_unix_secs =
+        this.settings().timeUnix + ++this.nextMutationNumber;
     this.agents.set(id, { ...record, configuration: candidate });
     return { value: structuredClone(candidate) };
   }
-  duplicateAgent(id: string, input: unknown = {}): Result<{ agent_id: string }> {
+  duplicateAgent(
+    id: string,
+    input: unknown = {},
+  ): Result<{ agent_id: string }> {
     const original = this.getAgent(id);
     if (!original) return { error: "agent_not_found" };
-    if (!object(input) || !keys(input, ["name"]) || input.name != null && !text(input.name)) return { error: "invalid_agent" };
+    if (
+      !object(input) ||
+      !keys(input, ["name"]) ||
+      (input.name != null && !text(input.name))
+    )
+      return { error: "invalid_agent" };
     // Stored configuration has already been validated by its owning operation.
     // Copy it directly so references added by other domains are preserved.
     const defaults = this.settings();
-    let agent_id: string;
-    do { agent_id = `sim-agent-created-${++this.nextAgentNumber}`; } while (this.agents.has(agent_id));
-    const time = defaults.timeUnix + ++this.nextMutationNumber;
-    const {branch_id: _branch, version_id: _version, main_branch_id: _main, ...copied} = original;
-    const configuration: Agent = { ...copied, agent_id, name: input.name as string ?? `${original.name} (copy)`,
-      metadata: { created_at_unix_secs: time, updated_at_unix_secs: time }, access_info: structuredClone(defaults.accessInfo) };
-    this.agents.set(agent_id, { configuration, creatorUserId: defaults.userId, media: structuredClone(this.agents.get(id)!.media) });
+    let number = this.nextAgentNumber, agent_id: string;
+    do {
+      agent_id = `sim-agent-created-${++number}`;
+    } while (this.agents.has(agent_id));
+    const time = defaults.timeUnix + this.nextMutationNumber + 1;
+    const {
+      branch_id: _branch,
+      version_id: _version,
+      main_branch_id: _main,
+      ...copied
+    } = original;
+    const configuration: Agent = {
+      ...copied,
+      agent_id,
+      name: (input.name as string) ?? `${original.name} (copy)`,
+      metadata: { created_at_unix_secs: time, updated_at_unix_secs: time },
+      access_info: structuredClone(defaults.accessInfo),
+    };
+    const record = {configuration,creatorUserId:defaults.userId,media:structuredClone(this.agents.get(id)!.media)};
+    this.lifecycle?.initializeAgent(agent_id,record,id);
+    this.agents.set(agent_id,record);
+    this.nextAgentNumber = number; this.nextMutationNumber++;
     return { value: { agent_id } };
   }
   deleteAgent(id: string) { return this.agents.delete(id); }

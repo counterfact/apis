@@ -9,6 +9,8 @@ export const emptyAgentProcedures: Scenario = ($) => {
   c.versions = new Map();
   c.working = new Map();
   c.nextProcedure = 0;
+  c.nextPublishedVersion = 0;
+  lifecycle.procedures = () => c;
   lifecycle.clearProcedureDrafts = (agentId, branchId) =>
     c.clearBranchDrafts(agentId, branchId);
   for (const record of $.loadContext("/convai/agents").agents.values())
