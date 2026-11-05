@@ -2,12 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Context } from "../api/routes/_.context.js";
 import * as scenarios from "../api/scenarios/index.js";
-import type { Scenario } from "../api/types/index.js";
+import { runScenario } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
-
-async function runScenario(context: Context, scenario: Scenario) {
-  await scenario({ context, loadContext: () => { throw new Error("Unused by account scenarios"); }, routes: {}, route: () => undefined });
-}
 
 test("account reads require initialization and return isolated, consistent state", async () => {
   const context = new Context();

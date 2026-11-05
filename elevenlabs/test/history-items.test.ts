@@ -2,33 +2,31 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Context } from "../api/routes/_.context.js";
 import { startup, reset } from "../api/scenarios/index.js";
-import type { Scenario } from "../api/types/index.js";
+import { createScenarioRunner } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
 
-async function runScenario(context: Context, scenario: Scenario) {
-  await scenario({ context, loadContext: () => { throw new Error("Unused by history scenarios"); }, routes: {}, route: () => undefined });
-}
-
 test("history item reads isolate nested state and deletion affects only history", async () => {
-  const context = new Context();
+  const root = new Context();
+  const runner = await createScenarioRunner(root);
+  const context = runner.loadContext("/history");
   assert.equal(context.getHistoryItem("missing"), undefined);
   assert.equal(context.deleteHistoryItem("missing"), false);
-  await runScenario(context, startup);
+  await runner.run(startup);
   const item = context.getHistoryItem("sim-history-1")!;
   assert.equal(item.history_item_id, "sim-history-1");
   item.settings!.stability = 99;
   assert.equal(context.getHistoryItem("sim-history-1")!.settings!.stability, 0.5);
-  const voices = context.listVoices();
-  const models = context.listModels();
-  const account = context.getUser();
+  const voices = root.listVoices();
+  const models = root.listModels();
+  const account = root.getUser();
   assert.equal(context.deleteHistoryItem("sim-history-1"), true);
   assert.equal(context.deleteHistoryItem("sim-history-1"), false);
   assert.equal(context.getHistoryItem("sim-history-1"), undefined);
   assert.deepEqual(context.listHistory({}).page!.history.map((value) => value.history_item_id), ["sim-history-2"]);
-  assert.deepEqual(context.listVoices(), voices);
-  assert.deepEqual(context.listModels(), models);
-  assert.deepEqual(context.getUser(), account);
-  await runScenario(context, reset);
+  assert.deepEqual(root.listVoices(), voices);
+  assert.deepEqual(root.listModels(), models);
+  assert.deepEqual(root.getUser(), account);
+  await runner.run(reset);
   assert.equal(context.getHistoryItem("sim-history-1")!.text, item.text);
 });
 

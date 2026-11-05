@@ -183,6 +183,18 @@ npm test
 ```
 
 Generation reads both local contracts and preserves authored handlers.
+History state and operations live in `api/routes/history/_.context.ts`; the root
+context owns voices, models, and account data. History scenarios load their own
+context with `$.loadContext("/history")`, and `reset` orchestrates both contexts.
+`test-support/scenarios.ts` discovers real context classes for direct tests, so
+new route contexts participate in scenario setup without custom test registries.
+
+The generator currently types a collection handler such as `routes/history.ts`
+using its parent directory's context, while the runtime resolves `/history` to
+the nested history context. That handler uses an explicit context type assertion
+at this boundary. Descendant handler types and scenario context overloads are
+regenerated from the local configuration; generated files are not edited by hand.
+
 Tests verify spec provenance, version routing, and shared voice behavior over
 Counterfact’s Dispatcher, plus context state transitions, model catalog isolation,
 account quota and voice-slot consistency, and listing rules directly.

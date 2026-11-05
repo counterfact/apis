@@ -2,21 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Context, defaultSettings } from "../api/routes/_.context.js";
 import { reset, startup } from "../api/scenarios/index.js";
-import type { Scenario } from "../api/types/index.js";
+import { runScenario } from "../test-support/scenarios.js";
 import type { HTTP_GET_Query } from "../api/types/v2/paths/voices.types.js";
-
-async function runScenario(context: Context, scenario: Scenario) {
-  await scenario({
-    context,
-    loadContext: () => {
-      throw new Error("Unused by voice scenarios");
-    },
-    routes: {},
-    route: () => {
-      throw new Error("Unused by voice scenarios");
-    },
-  });
-}
 
 test("voice state is isolated from returned objects and reset restores defaults", async () => {
   const context = new Context();

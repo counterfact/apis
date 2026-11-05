@@ -2,21 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Context } from "../api/routes/_.context.js";
 import { reset, startup } from "../api/scenarios/index.js";
-import type { Scenario } from "../api/types/index.js";
+import { runScenario } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
-
-async function runScenario(context: Context, scenario: Scenario) {
-  await scenario({
-    context,
-    loadContext: () => {
-      throw new Error("Unused by catalog scenarios");
-    },
-    routes: {},
-    route: () => {
-      throw new Error("Unused by catalog scenarios");
-    },
-  });
-}
 
 const expectedIds = ["eleven_multilingual_v2", "eleven_flash_v2_5"];
 

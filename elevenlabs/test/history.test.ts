@@ -2,17 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Context } from "../api/routes/_.context.js";
 import * as scenarios from "../api/scenarios/index.js";
-import type { Scenario } from "../api/types/index.js";
+import { createScenarioRunner } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
 
-async function runScenario(context: Context, scenario: Scenario) {
-  await scenario({ context, loadContext: () => { throw new Error("Unused by history scenarios"); }, routes: {}, route: () => undefined });
-}
-
 test("history listing filters and paginates isolated copies of scenario state", async () => {
-  const context = new Context();
+  const root = new Context();
+  const runner = await createScenarioRunner(root);
+  const context = runner.loadContext("/history");
   assert.deepEqual(context.listHistory({}).page?.history, []);
-  await runScenario(context, scenarios.startup);
+  await runner.run(scenarios.startup);
   const baseline = context.listHistory({}).page!;
   assert.deepEqual(baseline.history.map((item) => item.history_item_id), ["sim-history-2", "sim-history-1"]);
   baseline.history[0].settings!.stability = 99;
@@ -31,9 +29,9 @@ test("history listing filters and paginates isolated copies of scenario state", 
   assert.deepEqual(context.listHistory({ voice_id: "missing" }).page!.history, []);
   for (const page_size of [0, 1001, 1.5]) assert.equal(typeof context.listHistory({ page_size }).error, "string");
   assert.equal(typeof context.listHistory({ start_after_history_item_id: "missing" }).error, "string");
-  await runScenario(context, scenarios.emptyHistory);
+  await runner.run(scenarios.emptyHistory);
   assert.deepEqual(context.listHistory({}).page!.history, []);
-  await runScenario(context, scenarios.reset);
+  await runner.run(scenarios.reset);
   assert.equal(context.listHistory({}).page!.history.length, 2);
 });
 
