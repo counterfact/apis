@@ -2,6 +2,7 @@ import type { Scenario } from "../types/index.js";
 export const emptyConversations: Scenario = ($) => {
   const context = $.loadContext("/convai/conversations");
   context.conversations = new Map();
+  $.loadContext("/convai/users").conversations = () => context.conversations;
   context.sipMessages = new Map();
   context.references = new Map();
   context.workspaceId = "sim-workspace";
@@ -26,4 +27,25 @@ export const resetConversations: Scenario = ($) => {
     {call_id: "sim-conversation-call-1", phone_numbers: ["+15005550002"], local_address: "192.0.2.10:5060", remote_address: "198.51.100.10:5060", transport: "udp", raw_message: "INVITE sip:sim@example.invalid SIP/2.0\r\n", error_message: "", direction: "in", created_at_unix_micro: 1_735_689_602_000_000},
     {call_id: "sim-conversation-call-2", phone_numbers: ["+15005550002"], local_address: "192.0.2.10:5060", remote_address: "198.51.100.10:5060", transport: "udp", raw_message: "SIP/2.0 200 OK\r\n", error_message: "", direction: "out", created_at_unix_micro: 1_735_689_603_000_000},
   ]]]);
+};
+
+/** Add repeat contacts and an anonymous record without changing baseline records. */
+export const conversationUserContacts: Scenario = ($) => {
+  const c = $.loadContext("/convai/conversations");
+  const base = c.conversations.get("sim-conversation");
+  if (!base) throw new Error("Run reset before conversationUserContacts");
+  for (const [id, time, branch] of [
+    ["sim-conversation-first", 1735689599, undefined],
+    ["sim-conversation-latest", 1735689604, "sim-branch"],
+  ] as const) {
+    const record = structuredClone(base);
+    record.conversation_id = id;
+    record.metadata.start_time_unix_secs = time;
+    record.branch_id = branch;
+    c.conversations.set(id, record);
+  }
+  const anonymous = structuredClone(base);
+  anonymous.conversation_id = "sim-conversation-anonymous";
+  anonymous.user_id = null;
+  c.conversations.set(anonymous.conversation_id, anonymous);
 };

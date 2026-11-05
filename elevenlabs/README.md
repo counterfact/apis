@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 249 now have authored
-behavior. The remaining 188 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 250 now have authored
+behavior. The remaining 187 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1633,3 +1633,36 @@ preset and text-only/file-input metadata to `sim-agent`; reset restores the base
 agent configuration. Fixtures and this setup action live in `api/scenarios/agents.ts`.
 Agent create/PATCH remain generated due to Counterfact #2613. Contracts and request
 and response validation remain unchanged.
+
+
+## Conversation users
+
+`GET /v1/convai/users` derives distinct nonempty user IDs from current historical
+conversation records. Each user contains the filtered conversation count, earliest
+and latest start times, and the latest conversation's stored agent ID/name.
+Deleting conversations updates these aggregates immediately; deleting agents
+preserves historical names. No separate user collection is seeded or maintained.
+The users context reads a live conversation accessor wired by the conversation
+startup/reset scenarios, so replacing the conversation map is reflected immediately.
+
+Agent ID, branch ID, exact user-ID search, and inclusive before/after start-time
+bounds combine before grouping. Empty filters are exact values. Sorting supports
+`last_contact_unix_secs` (default) or `conversation_count`, descending by default,
+with ascending user-ID ties. Equal latest-contact times choose the ascending
+conversation ID. Decimal-offset cursors paginate after sorting, with page size
+1–100 (default 30); offsets beyond the end return an empty page. Invalid queries
+return 400 without changing records. Nullable integer query text receives strict
+normalization for the installed runtime's #2612 limitation.
+
+Conversation records have no sentiment scoring, so required sentiment fields
+contain zero scored counts and null averages; frustrated-conversation references
+are empty. `sort_by=average_sentiment_score` returns 400 explicitly. Speech-engine
+aliases beginning `seng_` also return 400: the simulator has no canonical mapping
+between speech engines and historical agent IDs. Other agent IDs match historical
+records exactly, including deleted agents. No sentiment analysis or AI work runs.
+
+Run `.scenario conversationUserContacts` after reset to add two repeat contacts
+and one anonymous conversation for discovery testing. The setup replaces only
+its own records; `reset` removes them and restores baseline contacts.
+`emptyConversations` clears users too, and instances isolate their state.
+These filter bounds, ties, unscored values and errors are local simulator behavior.

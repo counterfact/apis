@@ -18,6 +18,7 @@ import type { Context as ConvaiSettingsContext } from "../routes/convai/settings
 import type { Context as ConvaiTagsContext } from "../routes/convai/tags/_.context";
 import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.context";
 import type { Context as ConvaiTriageTicketsContext } from "../routes/convai/triage-tickets/_.context";
+import type { Context as ConvaiUsersContext } from "../routes/convai/users/_.context";
 import type { Context as ConvaiV2Context } from "../routes/convai/v2/_.context";
 import type { Context as DubbingProjectContext } from "../routes/dubbing/project/_.context";
 import type { Context as DubbingResourceContext } from "../routes/dubbing/resource/_.context";
@@ -94,6 +95,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/convai/triage-tickets" | `/convai/triage-tickets/${string}`,
   ): ConvaiTriageTicketsContext;
+  loadContext(
+    path: "/convai/users" | `/convai/users/${string}`,
+  ): ConvaiUsersContext;
   loadContext(path: "/convai/v2" | `/convai/v2/${string}`): ConvaiV2Context;
   loadContext(
     path: "/dubbing/project" | `/dubbing/project/${string}`,
