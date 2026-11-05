@@ -1,3 +1,5 @@
+import {resetWorkspaceRecords} from "./workspace-records.js";
+export {emptyWorkspaceRecords} from "./workspace-records.js";
 import {resetDubbingResources} from "./dubbing-resources.js";
 export {emptyDubbingResources} from "./dubbing-resources.js";
 import {resetDubbingProjects} from "./dubbing-projects.js";
@@ -72,6 +74,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetWorkspaceRecords($);
   resetDubbingProjects($);
   resetDubbingResources($);
   resetFlowGenerations($);

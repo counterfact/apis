@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 242 now have authored
-behavior. The remaining 195 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 247 now have authored
+behavior. The remaining 190 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1564,3 +1564,46 @@ rules are local simulator conventions. Optional speaker bodies should be sent as
 `{}` because absent bodies remain affected by Counterfact #2614. Transcription,
 translation, dubbing, rendering and similar-voice routes remain generated and
 uncounted. No audio, cloning, provider request, billing or network fetch occurs.
+
+
+## Workspace resource administration and historical records
+
+Five workspace operations now expose deterministic local metadata: resource reads,
+share/unshare, audit logs and API-request history. Resource sharing supports live
+voices and voice collections; other resource types return 400 explicitly. Resource
+names and existence follow their canonical contexts, including deletion and reset.
+Sharing does not change voice ownership or enforce authentication/permissions.
+The local creator is `sim-member-narrator` and always retains admin access.
+
+Exactly one user email, group ID (including `default`) or service-account key ID
+must be supplied. Emails resolve current workspace members. The canonical service
+account model has no email; target those accounts by a live key ID. Key targeting
+grants the associated account, and its grant survives deletion of every key while
+the account exists. Deleted principals disappear from projections. Each direct
+grant replaces that principal's previous role; unsharing an ungranted principal
+succeeds, while removing/downgrading the creator returns 409. Unknown resources or
+principals return 404, and invalid requests leave grants unchanged. Share options
+list ungranted live principals once each. Baseline group grants are returned as
+metadata without calculating effective group permissions. Reads are defensive copies.
+
+Audit logs and request tables are synthetic historical records, independent of
+current request traffic and other domain mutations. Startup/reset populate two
+of each in `api/scenarios/workspace-records.ts`. Context containers start empty;
+`emptyWorkspaceRecords` clears history and grants, preserving live resource data.
+All simulator instances isolate changes; reset restores records and removes grants.
+
+Audit logs filter by actor, class, activity and inclusive millisecond time bounds,
+then sort newest first with ascending ID ties. Decimal-offset cursors paginate
+1–100 entries (default 50); invalid cursors/bounds return 400. Nullable numeric
+query values receive strict normalization for Counterfact #2612.
+
+Request history requires at least one start/end bound (milliseconds from 2020),
+uses inclusive bounds, and returns up to 1–1000 rows (default 100). Sorting defaults
+to descending with an end bound, otherwise ascending; explicit `asc`/`desc` overrides
+it, with request ID ties ascending. The fixed columns are timestamp, request_id,
+method, path, status_code and user_id. Case-insensitive substring search checks all
+columns. Column filters combine with AND and support in/not_in, eq/neq and ordered
+comparisons; values must match the local numeric/string column types. Unsupported
+columns and invalid filters return 400. These table, sharing, ordering and error
+rules are local simulator conventions. No universal audit capture or provider
+request occurs, and contracts/validation remain unchanged.

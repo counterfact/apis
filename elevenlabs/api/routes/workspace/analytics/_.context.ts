@@ -2,11 +2,168 @@ import type { Body_Get_Workspace_Usage_v1_workspace_analytics_query_usage_by_pro
 import type { WorkspaceAnalyticsQueryResponseModel as UsageTable } from "../../../types/v1/components/schemas/WorkspaceAnalyticsQueryResponseModel.js";
 
 type Group = "product_type" | "model" | "voice_id" | "user_id";
-export type UsageRecord = Record<Group, string> & { time: number; credits: number };
-type UsageResult = { value: UsageTable; error?: never } | { value?: never; error: string };
-const groups = new Set<string>(["product_type", "model", "voice_id", "user_id"]);
+export type UsageRecord = Record<Group, string> & {
+  time: number;
+  credits: number;
+};
+type UsageResult =
+  { value: UsageTable; error?: never } | { value?: never; error: string };
+const groups = new Set<string>([
+  "product_type",
+  "model",
+  "voice_id",
+  "user_id",
+]);
 
 export class Context {
+  requests: Array<{
+    timestamp: number;
+    request_id: string;
+    method: string;
+    path: string;
+    status_code: number;
+    user_id: string;
+  }> = [];
+  listRequests(input: unknown): UsageTable {
+    const invalid = (): never => {
+      throw Object.assign(
+        new Error("Invalid or unsupported local request query"),
+        {
+          name: "WorkspaceRequestError",
+          status: 400,
+          code: "invalid_request_query",
+        },
+      );
+    };
+    if (!input || typeof input !== "object" || Array.isArray(input))
+      return invalid();
+    const q = input as Record<string, unknown>;
+    if (
+      Object.keys(q).some(
+        (k) =>
+          ![
+            "start_time",
+            "end_time",
+            "limit",
+            "sort",
+            "filters",
+            "search",
+          ].includes(k),
+      )
+    )
+      return invalid();
+    const time = (v: unknown) =>
+      v == null
+        ? null
+        : typeof v === "number" && Number.isSafeInteger(v) && v >= 1577836800000
+          ? v
+          : invalid();
+    const start = time(q.start_time),
+      end = time(q.end_time),
+      limit = q.limit ?? 100,
+      sort = q.sort ?? (end === null ? "asc" : "desc");
+    if (
+      (start === null && end === null) ||
+      (start !== null && end !== null && start > end) ||
+      !Number.isInteger(limit) ||
+      Number(limit) < 1 ||
+      Number(limit) > 1000 ||
+      !["asc", "desc"].includes(String(sort)) ||
+      (q.search != null && typeof q.search !== "string")
+    )
+      return invalid();
+    const columns = [
+      "timestamp",
+      "request_id",
+      "method",
+      "path",
+      "status_code",
+      "user_id",
+    ];
+    const predicates: Array<(r: (typeof this.requests)[number]) => boolean> =
+      [];
+    if (q.filters != null) {
+      if (!Array.isArray(q.filters)) return invalid();
+      for (const f of q.filters) {
+        if (
+          !f ||
+          typeof f !== "object" ||
+          !columns.includes(f.column) ||
+          !["in", "not_in", "le", "ge", "lt", "gt", "eq", "neq"].includes(
+            f.operation,
+          ) ||
+          !Array.isArray(f.values) ||
+          !f.values.length
+        )
+          return invalid();
+        const numeric = ["timestamp", "status_code"].includes(f.column);
+        if (
+          f.values.some((v: unknown) =>
+            numeric
+              ? typeof v !== "number" || !Number.isFinite(v)
+              : typeof v !== "string",
+          ) ||
+          (!["in", "not_in"].includes(f.operation) && f.values.length !== 1)
+        )
+          return invalid();
+        predicates.push((r) => {
+          const value = (r as unknown as Record<string, string | number>)[
+              f.column
+            ],
+            v = f.values[0];
+          switch (f.operation) {
+            case "in":
+              return f.values.includes(value);
+            case "not_in":
+              return !f.values.includes(value);
+            case "eq":
+              return value === v;
+            case "neq":
+              return value !== v;
+            case "le":
+              return value <= v;
+            case "ge":
+              return value >= v;
+            case "lt":
+              return value < v;
+            case "gt":
+              return value > v;
+            default:
+              return false;
+          }
+        });
+      }
+    }
+    const search = String(q.search ?? "").toLowerCase();
+    const rows = this.requests
+      .filter(
+        (r) =>
+          (start === null || r.timestamp >= start) &&
+          (end === null || r.timestamp <= end) &&
+          predicates.every((p) => p(r)) &&
+          Object.values(r).some((v) =>
+            String(v).toLowerCase().includes(search),
+          ),
+      )
+      .sort(
+        (a, b) =>
+          (sort === "asc" ? 1 : -1) * (a.timestamp - b.timestamp) ||
+          a.request_id.localeCompare(b.request_id),
+      )
+      .slice(0, Number(limit))
+      .map((r) =>
+        columns.map(
+          (k) => (r as unknown as Record<string, string | number>)[k],
+        ),
+      );
+    return {
+      columns,
+      column_types: ["DateTime", "String", "String", "String", "Int", "String"],
+      column_units: ["ms", null, null, null, null, null],
+      rows,
+    };
+  }
+
   usage: UsageRecord[] = [];
 
   queryUsage(query: UsageQuery): UsageResult {
