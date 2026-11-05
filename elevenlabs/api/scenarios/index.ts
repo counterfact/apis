@@ -49,8 +49,8 @@ import { resetFlowTemplates } from "./flow-templates.js";
 export { emptyFlowTemplates } from "./flow-templates.js";
 import {resetFlowGenerations} from "./flows.js";
 export {emptyFlowGenerations,startFlowGenerations,completeFlowGenerations,failFlowGenerations} from "./flows.js";
-import {resetProductionOrders} from "./productions.js";
-export {emptyProductionOrders,completeProductionOrders} from "./productions.js";
+import {resetProductionOrders, productionMediaSources} from "./productions.js";
+export {emptyProductionOrders,completeProductionOrders,productionMediaSources} from "./productions.js";
 import { resetAudioNative } from "./audio-native.js";
 export { emptyAudioNative, completeAudioNative } from "./audio-native.js";
 import { resetStudioProjects } from "./studio-projects.js";
@@ -174,6 +174,7 @@ export const reset: Scenario = ($) => {
   resetHistory($);
   resetAccount($);
   resetBoundedSpeech($);
+  productionMediaSources($);
   historyAudioFixtures($);
   resetBoundedSound($);
   resetBoundedMusic($);

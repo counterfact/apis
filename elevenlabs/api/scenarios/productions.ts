@@ -2,6 +2,9 @@ import type { Scenario } from "../types/index.js";
 export const emptyProductionOrders: Scenario = ($) => {
   const c = $.loadContext("/productions/orders");
   c.orders = new Map();
+  c.nextMediaId = 1;
+  c.mediaSources = new Map();
+  c.uploadDefaults = { maxBytes: 1_048_576, maxName: 240 };
   c.nextOrderId = 1;
   c.nextItemId = 1;
   c.timestamp = "2025-01-01T00:00:00Z";
@@ -82,4 +85,20 @@ export const completeProductionOrders: Scenario = ($) => {
       },
     ];
   }
+};
+
+/** Copy the previously decoded bounded speech fixture; no remote fetching occurs. */
+export const productionMediaSources: Scenario = ($) => {
+  const data = new Uint8Array($.loadContext("/text-to-speech").audio);
+  $.loadContext("/productions/orders").mediaSources = new Map([
+    [
+      "https://simulator.invalid/production-source.mp3",
+      {
+        data,
+        size: data.byteLength,
+        filename: "production-source.mp3",
+        contentType: "audio/mpeg",
+      },
+    ],
+  ]);
 };

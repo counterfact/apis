@@ -1,3 +1,5 @@
+import type { MultipartFile } from "../../../counterfact-types/index.js";
+import { copyUpload } from "../../assets/_.context.js";
 import type { OrderResponse } from "../../../types/v1/components/schemas/OrderResponse.js";
 import type { OrderMediaResponse } from "../../../types/v1/components/schemas/OrderMediaResponse.js";
 import type { DeliverableInfo } from "../../../types/v1/components/schemas/DeliverableInfo.js";
@@ -5,7 +7,7 @@ import type { LanguagesResponse } from "../../../types/v1/components/schemas/Lan
 import type { UpsertOrderItemRequest } from "../../../types/v1/components/schemas/UpsertOrderItemRequest.js";
 export type StoredOrder = {
   metadata: OrderResponse;
-  media: Map<string, OrderMediaResponse>;
+  media: Map<string, OrderMediaResponse & { upload?: MultipartFile }>;
   deliverables: DeliverableInfo[];
 };
 type Obj = Record<string, unknown>;
@@ -41,6 +43,9 @@ const states = [
 export class Context {
   orders = new Map<string, StoredOrder>();
   languages = new Map<string, LanguagesResponse>();
+  nextMediaId = 0;
+  uploadDefaults: { maxBytes: number; maxName: number } | undefined;
+  mediaSources = new Map<string, MultipartFile>();
   nextOrderId = 1;
   nextItemId = 1;
   timestamp = "";
@@ -160,10 +165,91 @@ export class Context {
     return { name: o.metadata.name };
   }
   media(id: string, media: string) {
-    return structuredClone(
+    const record =
       this.stored(id).media.get(media) ??
-        fail(404, "production_media_not_found", "Media not found on order"),
+      fail(404, "production_media_not_found", "Media not found on order");
+    const { upload, ...metadata } = record;
+    return structuredClone(metadata);
+  }
+  mediaUpload(id: string, media: string) {
+    this.media(id, media);
+    const upload = this.stored(id).media.get(media)!.upload;
+    return upload ? structuredClone(upload) : undefined;
+  }
+  registerMedia(id: string, value: unknown) {
+    const order = this.open(id),
+      config = this.uploadDefaults;
+    if (
+      !config ||
+      !object(value) ||
+      typeof value.declared_language !== "string" ||
+      Object.keys(value).some(
+        (key) =>
+          ![
+            "declared_language",
+            "media",
+            "media_url",
+            "media_url_filename",
+            "media_url_content_type",
+          ].includes(key),
+      )
+    )
+      return invalid();
+    const language = value.declared_language;
+    const supported = [...this.languages.values()].some((entry) =>
+      entry.kind === "single"
+        ? entry.languages.some((l) => l.code === language)
+        : entry.language_pairs.some(
+            (pair) => pair.source_language.code === language,
+          ),
     );
+    if (!supported || (value.media != null) === (value.media_url != null))
+      return invalid();
+    let source: unknown = value.media;
+    if (value.media_url != null) {
+      if (
+        typeof value.media_url !== "string" ||
+        typeof value.media_url_filename !== "string" ||
+        typeof value.media_url_content_type !== "string"
+      )
+        return invalid();
+      const fixture =
+        this.mediaSources.get(value.media_url) ??
+        fail(
+          400,
+          "unsupported_production_media_source",
+          "Only configured local URL sources are supported",
+        );
+      if (value.media_url_content_type !== fixture.contentType)
+        return invalid();
+      source = { ...fixture, filename: value.media_url_filename };
+    } else if (
+      value.media_url_filename != null ||
+      value.media_url_content_type != null
+    )
+      return invalid();
+    let upload: MultipartFile;
+    try {
+      upload = copyUpload(source, config.maxBytes, config.maxName);
+    } catch {
+      return invalid();
+    }
+    if (!/^(audio|video)\//.test(upload.contentType)) return invalid();
+    let next = this.nextMediaId;
+    const exists = (key: string) =>
+      [...this.orders.values()].some((o) => o.media.has(key));
+    while (exists(`prodmedia_${String(next).padStart(26, "0")}`)) next++;
+    const media_id = `prodmedia_${String(next).padStart(26, "0")}`;
+    order.media.set(media_id, {
+      media_id,
+      name: upload.filename,
+      content_type: upload.contentType,
+      language,
+      signed_url: `https://simulator.invalid/productions/${id}/${media_id}`,
+      upload,
+    });
+    this.nextMediaId = next + 1;
+    return { media_id };
   }
   upsert(id: string, v: unknown) {
     const o = this.open(id);

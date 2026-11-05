@@ -1,8 +1,16 @@
 import type { Scenario } from "../types/index.js";
 export const emptyAssets: Scenario = ($) => {
-  $.loadContext("/assets").records = new Map();
+  const c = $.loadContext("/assets");
+  c.records = new Map();
+  c.nextUpload = 0;
+  c.uploadDefaults = {
+    maxBytes: 1_048_576,
+    timestamp: 1_735_689_700,
+    maxName: 240,
+  };
 };
 export const resetAssets: Scenario = ($) => {
+  emptyAssets($);
   $.loadContext("/assets").records = new Map([
     [
       "sim-asset-audio",
