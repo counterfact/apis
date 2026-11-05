@@ -5,6 +5,9 @@ export const emptyTools: Scenario = ($) => {
   context.tools = new Map();
   context.executions = [];
   context.currentUserId = "sim-user";
+  context.nextToolId = 1;
+  context.mutationTime = 1735689602;
+  context.creatorAccess = { is_creator: true, creator_name: "Simulator", creator_email: "sim@example.invalid", role: "admin" };
   context.agentsMap = () => $.loadContext("/convai/agents").agents;
 };
 export const resetTools: Scenario = ($) => {

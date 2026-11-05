@@ -6,7 +6,9 @@ export const GET: Route["GET"] = async ($) => {
   return $.response.status(200).json(tool);
 };
 export const PATCH: Route["PATCH"] = async ($) => {
-  return $.response.status(200).random();
+  const result = $.context.updateTool($.path.tool_id, $.body);
+  if (result.error) return $.x.response.status(result.error === "tool_not_found" ? 404 : 400).json({ detail: { status: result.error } });
+  return $.response.status(200).json(result.value);
 };
 export const DELETE: Route["DELETE"] = async ($) => {
   const result = $.context.deleteTool($.path.tool_id, $.query.force);
