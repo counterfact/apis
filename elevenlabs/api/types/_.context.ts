@@ -57,6 +57,8 @@ import type { Context as ServiceAccountsContext } from "../routes/service-accoun
 import type { Context as SharedVoicesContext } from "../routes/shared-voices/_.context";
 import type { Context as SingleUseTokenContext } from "../routes/single-use-token/_.context";
 import type { Context as SpeechEngineContext } from "../routes/speech-engine/_.context";
+import type { Context as TextToDialogueContext } from "../routes/text-to-dialogue/_.context";
+import type { Context as TextToSpeechContext } from "../routes/text-to-speech/_.context";
 import type { Context as WorkspaceContext } from "../routes/workspace/_.context";
 import type { Context } from "../routes/_.context";
 interface LoadContextDefinitions {
@@ -225,6 +227,12 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/speech-engine" | `/speech-engine/${string}`,
   ): SpeechEngineContext;
+  loadContext(
+    path: "/text-to-dialogue" | `/text-to-dialogue/${string}`,
+  ): TextToDialogueContext;
+  loadContext(
+    path: "/text-to-speech" | `/text-to-speech/${string}`,
+  ): TextToSpeechContext;
   loadContext(path: "/workspace" | `/workspace/${string}`): WorkspaceContext;
   loadContext(path: "/" | `/${string}`): Context;
   loadContext(path: string): Record<string, unknown>;

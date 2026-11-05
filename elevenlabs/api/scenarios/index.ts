@@ -1,3 +1,4 @@
+import {resetBoundedSpeech} from "./bounded-speech.js";
 import {emptySyntheticCredentials} from "./synthetic-credentials.js";
 export {emptySyntheticCredentials} from "./synthetic-credentials.js";
 import {resetSyntheticOutbound} from "./synthetic-outbound.js";
@@ -156,6 +157,7 @@ export const reset: Scenario = ($) => {
   resetModels($);
   resetHistory($);
   resetAccount($);
+  resetBoundedSpeech($);
   $.context.voices = new Map(
     ["sim-narrator", "sim-assistant"].map((voice_id, index) => [
       voice_id,

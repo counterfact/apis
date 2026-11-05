@@ -5,7 +5,7 @@ import { reset, startup } from "../api/scenarios/index.js";
 import { runScenario } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
 
-const expectedIds = ["eleven_multilingual_v2", "eleven_flash_v2_5"];
+const expectedIds = ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v3"];
 
 test("model catalog starts empty, isolates returned objects, and reset restores fixtures", async () => {
   const context = new Context();
@@ -16,7 +16,7 @@ test("model catalog starts empty, isolates returned objects, and reset restores 
   models[0].languages[0].name = "Changed outside context";
   models[0].model_rates.character_cost_multiplier = 99;
   models.pop();
-  assert.equal(context.listModels().length, 2);
+  assert.equal(context.listModels().length, 3);
   assert.equal(context.listModels()[0].languages[0].name, "English");
   assert.equal(context.listModels()[0].model_rates.character_cost_multiplier, 1);
   context.models.clear();

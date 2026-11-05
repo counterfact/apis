@@ -16,6 +16,12 @@ export const resetModels: Scenario = ($) => {
         maximum_text_length_per_request: 40000,
         character_cost_multiplier: 0.5,
       },
+      {
+        model_id: "eleven_v3",
+        name: "Simulator v3 Dialogue",
+        maximum_text_length_per_request: 2000,
+        character_cost_multiplier: 1,
+      },
     ].map((model) => [
       model.model_id,
       {

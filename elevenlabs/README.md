@@ -3,6 +3,60 @@
 Multi-version Counterfact simulator generated from the official
 [ElevenLabs OpenAPI spec](https://api.elevenlabs.io/openapi.json).
 
+## Bounded speech fixtures
+
+All four `POST /v1/text-to-speech/{voice_id}` variants (plain,
+`with-timestamps`, `stream`, and `stream/with-timestamps`) and all four
+`POST /v1/text-to-dialogue` variants return the same small synthetic silence
+fixture. No speech synthesis, normalization, model inference, audio effects or
+provider request runs. Stream paths return one complete bounded ordinary binary
+or JSON response, with no incremental timing or event-framing simulation.
+The pinned runtime's asynchronous stream formatter supports sequential JSON/event
+media; raw asynchronous audio chunks are not used here.
+
+Binary responses are `audio/mpeg`; timestamp responses contain matching base64
+MP3 bytes, original/normalized character alignments and, for dialogue, voice
+segments. The fixture has twenty 417-byte MPEG-1 Layer III frames: 8,340 bytes,
+stereo, 44,100 Hz, nominal 128 kbps and 23,040 decoded sample frames (about
+0.52245 seconds). Synthetic alignment divides this fixed duration evenly among
+Unicode code points; dialogue concatenates inputs without separators, and segment
+end indexes are exclusive. These timings describe local fixtures, not spoken words.
+
+The synthetic frame source is populated in `api/scenarios/bounded-speech.ts`.
+It was independently decoded with the public
+[minimp3 decoder](https://github.com/lieff/minimp3) to 23,040 sample frames with
+every stereo PCM sample zero. The MP3 SHA-256 is
+`5a8c648164ba405f8ddd927c3fa307e83410cedcf2ada38d4b1b14b18d0c7856`;
+the decoder header used for this one-time check had SHA-256
+`1a213f9cb22f5e9dca83fae14597cb74943905ab4d5371f242d528b0c84ddb80`.
+No decoder or platform tool is required by simulator runtime or normal tests.
+
+Requests require existing canonical voices and a catalog model with text-to-speech
+capability. Default models are `eleven_multilingual_v2` for TTS and `eleven_v3`
+for dialogue; startup/reset include the latter synthetic catalog dependency.
+Inputs must contain nonblank text, with at most 2,000 Unicode code points in total;
+dialogue permits up to 100 lines and ten distinct voices. Only
+`mp3_44100_128` output is supported. Nondefault synthesis, effects, continuity,
+language, seed and settings options return 400, including normalization `on`/`off`.
+Omitted/null options, empty locator/request-ID arrays and default false flags
+leave fixture rendering unchanged; deprecated latency zero is accepted.
+
+Each accepted request charges one fictional character-quota unit per Unicode code
+point, regardless of model rates. Insufficient quota returns 429 before changing
+IDs, usage or history. Successful requests return a `request-id` header and,
+by default, a `history-item-id` header. Retained history includes immutable input,
+voice/model/settings snapshots, alignments, usage bounds and copied fixture bytes.
+Dialogue stores its voice/text pairs with null top-level text and voice fields.
+`enable_logging=false` consumes quota but stores no history or audio and omits the
+history header. No account tier or authentication is enforced. Other unsupported
+options and missing voices/models fail before mutation.
+
+Contexts start empty; startup/reset populate the fixture, counter and accessors.
+Reset removes new renders and restores quota/catalog/history. History deletion
+also removes its retained audio; deleting a voice preserves earlier history.
+Instances isolate all state, and returned media/metadata are defensive copies.
+These IDs, accounting, retention and error rules are local simulator conventions.
+
 ## Run
 
 Requires Node.js 22.22 or newer. Counterfact is pinned to 3.1.0.
@@ -34,8 +88,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 334 now have authored
-behavior. The remaining 103 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 342 now have authored
+behavior. The remaining 95 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -134,8 +188,8 @@ conventions. Authentication and permission enforcement are not simulated.
 
 ## Model discovery
 
-`GET /v1/models` returns a stable two-model catalog containing
-`eleven_multilingual_v2` and `eleven_flash_v2_5`. Voice fixtures reference an ID
+`GET /v1/models` returns a stable three-model catalog containing
+`eleven_multilingual_v2`, `eleven_flash_v2_5`, and `eleven_v3`. Voice fixtures reference an ID
 in this catalog. Responses include capabilities, languages, request limits,
 and rate fields, with defensive copies of the stored model data.
 
@@ -193,8 +247,8 @@ both endpoints. Run `reset` to restore baseline usage, voices, and models.
 As a local convention, every current simulator voice occupies one voice slot:
 deleting a voice or running `voiceDiscovery` changes `voice_slots_used` in both
 account responses. Other counters and limits are synthetic fixtures. Quota
-exhaustion only changes account data; it does not enforce limits on other
-operations. The fixed creation and reset timestamps do not advance with time.
+exhaustion changes account data and prevents the bounded speech-rendering operations
+described below; other operations do not enforce that quota. The fixed creation and reset timestamps do not advance with time.
 These fixtures do not represent ElevenLabs plans, prices, or billing behavior.
 Authentication, billing, and audio generation are not simulated.
 

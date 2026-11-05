@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/text-to-speech/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { Body_text_to_speech_full_with_timestamps } from "../../../components/schemas/Body_text_to_speech_full_with_timestamps.js";
 import type { AudioWithTimestampsResponseModel } from "../../../components/schemas/AudioWithTimestampsResponseModel.js";

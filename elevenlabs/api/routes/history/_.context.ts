@@ -8,6 +8,7 @@ type HistoryListResult =
 
 export class Context {
   history = new Map<string, SpeechHistoryItemResponseModel>();
+  audio = new Map<string, Uint8Array>();
 
   getHistoryItem(id: string) {
     const item = this.history.get(id);
@@ -15,6 +16,7 @@ export class Context {
   }
 
   deleteHistoryItem(id: string) {
+    this.audio.delete(id);
     return this.history.delete(id);
   }
 

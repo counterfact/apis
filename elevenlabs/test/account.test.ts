@@ -70,5 +70,5 @@ test("account endpoints share quota state, reset fixtures, and isolate simulator
   assert.deepEqual(await read("/v1/user"), user);
   assert.deepEqual(await read("/v1/user/subscription"), subscription);
   assert.equal((await read("/v1/voices")).voices.length, 2);
-  assert.equal((await read("/v1/models")).length, 2);
+  assert.equal((await read("/v1/models")).length, 3);
 });

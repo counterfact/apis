@@ -3,6 +3,7 @@ import { defaultSettings } from "../routes/_.context.js";
 
 /** Historical metadata fixtures only; no audio was generated. */
 export const resetHistory: Scenario = ($) => {
+  $.loadContext("/history").audio = new Map();
   $.loadContext("/history").history = new Map(
     ["sim-history-1", "sim-history-2"].map((history_item_id, index) => [
       history_item_id,
@@ -27,5 +28,6 @@ export const resetHistory: Scenario = ($) => {
 };
 
 export const emptyHistory: Scenario = ($) => {
+  $.loadContext("/history").audio = new Map();
   $.loadContext("/history").history = new Map();
 };
