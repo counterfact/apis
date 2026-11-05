@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 299 now have authored
-behavior. The remaining 138 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 300 now have authored
+behavior. The remaining 137 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2075,3 +2075,17 @@ prices. Run `emptyLlmUsage` to clear rate metadata (live models then return 400
 An empty canonical model catalog returns an empty price list. Responses are fresh
 copies, and instances isolate all scenario changes. These formula, rounding,
 page-count and error conventions are local simulator behavior.
+
+## Audio-effects catalog
+
+`GET /v1/audio-effects/catalog` returns fictional filter-preset, reverb-environment
+and background-noise metadata. Each collection sorts by its ID, a local simulator
+convention; descriptions may be null. These identifiers support local picker UI
+testing and are not claims about current ElevenLabs effects. No audio effects,
+speech synthesis, asset loading or provider request runs. Other operations do not
+apply these effects as part of this catalog slice.
+
+Contexts initialize empty. Startup/reset populate `api/scenarios/audio-effects.ts`;
+`emptyAudioEffects` clears only these three catalogs. Reads return defensive copies,
+instances isolate state, and reset restores baseline metadata. The contract has
+no query options. Request/response validation and the contracts remain unchanged.

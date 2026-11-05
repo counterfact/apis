@@ -1,3 +1,5 @@
+import { resetAudioEffects } from "./audio-effects.js";
+export { emptyAudioEffects } from "./audio-effects.js";
 import { resetLlmUsage } from "./llm-usage.js";
 export { emptyLlmUsage, llmUsageFastTier } from "./llm-usage.js";
 import { resetTestInvocations } from "./test-invocations.js";
@@ -130,6 +132,7 @@ export const reset: Scenario = ($) => {
   resetAgentMergeProposals($);
   resetAnalysisItems($);
   resetKnowledgeBase($);
+  resetAudioEffects($);
   resetLlmUsage($);
   resetPhoneNumbers($);
   resetBatchCalls($);
