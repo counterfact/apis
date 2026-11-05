@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 304 now have authored
-behavior. The remaining 133 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 305 now have authored
+behavior. The remaining 132 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1782,16 +1782,17 @@ Each success deactivates prior history and records a synthetic increasing time/I
 only metadata changes, with no routing, calling, billing or execution. Lists sort
 newest first with descending ID ties and use page numbers from 1, page size 1–100
 (default 30). Draft deletion clears only the branch's local draft marker and is
-idempotent. Recursive branch/draft creation, merge/rebase and procedure compilation
-remain generated and uncounted. All reads return defensive copies, simulator
+idempotent. Recursive branch/draft creation and procedure compilation
+remain generated and uncounted. Branch merge/rebase behavior is described below.
+All reads return defensive copies, simulator
 instances isolate changes, and reset restores the fixtures. Error, ordering,
 null-update, snapshot and traffic-split conventions are local simulator behavior.
 
 
 ## Agent merge proposal management
 
-Six proposal operations now persist local review metadata: collection create/list,
-detail read/PATCH, reviews and comments. Startup/reset seed `sim-merge-proposal`
+Seven proposal operations now persist local review metadata and merges: collection
+create/list, detail read/PATCH, reviews, comments and merge. Startup/reset seed `sim-merge-proposal`
 in `api/scenarios/agent-merge-proposals.ts`; contexts start empty.
 `emptyAgentMergeProposals` clears records and counters while preserving agents
 and branches. Instances isolate state and reads return defensive copies.
@@ -1818,11 +1819,25 @@ with independent IDs. Blank titles/comments and invalid mutations leave records
 and counters unchanged. These ID, time, null, ordering and error conventions are
 local simulator behavior.
 
-Proposal merge and branch merge/rebase remain generated and uncounted, pending
-shared local three-way configuration/version merge behavior. This is unfinished
-simulator implementation, not a Counterfact runtime blocker. No merge, rebase,
-AI review, deployment or provider processing occurs through these six operations.
-Contracts and request/response validation remain unchanged.
+`POST /v1/convai/agents/{agent_id}/merge-proposals/{merge_proposal_id}/merge`
+applies the shared branch merge behavior below, creates a real local version on
+the target and records its ID, local user and timestamp in a merged outcome.
+It accepts `force` and `archive_source_branch` with the same defaults as direct
+branch merges. Review requests and previous reviews remain metadata; the merge
+action itself represents local approval and does not require an earlier approval
+record. Permissions and protected-branch authorization are not simulated.
+
+Only open proposals may merge. A changed source tip since proposal creation
+returns 409 even with `force`; create a new proposal for the new source version.
+The current target configuration participates in the merge, including live main
+edits. Source-tip checks use committed version IDs; live main changes may postdate
+the same source tip and are included. These are local simulator conventions.
+Closed/merged proposals, stale source tips and branch precondition failures leave
+the proposal, version history, configuration and counters unchanged. A successful
+merge archives its source by default and is visible in proposal detail/list and
+agent/branch/version reads. Reset restores the open baseline and original versions.
+No AI review, deployment, provider request or model processing occurs. Contracts
+and request/response validation remain unchanged.
 
 
 ## Branch procedure metadata and drafts
@@ -2128,7 +2143,7 @@ incomplete ancestry also fail with 409; missing agents/branches return 404. Inva
 options return 400. Procedure-generated workflow elements are unsupported and
 explicit `include_procedure_generated_workflow_elements: true` returns 400.
 No workflow, procedure, provider request or model executes. Contracts and validation
-remain unchanged. Proposal merge remains generated until its integration slice.
+remain unchanged. Proposal merges reuse this same engine.
 
 Contexts start empty; startup/reset seed ancestry and reset the version counter in
 `api/scenarios/agent-lifecycle.ts`. `branchMergeConflicts` adds divergent live-main

@@ -51,6 +51,40 @@ export class Context {
   get(agentId: string, id: string) {
     return structuredClone(this.record(agentId, id));
   }
+  merge(agentId: string, id: string, input: unknown) {
+    const proposal = this.record(agentId, id);
+    this.open(proposal);
+    if (
+      !object(input) ||
+      Object.keys(input).some(
+        (key) => !["force", "archive_source_branch"].includes(key),
+      ) ||
+      Object.values(input).some((value) => typeof value !== "boolean")
+    )
+      return invalid();
+    const lifecycle = this.lifecycle;
+    if (!lifecycle) throw new Error("Run startup or reset");
+    lifecycle.get(agentId, proposal.source_branch_id);
+    if (
+      lifecycle.branches.get(proposal.source_branch_id)!.tip !==
+      proposal.source_tip_version_id_at_creation
+    )
+      return fail(409, "merge_proposal_source_changed");
+    // Prepare all proposal data before the lifecycle transaction. A failed merge
+    // must leave the review record and its mutation clock untouched.
+    const next = structuredClone(proposal), settings = this.settings();
+    const merged = lifecycle.merge(
+      agentId, proposal.source_branch_id, proposal.target_branch_id, input,
+    );
+    const time = this.tick();
+    next.outcome = {
+      status: "merged", version_id: merged.version_id,
+      at: time, by_user_id: settings.userId,
+    };
+    next.updated_at = time;
+    this.records.set(id, next);
+    return structuredClone(next);
+  }
   create(agentId: string, input: unknown) {
     const a = this.agent(agentId);
     if (
