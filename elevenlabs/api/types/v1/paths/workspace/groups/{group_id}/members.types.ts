@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/workspace/groups/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_Add_member_to_user_group_v1_workspace_groups__group_id__members_post } from "../../../../components/schemas/Body_Add_member_to_user_group_v1_workspace_groups__group_id__members_post.js";
 import type { AddWorkspaceGroupMemberResponseModel } from "../../../../components/schemas/AddWorkspaceGroupMemberResponseModel.js";

@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 70 now have authored
-behavior. The remaining 367 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 74 now have authored
+behavior. The remaining 363 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -658,6 +658,28 @@ operations: their recursive request schemas share the installed validation
 blocker [#2613](https://github.com/counterfact/api-simulator/issues/2613).
 Validation remains enabled and bindings are generated normally. Use startup,
 reset and named fixtures for configuration setup.
+
+## Workspace groups
+
+| Method | Path | Behavior |
+| ------ | ---- | -------- |
+| GET | `/v1/workspace/groups` | Read a group-ID keyed map of groups and member IDs |
+| GET | `/v1/workspace/groups/search` | Find groups by a case-insensitive name substring |
+| POST | `/v1/workspace/groups/{group_id}/members` | Add an existing synthetic workspace member |
+| POST | `/v1/workspace/groups/{group_id}/members/remove` | Remove a member from a group |
+
+Startup and reset seed two groups and an email-to-member-ID directory in
+`api/scenarios/groups.ts`. Membership changes are visible in both group listing
+and search results, which project member emails. Search trims the input; blank
+or unmatched names return an empty list. Groups retain scenario insertion order.
+Adding an existing member and removing an absent member are idempotent.
+Missing groups or workspace members return 404; SCIM-frozen groups return 409.
+Invalid emails or extra membership fields return 400. These are local simulator
+conventions; authentication, authorization and external SCIM calls are not run.
+
+`emptyGroups` clears groups and the member directory; `reset` restores both.
+The nested context starts empty and returns defensive read copies. Each simulator
+instance owns independent state. Group creation and deletion remain generated.
 
 ## Development
 

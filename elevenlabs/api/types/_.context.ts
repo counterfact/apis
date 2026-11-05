@@ -9,6 +9,7 @@ import type { Context as ConvaiToolsContext } from "../routes/convai/tools/_.con
 import type { Context as VoicesCollectionsContext } from "../routes/voices/collections/_.context";
 import type { Context as WorkspaceAnalyticsContext } from "../routes/workspace/analytics/_.context";
 import type { Context as WorkspaceAuthConnectionsContext } from "../routes/workspace/auth-connections/_.context";
+import type { Context as WorkspaceGroupsContext } from "../routes/workspace/groups/_.context";
 import type { Context as WorkspaceWebhooksContext } from "../routes/workspace/webhooks/_.context";
 import type { Context as HistoryContext } from "../routes/history/_.context";
 import type { Context as PronunciationDictionariesContext } from "../routes/pronunciation-dictionaries/_.context";
@@ -47,6 +48,9 @@ interface LoadContextDefinitions {
     path:
       "/workspace/auth-connections" | `/workspace/auth-connections/${string}`,
   ): WorkspaceAuthConnectionsContext;
+  loadContext(
+    path: "/workspace/groups" | `/workspace/groups/${string}`,
+  ): WorkspaceGroupsContext;
   loadContext(
     path: "/workspace/webhooks" | `/workspace/webhooks/${string}`,
   ): WorkspaceWebhooksContext;

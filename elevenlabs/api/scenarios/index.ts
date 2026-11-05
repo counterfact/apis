@@ -1,3 +1,5 @@
+import { resetGroups } from "./groups.js";
+export { emptyGroups } from "./groups.js";
 import type { Scenario } from "../types/index.js";
 import { defaultSettings } from "../routes/_.context.js";
 import { resetCollections } from "./collections.js";
@@ -32,6 +34,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetGroups($);
   resetAgents($);
   resetTools($);
   resetSecrets($);
