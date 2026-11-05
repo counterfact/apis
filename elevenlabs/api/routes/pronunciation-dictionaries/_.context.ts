@@ -45,6 +45,15 @@ export class Context {
     return { value: this.saveRules(dictionary, current.filter((rule) => !removed.has(rule.string_to_replace))) };
   }
 
+  setRules(id: string, rules: DictionaryRule[]): RulesResult {
+    const dictionary = this.dictionaries.get(id);
+    if (!dictionary) return { missing: true };
+    if (rules.some((rule) => rule.string_to_replace.length === 0)) {
+      return { error: "Rule string_to_replace must be non-empty" };
+    }
+    return { value: this.saveRules(dictionary, rules) };
+  }
+
   private saveRules(dictionary: DictionaryRecord, rules: readonly DictionaryRule[]): RulesVersion {
     const id = dictionary.metadata.id;
     let number = dictionary.versions.size + 1;
