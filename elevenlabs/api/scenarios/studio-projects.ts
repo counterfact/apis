@@ -110,8 +110,14 @@ export const resetStudioProjects: Scenario = ($) => {
   c.podcastTemplate = structuredClone(c.projects.get("sim-project"));
 };
 export const completeStudioConversions: Scenario = ($) => {
-  const c = $.loadContext("/studio/projects");
+  completeStudioProjectJobs($.loadContext("/studio/projects"));
+};
+export function completeStudioProjectJobs(
+  c: import("../routes/studio/projects/_.context.js").Context,
+  ids?: Set<string>,
+) {
   for (const [id, job] of c.pending) {
+    if (ids && !ids.has(id)) continue;
     const live = c.projects.get(id);
     if (!live) {
       c.pending.delete(id);
@@ -204,4 +210,4 @@ export const completeStudioConversions: Scenario = ($) => {
     );
     c.pending.delete(id);
   }
-};
+}
