@@ -1,6 +1,7 @@
 import type { Scenario } from "../types/index.js";
 export const emptyLegacyDubbing: Scenario = ($) => {
   $.loadContext("/dubbing").records = new Map();
+  $.loadContext("/dubbing").audio = new Map();
 };
 export const resetLegacyDubbing: Scenario = ($) => {
   emptyLegacyDubbing($);

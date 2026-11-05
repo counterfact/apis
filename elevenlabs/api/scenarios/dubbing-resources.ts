@@ -2,6 +2,9 @@ import type { Scenario } from "../types/index.js";
 export const emptyDubbingResources: Scenario = ($) => {
   const c = $.loadContext("/dubbing/resource");
   c.resources = new Map();
+  c.jobs = new Map();
+  c.nextRenderId = 1;
+  c.candidates = [];
   c.speakerSettings = new Map();
   c.nextSegmentId = 1;
   c.nextSpeakerId = 1;

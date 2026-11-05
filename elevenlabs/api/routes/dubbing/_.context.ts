@@ -41,6 +41,14 @@ const stamp = (seconds: number, separator: string) => {
   return `${String(Math.floor(ms / 3600000)).padStart(2, "0")}:${String(Math.floor(ms / 60000) % 60).padStart(2, "0")}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}${separator}${String(ms % 1000).padStart(3, "0")}`;
 };
 export class Context {
+  audio = new Map<string, Record<string, Uint8Array>>();
+  getAudio(id: string, language: string) {
+    const r = this.record(id);
+    if (r.metadata.status !== "dubbed") return fail(425, "dubbing_not_dubbed");
+    const bytes = this.audio.get(id)?.[language === "source" ? r.metadata.source_language! : language];
+    if (!bytes) return fail(404, "dubbing_audio_not_found");
+    return new Uint8Array(bytes);
+  }
   records = new Map<string, LegacyDub>();
   private record(id: string) {
     return this.records.get(id) ?? fail(404, "dubbing_not_found");
@@ -51,6 +59,7 @@ export class Context {
   delete(id: string) {
     this.record(id);
     this.records.delete(id);
+    this.audio.delete(id);
     return { status: "ok" };
   }
   list(q: Record<string, unknown>) {

@@ -24,6 +24,42 @@ const invalid = (): never =>
   );
 const clone = <T>(v: T): T => structuredClone(v);
 export class Context {
+  jobs = new Map<string, {kind: "transcribe" | "translate" | "dub" | "render"; snapshot: DubbingResource; segments: string[]; languages: string[]; renderId?: string}>();
+  nextRenderId = 1;
+  candidates: import("../../../types/v1/components/schemas/SimilarVoice.js").SimilarVoice[] = [];
+  private editable(id: string) {
+    const r = this.resource(id);
+    if (this.jobs.has(id)) fail(409, "dubbing_processing", "Resource processing");
+    return r;
+  }
+  process(id: string, kind: "transcribe" | "translate" | "dub", v: unknown) {
+    const r = this.editable(id);
+    if (!object(v) || Object.keys(v).some(k => !["segments", ...(kind === "transcribe" ? [] : ["languages"])].includes(k)) || !Array.isArray(v.segments) || v.segments.some(s => typeof s !== "string")) return invalid();
+    const segments = v.segments.length ? [...new Set(v.segments as string[])] : Object.keys(r.speaker_segments);
+    for (const sid of segments) this.segment(r, sid);
+    const raw = kind === "transcribe" ? [] : v.languages;
+    if (raw != null && (!Array.isArray(raw) || raw.some(l => typeof l !== "string"))) return invalid();
+    const languages = kind === "transcribe" ? [] : raw == null || !(raw as string[]).length ? [...r.target_languages] : [...new Set(raw as string[])];
+    for (const l of languages) if (!r.target_languages.includes(l)) fail(404, "dubbing_language_not_found", "Target language not found");
+    if (!segments.length || (kind !== "transcribe" && !languages.length)) return invalid();
+    this.jobs.set(id, {kind, snapshot: clone(r), segments, languages});
+    return {version: ++r.version};
+  }
+  render(id: string, language: string, v: unknown) {
+    const r = this.editable(id);
+    const l = language === "original" ? r.source_language : this.language(r, language);
+    if (!object(v) || Object.keys(v).some(k => !["render_type", "normalize_volume"].includes(k)) || v.render_type !== "mp3" || (v.normalize_volume != null && v.normalize_volume !== false)) return invalid();
+    if (l !== r.source_language && Object.values(r.speaker_segments).some(s => !s.dubs[l]?.media_ref || s.dubs[l].audio_stale)) fail(409, "dubbing_audio_not_ready", "Dub all segments before rendering");
+    const render_id = `sim-dubbing-render-${this.nextRenderId++}`;
+    const snapshot = clone(r);
+    r.renders[render_id] = {id: render_id, version: ++r.version, language: l, type: "mp3", media_ref: null, status: "processing"};
+    this.jobs.set(id, {kind: "render", snapshot, segments: Object.keys(r.speaker_segments), languages: [l], renderId: render_id});
+    return {version: r.version, render_id};
+  }
+  similar(id: string, speaker: string) {
+    this.speaker(this.resource(id), speaker);
+    return {voices: clone(this.candidates.slice(0, 10))};
+  }
   resources = new Map<string, DubbingResource>();
   speakerSettings = new Map<string, Record<string, Record<string, number>>>();
   nextSpeakerId = 1;
@@ -78,7 +114,7 @@ export class Context {
     return clone(this.resource(id));
   }
   addLanguage(id: string, v: unknown) {
-    const r = this.resource(id);
+    const r = this.editable(id);
     if (
       !object(v) ||
       Object.keys(v).some((k) => k !== "language") ||
@@ -96,7 +132,7 @@ export class Context {
     return { version: ++r.version };
   }
   createSegment(id: string, speaker: string, v: unknown) {
-    const r = this.resource(id),
+    const r = this.editable(id),
       track = this.speaker(r, speaker);
     if (
       !object(v) ||
@@ -137,7 +173,7 @@ export class Context {
     return { version: ++r.version, new_segment: segment };
   }
   updateSegment(id: string, segment: string, language: string, v: unknown) {
-    const r = this.resource(id),
+    const r = this.editable(id),
       s = this.segment(r, segment);
     this.language(r, language);
     if (
@@ -162,7 +198,7 @@ export class Context {
     return { version: ++r.version };
   }
   migrate(id: string, v: unknown) {
-    const r = this.resource(id);
+    const r = this.editable(id);
     if (
       !object(v) ||
       Object.keys(v).some((k) => !["segment_ids", "speaker_id"].includes(k)) ||
@@ -184,7 +220,7 @@ export class Context {
     return { version: ++r.version };
   }
   removeSegment(id: string, segment: string) {
-    const r = this.resource(id);
+    const r = this.editable(id);
     this.segment(r, segment);
     for (const t of Object.values(r.speaker_tracks))
       t.segments = t.segments.filter((s) => s !== segment);
@@ -230,7 +266,7 @@ export class Context {
     return v;
   }
   createSpeaker(id: string, v: unknown) {
-    const r = this.resource(id),
+    const r = this.editable(id),
       input = this.speakerInput(v, false),
       speaker = `sim-resource-speaker-created-${this.nextSpeakerId++}`;
     r.speaker_tracks[speaker] = {
@@ -268,7 +304,7 @@ export class Context {
     this.speakerSettings.set(key, settings);
   }
   updateSpeaker(id: string, speaker: string, v: unknown) {
-    const r = this.resource(id),
+    const r = this.editable(id),
       track = this.speaker(r, speaker),
       input = this.speakerInput(v, true),
       languages = input.languages as string[] | null | undefined;

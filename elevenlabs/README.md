@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 366 now have authored
-behavior. The remaining 71 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 373 now have authored
+behavior. The remaining 64 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2609,3 +2609,57 @@ accessor and counters during startup/reset. Plans and songs retain immutable
 copies of inputs/results unless `enable_logging=false`; zero retention still
 allocates the next local ID. Reset clears both maps and counters. Instances
 isolate state, and returned plan/media copies cannot modify retained records.
+
+## Bounded dubbing processing
+
+Seven additional dubbing operations use synthetic local outcomes: project target
+transcript regeneration; resource transcribe, translate, dub, render and speaker
+similar-voice discovery; and legacy dubbed audio retrieval. No transcription,
+translation, similarity analysis, synthesis, media fetching, webhook or provider
+request runs. Multipart project/dub creation still requires source-file or URL
+input and remains generated under Counterfact #2607; an absent body cannot create
+a useful source project.
+
+Resource processing accepts explicit segment IDs; an empty segment array selects
+all segments. Translate/dub require `languages`, where null or an empty array
+selects every target language. Duplicate IDs are collapsed. Unknown members fail
+atomically. Transcription replaces selected source text with
+`[synthetic transcript] ` plus its captured text (or segment ID when blank), and
+marks target audio stale. Translation writes `[synthetic LANGUAGE] SOURCE` without
+producing audio. Dub fills missing source/target text using those conventions and
+attaches inert synthetic MP3 references, marking selected target audio current.
+Each accepted job increases the version once; completion increases it once more.
+
+Run `completeDubbingProcessing` to complete queued resource work and project target
+regeneration. Requests retain copied snapshots and resource edits/overlapping jobs
+return 409 while pending. Completion is idempotent. Render supports only MP3 with
+normalization omitted/null/false; other formats or enabled normalization return
+400. Every target segment must have current dubbed audio before rendering;
+`original` selects source audio. Renders use IDs `sim-dubbing-render-1` upward,
+progress from `processing` to `complete`, and expose inert `simulator.invalid`
+URLs in canonical resource metadata. Those URLs do not serve downloadable media.
+All generated MP3 references describe the fixed silence duration documented above.
+
+Target regeneration requires stale output with edited segments and nonblank
+translations. It captures only edited surviving segments, reports their summed
+region duration and changes the target to `processing`. No edits returns 409;
+source/target edits during that queue also return 409. Completion publishes the
+captured revision and preserves edited text. Charged seconds and remaining free
+allowance are always zero: no pricing, quota or allowance policy is simulated.
+The older `completeDubbingLanguages` scenario leaves explicit regeneration jobs
+for `completeDubbingProcessing` to finish. Deletion cancels target/project jobs.
+
+Similar-voice results are a copied, fixed startup list of the two canonical
+fictional voices, with no similarity scores or ranking claim. Missing resources
+or speakers return 404. Legacy completed dub `sim-legacy-dub` serves independent
+copies of the same 8,340-byte synthetic MP3 for `en`, `es` or source alias
+`source`, as complete buffered `audio/mpeg` responses. Pending legacy dubs return
+425 and missing languages return 404. Legacy deletion removes its audio. Modern
+resource processing leaves legacy automatic-dub audio unchanged.
+
+Contexts initialize empty containers; startup/reset populate candidate/media
+fixtures, counters and queues in `api/scenarios/dubbing-processing.ts`. Empty
+resource/project/legacy scenarios clear their related state. Reset restores all
+baseline fixtures and cancels pending work. Instances isolate every change.
+These IDs, markers, version increments, status/error and billing rules are local
+simulator conventions.

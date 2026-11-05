@@ -2,6 +2,8 @@ import type { Scenario } from "../types/index.js";
 export const emptyDubbingProjects: Scenario = ($) => {
   const c = $.loadContext("/dubbing/project");
   c.projects = new Map();
+  c.regenerations = new Map();
+  c.editedSegments = new Map();
   c.nextSegmentId = 1;
   c.nextLanguageId = 1;
   c.timestamp = "2025-01-01T00:00:00Z";
@@ -77,6 +79,7 @@ export const completeDubbingLanguages: Scenario = ($) => {
   for (const p of c.projects.values()) {
     if (p.metadata.status !== "ready") continue;
     for (const l of p.languages.values()) {
+      if (c.regenerations.has(`${p.metadata.project_id}/${l.metadata.language_id}`)) continue;
       if (!["queued", "processing", "stale"].includes(l.metadata.status))
         continue;
       for (const s of p.segments.values())
@@ -85,6 +88,7 @@ export const completeDubbingLanguages: Scenario = ($) => {
             s.id,
             `[synthetic ${l.metadata.target_language}] ${s.text}`,
           );
+      c.editedSegments.delete(`${p.metadata.project_id}/${l.metadata.language_id}`);
       l.metadata.status = "completed";
       l.metadata.output_revision = l.metadata.revision;
       l.metadata.outputs = {

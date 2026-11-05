@@ -34,6 +34,20 @@ const invalid = (): never =>
   );
 const clone = <T>(v: T): T => structuredClone(v);
 export class Context {
+  editedSegments = new Map<string, Set<string>>();
+  regenerations = new Map<string, {projectId: string; languageId: string; revision: number; segments: DubbingTranscriptSegment[]; translations: Map<string, string | null>}>();
+  regenerate(pid: string, lid: string) {
+    const p = this.ready(pid), l = this.available(pid, lid);
+    if (l.metadata.status !== "stale") fail(409, "dubbing_no_edits", "No edits to regenerate");
+    const dirty = this.editedSegments.get(`${pid}/${lid}`);
+    const segments = this.ordered(p).filter(s => dirty?.has(s.id));
+    if (!segments.length || segments.some(s => !l.translations.get(s.id))) return invalid();
+    const seconds = segments.reduce((n, s) => n + s.end_s - s.start_s, 0);
+    // A bounded local queue has zero quota cost and no provider billing.
+    this.regenerations.set(`${pid}/${lid}`, {projectId: pid, languageId: lid, revision: l.metadata.revision, segments: clone(segments), translations: clone(l.translations)});
+    l.metadata.status = "processing";
+    return {regenerated_segment_ids: segments.map(s => s.id), regenerated_seconds: seconds, charged_seconds: 0, free_regeneration_seconds_remaining: 0};
+  }
   projects = new Map<string, StoredProject>();
   nextSegmentId = 1;
   nextLanguageId = 1;
@@ -46,6 +60,7 @@ export class Context {
   }
   private ready(id: string) {
     const p = this.stored(id);
+    if ([...this.regenerations.values()].some(j => j.projectId === id)) fail(409, "dubbing_processing", "Project processing");
     if (p.metadata.status !== "ready")
       fail(409, "dubbing_project_not_ready", "Source transcript not ready");
     return p;
@@ -58,6 +73,7 @@ export class Context {
   }
   private available(pid: string, lid: string) {
     const l = this.target(pid, lid);
+    if (l.metadata.status === "processing") fail(409, "dubbing_processing", "Language processing");
     if (l.metadata.output_revision == null)
       fail(
         409,
@@ -120,6 +136,8 @@ export class Context {
   deleteProject(id: string) {
     this.stored(id);
     this.projects.delete(id);
+    for (const [key, j] of this.regenerations) if (j.projectId === id) this.regenerations.delete(key);
+    for (const key of this.editedSegments.keys()) if (key.startsWith(`${id}/`)) this.editedSegments.delete(key);
   }
   language(pid: string, lid: string) {
     return clone(this.target(pid, lid).metadata);
@@ -208,6 +226,8 @@ export class Context {
   deleteLanguage(pid: string, lid: string) {
     this.target(pid, lid);
     this.stored(pid).languages.delete(lid);
+    this.regenerations.delete(`${pid}/${lid}`);
+    this.editedSegments.delete(`${pid}/${lid}`);
   }
   sourceTranscript(pid: string) {
     const p = this.ready(pid);
@@ -281,6 +301,10 @@ export class Context {
     p.metadata.revision++;
     p.metadata.updated_at = this.timestamp;
     for (const l of p.languages.values()) {
+      const key = `${p.metadata.project_id}/${l.metadata.language_id}`;
+      const dirty = this.editedSegments.get(key) ?? new Set<string>();
+      for (const id of affected) dirty.add(id);
+      this.editedSegments.set(key, dirty);
       for (const id of affected) l.translations.delete(id);
       l.metadata.revision++;
       l.metadata.updated_at = this.timestamp;
@@ -367,6 +391,9 @@ export class Context {
       if (Object.hasOwn(e, "translation"))
         next.set(id, e.translation as string | null);
     }
+    const key = `${pid}/${lid}`, dirty = this.editedSegments.get(key) ?? new Set<string>();
+    for (const id of Object.keys(edits)) dirty.add(id);
+    this.editedSegments.set(key, dirty);
     l.translations = next;
     l.metadata.revision++;
     l.metadata.updated_at = this.timestamp;

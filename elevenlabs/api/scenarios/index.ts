@@ -1,3 +1,5 @@
+import {resetDubbingProcessing} from "./dubbing-processing.js";
+export {completeDubbingProcessing} from "./dubbing-processing.js";
 import {resetBoundedMusic} from "./bounded-music.js";
 import {resetBoundedSpeech} from "./bounded-speech.js";
 import {resetBoundedSound} from "./bounded-sound.js";
@@ -191,6 +193,7 @@ export const reset: Scenario = ($) => {
   );
   resetPvcVoices($);
   resetCollections($);
+  resetDubbingProcessing($);
 };
 export const startup: Scenario = reset;
 
