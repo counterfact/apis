@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../../routes/service-accounts/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../../counterfact-types/index.ts";
 import type { Body_edit_service_account_api_key_v1_service_accounts__service_account_user_id__api_keys__api_key_id__patch } from "../../../../components/schemas/Body_edit_service_account_api_key_v1_service_accounts__service_account_user_id__api_keys__api_key_id__patch.js";
 import type { HTTPValidationError } from "../../../../components/schemas/HTTPValidationError.js";

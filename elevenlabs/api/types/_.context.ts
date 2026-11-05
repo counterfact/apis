@@ -13,6 +13,7 @@ import type { Context as WorkspaceGroupsContext } from "../routes/workspace/grou
 import type { Context as WorkspaceWebhooksContext } from "../routes/workspace/webhooks/_.context";
 import type { Context as HistoryContext } from "../routes/history/_.context";
 import type { Context as PronunciationDictionariesContext } from "../routes/pronunciation-dictionaries/_.context";
+import type { Context as ServiceAccountsContext } from "../routes/service-accounts/_.context";
 import type { Context } from "../routes/_.context";
 interface LoadContextDefinitions {
   loadContext(
@@ -59,6 +60,9 @@ interface LoadContextDefinitions {
     path:
       "/pronunciation-dictionaries" | `/pronunciation-dictionaries/${string}`,
   ): PronunciationDictionariesContext;
+  loadContext(
+    path: "/service-accounts" | `/service-accounts/${string}`,
+  ): ServiceAccountsContext;
   loadContext(path: "/" | `/${string}`): Context;
   loadContext(path: string): Record<string, unknown>;
 }

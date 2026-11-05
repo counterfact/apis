@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 74 now have authored
-behavior. The remaining 363 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 81 now have authored
+behavior. The remaining 356 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -680,6 +680,49 @@ conventions; authentication, authorization and external SCIM calls are not run.
 `emptyGroups` clears groups and the member directory; `reset` restores both.
 The nested context starts empty and returns defensive read copies. Each simulator
 instance owns independent state. Group creation and deletion remain generated.
+
+## Service accounts and API keys
+
+Seven operations now persist synthetic service-account and key configuration:
+`GET`/`POST /v1/service-accounts`, `GET`/`POST` on each account's `api-keys`,
+`PATCH`/`DELETE` on a key, and `POST` on its `disable` subpath.
+Startup and `reset` restore `sim-service-account` and its read-only fixture key
+from `api/scenarios/service-accounts.ts`. `emptyServiceAccounts` clears all
+accounts, keys, and ID counters. Contexts begin empty. Each instance is isolated.
+
+Accounts list in insertion order and include their current keys. Creation
+returns `service-account-user-id`; lists use `service_account_user_id`.
+Accounts accept a nonempty name and optional default sharing groups. Groups
+must exist, have a unique ID per request, and use admin/editor/viewer permission.
+Shared group metadata is read live, including membership changes. The simulator
+allows 20 accounts, returning 409 at the limit. IDs use increasing
+`sim-service-account-created-N` and `sim-service-key-created-N` suffixes.
+
+Key creation returns a clearly synthetic `xi-api-key` exactly once. Reads expose
+only hints and synthetic hashes, plus configuration metadata; these keys cannot
+authenticate to ElevenLabs. `permissions: "all"` reads back as null; an empty
+array remains empty. Limits, IP allowlists, expiry and disable settings persist
+without enforcing authentication, quotas, network access, expiry jobs or plan
+entitlements. Bare IPv4/IPv6 addresses get /32 or /128 suffixes; supplied valid
+CIDRs are preserved. Credit/concurrency limits must be nonnegative safe integers.
+
+The installed runtime rejects an absent PATCH body despite its optional contract;
+send `{}` for a no-op. Request validation remains enabled.
+PATCH preserves omitted fields and `no_update` values. Null names and nullable
+numeric limits preserve their values; `clear` removes numeric limits, IP
+allowlists or expiry. `third_party_disable_allowed: "clear"` restores the local
+true default. `is_enabled` toggles `is_disabled`; disabling records
+`self_disabled`, and enabling clears that reason. The disable endpoint is
+idempotent. Updates validate the entire request before changing state.
+Successful PATCH, DELETE and disable return 200 with `{}`. Missing accounts or
+keys return 404, with account lookup taking precedence. Unknown fields and
+invalid configurations return 400. Repeated deletion returns 404.
+
+Expiry is validated against a scenario-owned fixed clock, 1735689600 (2025-01-01
+UTC), accepting 15 minutes through 90 days ahead inclusively. Omitted/null
+create expiry means never expires. Creation timestamps use this same clock.
+ID allocation, frozen time, limits, defaults, null handling and errors are local
+simulator conventions. Workspace downgrade and enterprise policy are not modeled.
 
 ## Development
 

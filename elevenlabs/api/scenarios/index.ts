@@ -1,3 +1,5 @@
+import { resetServiceAccounts } from "./service-accounts.js";
+export { emptyServiceAccounts } from "./service-accounts.js";
 import { resetGroups } from "./groups.js";
 export { emptyGroups } from "./groups.js";
 import type { Scenario } from "../types/index.js";
@@ -35,6 +37,7 @@ export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
   resetGroups($);
+  resetServiceAccounts($);
   resetAgents($);
   resetTools($);
   resetSecrets($);
