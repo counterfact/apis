@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 416 operations retain their
+the stateful voices implementation. The remaining 415 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -267,6 +267,40 @@ Rule order and duplicates are preserved. Matching flags (`case_sensitive` and
 `word_boundaries`) have no PLS representation here and are omitted from the
 export. This simulator does not apply pronunciation rules to speech.
 
+## Workspace usage analytics
+
+`POST /v1/workspace/analytics/query/usage-by-product-over-time` returns synthetic
+credit usage from a separate ledger in `api/routes/workspace/analytics/_.context.ts`.
+Startup and `reset` populate that ledger in `api/scenarios/usage.ts`; the two
+fixtures total 1,000 credits on January 1, 2025 UTC. Run `.scenario emptyUsage`
+(or `app.scenario("emptyUsage", "api")`) to clear it, then `reset` to restore it.
+History or voice deletion does not remove ledger entries. `quotaExhausted`
+changes account quota data without changing this synthetic usage report.
+
+Supply integer millisecond `start_time` and `end_time` values from 2020 onward,
+with start before end. The window includes start and excludes end. Supported
+`interval_seconds` values are 60 (default), 3600, and 86400, aligned to UTC
+minute, hour, or day boundaries. Only `time_zone: "UTC"` is supported.
+Omitted/null `group_by` defaults to `["product_type"]`; an empty list aggregates
+all products. Supported distinct grouping fields are `product_type`, `model`,
+`voice_id`, and `user_id`. Nonempty filters, unsupported groups, time zones,
+and intervals return HTTP 400 rather than being ignored.
+
+As local table conventions, columns are `time`, the requested grouping fields
+in their supplied order, and `credits`. Their types are `DateTime`, `String`
+for each group, and `Float`, with units `ms`, null for groups, and `credits`.
+Rows are ordered by bucket time then grouping values. Only occupied buckets
+are returned; empty windows have no rows. Bucket times can precede an unaligned
+window start, but only ledger entries inside the window contribute. The
+simulator does not calculate invoices, enforce billing, or append display-name
+columns. Values and product labels are local fixtures, not pricing claims.
+
+```sh
+curl -X POST http://localhost:3100/v1/workspace/analytics/query/usage-by-product-over-time \
+  -H 'Content-Type: application/json' \
+  -d '{"start_time":1735689600000,"end_time":1735776000000,"interval_seconds":86400}'
+```
+
 ## Development
 
 ```sh
@@ -278,7 +312,7 @@ npm test
 Generation reads both local contracts and preserves authored handlers.
 History state and operations live in `api/routes/history/_.context.ts`; the root
 context owns voices, models, and account data. History scenarios load their own
-context with `$.loadContext("/history")`, and `reset` orchestrates both contexts.
+context with `$.loadContext("/history")`, and `reset` orchestrates all route contexts.
 `test-support/scenarios.ts` discovers real context classes for direct tests, so
 new route contexts participate in scenario setup without custom test registries.
 

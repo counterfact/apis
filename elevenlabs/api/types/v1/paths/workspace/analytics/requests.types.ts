@@ -4,7 +4,7 @@
 import type { WideOperationArgument } from "../../../../../counterfact-types/index.ts";
 import type { OmitValueWhenNever } from "../../../../../counterfact-types/index.ts";
 import type { COUNTERFACT_RESPONSE } from "../../../../../counterfact-types/index.ts";
-import type { Context } from "../../../../../routes/_.context.ts";
+import type { Context } from "../../../../../routes/workspace/analytics/_.context.ts";
 import type { ResponseBuilderFactory } from "../../../../../counterfact-types/index.ts";
 import type { Body_List_API_requests_v1_workspace_analytics_requests_post } from "../../../components/schemas/Body_List_API_requests_v1_workspace_analytics_requests_post.js";
 import type { WorkspaceAnalyticsQueryResponseModel } from "../../../components/schemas/WorkspaceAnalyticsQueryResponseModel.js";
