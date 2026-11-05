@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 88 now have authored
-behavior. The remaining 349 operations retain their generated random responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 97 now have authored
+behavior. The remaining 340 operations retain their generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -772,6 +772,56 @@ settings do not erase historical fixtures. Deletion removes the phone and its
 logs, preserving agents. Missing phones return 404. Responses are defensive copies
 and instances isolate state. Error codes, IDs, pagination and the above metadata
 and update conventions are local simulator behavior.
+
+## Conversation records
+
+Nine conversation operations now use synthetic historical records: list, resolve,
+detail, delete, lightweight summary, SIP-message history, feedback, tag assignment
+and tag removal. Startup/reset seed `sim-conversation` and `sim-conversation-old`
+in `api/scenarios/conversations.ts`; `emptyConversations` clears these records,
+reference mappings, and SIP logs. Contexts initialize empty. Restart/reset restores
+all baseline state; simulator instances isolate changes. These are stored records,
+without running conversations, calls, analysis, or audio generation.
+
+Lists sort by start time (descending by default, ascending with `sort_direction`)
+with ascending conversation-ID ties, then paginate with decimal-offset cursors.
+Page sizes are 1–100, default 30. Supported filters include agent/user/branch/version,
+visited agent/branch IDs, success, inclusive start-time and duration bounds, rating,
+feedback-comment presence, language, termination reason, status exclusion, tags,
+initiation source, text-only mode, product, and case-insensitive transcript substring
+search. Arrays match any supplied value; different filters combine with AND.
+Empty inclusion arrays match no records; empty status exclusions exclude nothing.
+`summary_mode=include` returns stored title/summary;
+default list results omit them. Advanced evaluation, data-collection, dynamic-variable,
+tool, topic, parent-conversation, guardrail and workflow filters return 400.
+`include_invalid_tool_calls=true` and `format=opentelemetry` also return 400.
+The installed runtime's nullable numeric/boolean queries and single array query
+values are normalized strictly at this group's boundary; invalid values return 400
+([nullable scalars #2612](https://github.com/counterfact/api-simulator/issues/2612),
+[single arrays #2615](https://github.com/counterfact/api-simulator/issues/2615)).
+
+Detail, list and summary derive from the same record; deleting an agent preserves
+historical agent IDs and names. Summary returns plain role/message pairs and omits
+tool-only and contextual-update turns. When plain-message count exceeds
+`max_messages` (1–200, default 40), messages are null and `messages_omitted` is true.
+SIP logs paginate newest first (1–20, default 20); they are independent synthetic
+historical fixtures. Resolution accepts HTTPS Slack message/Zendesk ticket URLs
+and looks them up with the supplied historical agent ID in scenario-owned mappings.
+The baseline maps `https://simulator.zendesk.com/agent/tickets/12345` and
+`https://simulator.slack.com/archives/C123/p1735689602000000` to `sim-conversation`
+for `sim-agent`. It makes no external lookup or undocumented ID-hashing claim.
+Unmapped valid references return 404; malformed/unsupported references return 400.
+
+Feedback stores `like`/`dislike` as one current thumbs vote, so repeated votes do
+not accumulate counts. Explicit null clears that vote; omitted feedback preserves
+it. Tag assignment validates every ID against the live canonical workspace tag
+collection before mutation and ignores duplicate assignments. Removing an absent
+assignment succeeds. Deleted tags disappear from conversation projections and list
+filtering; resetting the tag map is reflected immediately. Both tag mutations
+return 204 without a body. Deleting a conversation removes its SIP logs and
+reference mappings, and subsequent operations return 404. Errors, pagination,
+filter bounds, current-vote semantics, reference mappings and ordering are local
+simulator conventions. Authentication/permissions are not enforced.
 
 ## Development
 

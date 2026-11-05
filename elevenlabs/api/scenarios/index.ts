@@ -1,3 +1,5 @@
+import { resetConversations } from "./conversations.js";
+export { emptyConversations } from "./conversations.js";
 import { resetPhoneNumbers } from "./phone-numbers.js";
 export { emptyPhoneNumbers } from "./phone-numbers.js";
 import { resetServiceAccounts } from "./service-accounts.js";
@@ -47,6 +49,7 @@ export const reset: Scenario = ($) => {
   resetEnvironments($);
   resetEnvironmentVariables($);
   resetTags($);
+  resetConversations($);
   resetSettings($);
   resetAuthConnections($);
   resetWebhooks($);

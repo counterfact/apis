@@ -30,3 +30,12 @@ invoking the handler. Reproduced using a minimal public Dispatcher request with
 `requestBody.required: false`; sending JSON `{}` permits a no-op service-account
 key PATCH. The simulator keeps request validation enabled and tests the installed
 runtime limitation without changing its source contract.
+
+## Single array query values
+
+[Counterfact #2615](https://github.com/counterfact/api-simulator/issues/2615):
+A single value for both a plain array query schema and a nullable array schema
+reaches a public Dispatcher handler as a string. Repeated values remain arrays.
+The conversation context normalizes only its six supported array query filters
+from a string to a singleton list, validates list items, and preserves repeated
+values. Request and response validation remain enabled.
