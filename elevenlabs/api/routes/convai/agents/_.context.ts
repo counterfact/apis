@@ -204,6 +204,14 @@ export class Context {
     const record = this.agents.get(id);
     return record ? structuredClone(record.configuration) : undefined;
   }
+  deleteHoldAudio(id: string): Result<{ agent_id: string }> {
+    const agent = this.agents.get(id)?.configuration;
+    if (!agent) return { error: "agent_not_found" };
+    // This is live configuration metadata; immutable versions remain untouched.
+    if (agent.platform_settings?.queueing_config)
+      delete agent.platform_settings.queueing_config.hold_audio;
+    return { value: { agent_id: id } };
+  }
   getWidget(
     id: string,
     signature?: string | null,

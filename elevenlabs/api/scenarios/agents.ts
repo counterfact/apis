@@ -63,3 +63,20 @@ export const agentWidgetConfiguration: Scenario = ($) => {
     },
   };
 };
+
+/** Inert hold metadata; no upload or playback occurs. */
+export const agentHoldAudioFixture: Scenario = ($) => {
+  const live = $.loadContext("/convai/agents").agents.get("sim-agent")!.configuration;
+  live.platform_settings!.queueing_config = {
+    enabled: true, wait_timeout_seconds: 240,
+    hold_audio: { audio_path: "synthetic/hold.mp3", audio_url: "https://simulator.invalid/hold.mp3",
+      original_filename: "synthetic-hold.mp3", duration_secs: 1, size_bytes: 128 },
+  };
+  live.default_hold_audio_url = "https://simulator.invalid/default-tone.mp3";
+  for (const version of $.loadContext("/convai/agents/{agent_id}/branches").versions.values()) {
+    version.configuration.platform_settings!.queueing_config = structuredClone(live.platform_settings!.queueing_config);
+    version.configuration.default_hold_audio_url = live.default_hold_audio_url;
+  }
+  // Live main configuration may diverge from its immutable stored tip.
+  live.platform_settings!.queueing_config.wait_timeout_seconds = 300;
+};

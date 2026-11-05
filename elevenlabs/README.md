@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 391 now have authored
-behavior. The remaining 46 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 392 now have authored
+behavior. The remaining 45 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2839,3 +2839,21 @@ Context containers start empty; `api/scenarios/agent-topics.ts` owns all fixture
 `emptyAgentTopics` clears completed runs, and reset restores the baseline.
 Reads return defensive copies and separate instances isolate state. IDs, windows,
 ordering and error rules above are local simulator conventions.
+
+
+## Agent custom hold-audio removal
+
+`DELETE /v1/convai/agents/{agent_id}/hold-audio` removes only the live canonical
+agent's `platform_settings.queueing_config.hold_audio` metadata and returns its
+`agent_id`. Canonical and main-branch reads immediately reflect removal; stored
+versions and feature-branch snapshots remain unchanged. Queue enablement, timeout,
+default-tone URL and all other agent fields are preserved. Repeated removal and
+agents without custom audio succeed without adding queue configuration. Missing
+or deleted agents return 404. These idempotency and status rules are local
+simulator conventions; no audio playback, call or provider request occurs.
+
+Run `agentHoldAudioFixture` to populate inert custom metadata on live and historical
+fixtures, including a live timeout that differs from its stored main version.
+Reset removes this optional setup and restores the baseline. Contexts start empty,
+scenarios own fixtures, and separate instances isolate changes. The multipart
+upload operation remains generated under Counterfact #2607.
