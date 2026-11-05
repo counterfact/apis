@@ -1,6 +1,31 @@
 import type { Scenario } from "../types/index.js";
 export const emptyTestInvocations: Scenario = ($) => {
   const c = $.loadContext("/convai/test-invocations");
+  const agents = $.loadContext("/convai/agents");
+  c.agents = () => $.loadContext("/convai/agents");
+  c.agentTests = () => $.loadContext("/convai/agent-testing");
+  agents.testInvocations = () => $.loadContext("/convai/test-invocations");
+  c.nextInvocation = 0;
+  c.executionDefaults = {
+    maxTests: 100,
+    maxRepeat: 10,
+    creator: "sim-member-narrator",
+    bucketTitles: {
+      pending: "Pending local runs",
+      passed: "Synthetic passed runs",
+      failed: "Synthetic failed runs",
+      cancelled: "Cancelled local runs",
+    },
+    bucketReason:
+      "Grouped by explicitly assigned local status; no model evaluation.",
+    title: "Local agent tests",
+    access: {
+      is_creator: true,
+      creator_name: "Narrator",
+      creator_email: "narrator@example.invalid",
+      role: "admin",
+    },
+  };
   c.records = new Map();
   c.mutationTime = 1735689700;
 };
@@ -112,4 +137,20 @@ export const testInvocationUsage: Scenario = ($) => {
     "sim-test-invocation-complete",
   );
   if (complete) complete.value.created_at = record.value.created_at;
+};
+
+/** Explicit local synthetic results; no inference or billing is performed. */
+export const completePendingTestInvocations: Scenario = ($) => {
+  const c = $.loadContext("/convai/test-invocations");
+  for (const [id, record] of c.records) {
+    const results = record.value.test_runs
+      .filter((run) => run.status === "pending")
+      .map((run) => ({
+        test_run_id: run.test_run_id,
+        status: "passed",
+        credits_used: null,
+        price: null,
+      }));
+    if (results.length) c.complete(id, results);
+  }
 };

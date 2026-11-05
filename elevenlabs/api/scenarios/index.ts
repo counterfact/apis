@@ -22,7 +22,7 @@ export { emptyAudioEffects } from "./audio-effects.js";
 import { resetLlmUsage } from "./llm-usage.js";
 export { emptyLlmUsage, llmUsageFastTier } from "./llm-usage.js";
 import { resetTestInvocations } from "./test-invocations.js";
-export { emptyTestInvocations, testInvocationUsage } from "./test-invocations.js";
+export { emptyTestInvocations, testInvocationUsage, completePendingTestInvocations } from "./test-invocations.js";
 import { resetStoredTranscripts } from "./stored-transcripts.js";
 export { emptyStoredTranscripts } from "./stored-transcripts.js";
 import { resetIsolationHistory } from "./isolation-history.js";

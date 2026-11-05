@@ -642,6 +642,11 @@ export class Context {
       .map((data) => `data: ${JSON.stringify(data)}\n\n`)
       .join("");
   }
+  testInvocations?: () => import("../test-invocations/_.context.js").Context;
+  runTests(id: string, input: unknown) {
+    if (!this.testInvocations) throw new Error("Run startup or reset");
+    return this.testInvocations().runTests(id, input);
+  }
   knowledgeBase?:()=>import("../knowledge-base/_.context.js").Context;
   queryKnowledgeBase(id:string,input:unknown,branchId?:string|null){if(!this.knowledgeBase)throw new Error("Run startup or reset");return this.knowledgeBase().queryAgent(id,input,branchId);}
   lifecycle?: import("./{agent_id}/branches/_.context.js").Context;
