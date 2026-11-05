@@ -34,8 +34,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 210 now have authored
-behavior. The remaining 227 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 219 now have authored
+behavior. The remaining 218 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -1447,3 +1447,36 @@ this explicit scenario, keeping tests deterministic. Media and deliverable URLs
 use `simulator.invalid` and do not serve files. Reads return defensive copies;
 instances are isolated. Multipart media registration remains generated and is
 not counted, pending Counterfact #2607. No media is fetched, uploaded or processed.
+
+
+## Flows generation records
+
+Nine image, video and text-to-speech Flows operations now persist synthetic local
+records: create, list and detail for each media kind. Startup/reset seed one
+completed fixture per kind in `api/scenarios/flows.ts`; contexts start empty.
+Creation returns `sim-flow-created-N` and `pending`. Request parameters remain
+inert metadata: no media, model inference, provider request, billing or background
+job runs. Voices and pronunciation dictionaries are stored references without
+resolution or canonical-state changes. These records are separate from speech
+history and account usage.
+
+Prompt-based models in the snapshot and the three TTS models are supported.
+Nonblank prompt/text and TTS voice are required locally. Webhooks, reference
+media, masks, and Creatify Aurora lipsync return 400 explicitly; no notifications,
+asset resolution or remote fetching occurs. Other schema-valid settings are stored
+without affecting synthetic output. Malformed requests leave records and counters
+unchanged. The unchanged contracts still validate requests and responses.
+
+Lists filter by status and exact model ID before decimal-offset pagination
+(1–100 records, default 30), newest creation first with ID ties. Invalid options
+return 400; beyond-end pages are empty. Detail is scoped to its media kind and
+missing or wrong-kind IDs return 404. Responses are defensive copies and instances
+are isolated. IDs, ordering, errors and blank-input checks are local conventions.
+
+`startFlowGenerations` moves pending records to generating. `completeFlowGenerations`
+replaces pending/generating records with synthetic completed metadata, using
+`image/png`, `video/mp4` or `audio/mpeg` and fixed `simulator.invalid` URLs that do
+not serve files or expire. `failFlowGenerations` instead stores a synthetic
+`model_error`. Terminal records are preserved by later transition scenarios.
+`emptyFlowGenerations` clears records/counters; reset restores the baseline.
+Template and template-run operations remain generated and uncounted.
