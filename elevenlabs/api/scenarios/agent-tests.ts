@@ -14,6 +14,14 @@ export const emptyAgentTests: Scenario = ($) => {
       creator_email: "narrator@example.invalid",
       role: "admin",
     },
+    definition: {
+      common: { chat_history: [], dynamic_variables: {}, environment: "production", from_conversation_metadata: null, conversation_initiation_source: null },
+      llm: { success_condition: "", success_examples: [], failure_examples: [] },
+      tool: { tool_call_parameters: null, check_any_tool_matches: false },
+      simulation: { simulation_scenario: "", simulation_max_turns: 5, simulation_environment: "production", tool_mock_config: { mocking_strategy: "none", fallback_strategy: "raise_error", mocked_tool_ids: [] }, tool_mock_overrides: {}, evaluation_model: "claude-sonnet-4-6", simulated_user_model: "claude-sonnet-4-6" },
+      integration: { integration_id: "", credential_id: "", integration_connection_id: "" },
+      integrationResult: { is_blocked: false, tool_latency_secs: 0, error_type: "", raw_error_message: "", dynamic_variable_updates: [] },
+    },
   };
 };
 export const resetAgentTests: Scenario = ($) => {

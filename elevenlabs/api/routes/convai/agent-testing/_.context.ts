@@ -3,6 +3,16 @@ import type { GetToolCallUnitTestResponseModel as Tool } from "../../../types/v1
 import type { GetSimulationTestResponseModel as Simulation } from "../../../types/v1/components/schemas/GetSimulationTestResponseModel.js";
 import type { UnitTestSummaryResponseModel as Summary } from "../../../types/v1/components/schemas/UnitTestSummaryResponseModel.js";
 import type { ResourceAccessInfo as Access } from "../../../types/v1/components/schemas/ResourceAccessInfo.js";
+import type { CreateResponseUnitTestRequest } from "../../../types/v1/components/schemas/CreateResponseUnitTestRequest.js";
+import type { CreateToolCallUnitTestRequest } from "../../../types/v1/components/schemas/CreateToolCallUnitTestRequest.js";
+import type { CreateSimulationTestRequest } from "../../../types/v1/components/schemas/CreateSimulationTestRequest.js";
+import type { ConversationHistoryTranscriptCommonModel_Input as TurnInput } from "../../../types/v1/components/schemas/ConversationHistoryTranscriptCommonModel-Input.js";
+import type { ConversationHistoryTranscriptCommonModel_Output as TurnOutput } from "../../../types/v1/components/schemas/ConversationHistoryTranscriptCommonModel-Output.js";
+type CallInput = NonNullable<TurnInput["tool_calls"]>[number];
+type CallOutput = NonNullable<TurnOutput["tool_calls"]>[number];
+type ResultInput = NonNullable<TurnInput["tool_results"]>[number];
+type ResultOutput = NonNullable<TurnOutput["tool_results"]>[number];
+type TestRequest = CreateResponseUnitTestRequest | CreateToolCallUnitTestRequest | CreateSimulationTestRequest;
 type Obj = Record<string, unknown>;
 type Meta = {
   parent: string | null;
@@ -48,7 +58,17 @@ export class Context {
   folders = new Map<string, StoredFolder>();
   nextId = 1;
   nextMutation = 0;
-  defaults?: { time: number; userId: string; access: Access };
+  defaults?: {
+    time: number; userId: string; access: Access;
+    definition: {
+      common: Pick<Llm, "chat_history" | "dynamic_variables" | "environment" | "from_conversation_metadata" | "conversation_initiation_source">;
+      llm: Pick<Llm, "success_condition" | "success_examples" | "failure_examples">;
+      tool: Pick<Tool, "tool_call_parameters" | "check_any_tool_matches">;
+      simulation: Pick<Simulation, "simulation_scenario" | "simulation_max_turns" | "simulation_environment" | "tool_mock_config" | "tool_mock_overrides" | "evaluation_model" | "simulated_user_model">;
+      integration: { integration_id: string; credential_id: string; integration_connection_id: string };
+      integrationResult: { is_blocked: boolean; tool_latency_secs: number; error_type: string; raw_error_message: string; dynamic_variable_updates: [] };
+    };
+  };
   private settings() {
     if (!this.defaults)
       throw new Error("Run agent test startup or reset first");
@@ -88,6 +108,71 @@ export class Context {
       id = f.parent;
     }
     return rows;
+  }
+  private call(value: CallInput): CallOutput {
+    const details = value.tool_details;
+    return { ...value, tool_details: details?.type === "api_integration_webhook" ? { ...this.settings().definition.integration, ...details } : details };
+  }
+  private result(value: ResultInput): ResultOutput {
+    if (value.type === "api_integration_webhook") return { ...this.settings().definition.integrationResult, ...this.settings().definition.integration, ...value };
+    if (value.type === "workflow") return {
+      ...value,
+      result: value.result == null ? value.result : {
+        ...value.result,
+        steps: value.result.steps?.map(step => step.type === "nested_tools" ? { ...step, requests: step.requests.map(call => this.call(call)), results: step.results.map(result => this.result(result)) } : step),
+      },
+    };
+    return value;
+  }
+  private turn(value: TurnInput): TurnOutput {
+    return { ...value, tool_calls: value.tool_calls?.map(call => this.call(call)), tool_results: value.tool_results?.map(result => this.result(result)) };
+  }
+  private definition(id: string, value: TestRequest): { parent: string | null; definition: StoredTest["definition"] } {
+    const common = ["name", "type", "parent_folder_id", "chat_history", "dynamic_variables", "from_conversation_metadata", "conversation_initiation_source", "environment"];
+    const fields = {
+      llm: ["success_condition", "success_examples", "failure_examples"],
+      tool: ["tool_call_parameters", "check_any_tool_matches"],
+      simulation: ["success_condition", "success_conditions", "simulation_scenario", "simulation_max_turns", "simulation_environment", "tool_mock_config", "tool_mock_overrides", "evaluation_model", "simulated_user_model"],
+    };
+    if (!object(value)) return invalid();
+    const type = value.type ?? "llm";
+    if (!(type === "llm" || type === "tool" || type === "simulation")) return invalid();
+    input(value, [...common, ...fields[type]]);
+    if (!text(value.name) || (value.parent_folder_id != null && !text(value.parent_folder_id))) return invalid();
+    if (value.type === "simulation") {
+      if (!(text(value.success_condition) || (Array.isArray(value.success_conditions) && value.success_conditions.length > 0 && value.success_conditions.every(text)))) return invalid();
+      if (value.simulation_max_turns !== undefined && (!Number.isSafeInteger(value.simulation_max_turns) || value.simulation_max_turns < 1 || value.simulation_max_turns > 50)) return invalid();
+    }
+    const { parent_folder_id, ...body } = value;
+    const parent = parent_folder_id ?? null;
+    if (parent !== null) this.storedFolder(parent);
+    const defaults = this.settings().definition;
+    const normalized = {
+      chat_history: body.chat_history?.map(turn => this.turn(turn)) ?? defaults.common.chat_history,
+      from_conversation_metadata: body.from_conversation_metadata == null ? body.from_conversation_metadata ?? defaults.common.from_conversation_metadata : {
+        ...body.from_conversation_metadata,
+        original_agent_reply: body.from_conversation_metadata.original_agent_reply?.map(turn => this.turn(turn)),
+      },
+    };
+    if (body.type === "tool") return { parent, definition: structuredClone({ ...defaults.common, ...defaults.tool, ...body, ...normalized, id, type: "tool" }) };
+    if (body.type === "simulation") return { parent, definition: structuredClone({ ...defaults.common, ...defaults.simulation, ...body, ...normalized, id, type: "simulation" }) };
+    return { parent, definition: structuredClone({ ...defaults.common, ...defaults.llm, ...body, ...normalized, success_condition: "success_condition" in body ? body.success_condition ?? defaults.llm.success_condition : defaults.llm.success_condition, id, type: "llm" }) };
+  }
+  create(value: TestRequest) {
+    // Validate and clone before allocating an ID or advancing mutation time.
+    const record = this.definition("", value), defaults = this.settings();
+    let id: string;
+    do { id = `sim-test-created-${this.nextId++}`; } while (this.tests.has(id) || this.folders.has(id));
+    record.definition.id = id;
+    const time = this.now();
+    this.tests.set(id, { ...record, creator: defaults.userId, access: structuredClone(defaults.access), created: time, updated: time });
+    return { id };
+  }
+  update(id: string, value: TestRequest) {
+    this.get(id);
+    const record = this.definition(id, value);
+    this.tests.set(id, { ...this.tests.get(id)!, ...record, updated: this.now() });
+    return this.get(id);
   }
   get(id: string) {
     const t = this.tests.get(id);
