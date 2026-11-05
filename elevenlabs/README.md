@@ -57,6 +57,49 @@ also removes its retained audio; deleting a voice preserves earlier history.
 Instances isolate all state, and returned media/metadata are defensive copies.
 These IDs, accounting, retention and error rules are local simulator conventions.
 
+## Voice preview design and saving
+
+Five `/v1/text-to-voice` operations now share local preview state: deprecated
+`POST /create-previews`, `POST /design`, `POST /{voice_id}/remix`, `POST` on the
+collection to save a preview, and `GET /{generated_voice_id}/stream` to retrieve
+its audio. Each preview operation creates three distinct IDs with copied versions
+of the independently decoded silence fixture described above. It does not design,
+remix, enhance, synthesize or analyze a voice, and makes no provider request.
+The source voice must exist for remixing; its audio and metadata remain unchanged.
+
+Descriptions follow the contract's 20–1,000 character bounds (5–1,000 for remix).
+Text has 100–1,000 Unicode code points. Omitted/null text uses a fixed scenario
+passage, not generated text. `auto_generate_text=true` and `should_enhance=true`
+return 400. Only `mp3_44100_128`, default loudness 0.5, default guidance 5
+(2 for remix), and quality 0.9 are supported. Nonnull seed, reference audio,
+prompt strength and remix-session options return 400 before mutation. Design
+accepts the two `ttv` catalog IDs and defaults to `eleven_multilingual_ttv_v2`;
+remix uses `eleven_ttv_v3`. The original catalog order remains unchanged.
+
+Each preview request consumes one fictional character-quota unit per code point
+per preview (three times the text length). Insufficient quota returns 429 before
+allocating IDs. Previews live separately from speech history. Repeated retrieval
+and saving consume no additional character quota. `stream_previews=true` on design
+or remix returns each ID with an empty required `audio_base_64` string; retrieval
+returns the copied MP3 as one complete ordinary `audio/mpeg` response. No
+incremental timing or framing is simulated. Otherwise previews include base64
+bytes, fixture duration and a language label (English by default, or the source
+voice's language label for remix). Language is metadata, not detected speech.
+
+Saving creates an owned generated voice in the canonical voice map. V1/V2 reads,
+settings, deletion and subscription slot counts observe it. Name, description and
+labels are metadata only; the saved voice has default settings and no samples or
+preview URL. A preview can be saved once; reuse returns 409. All current voices
+occupy a local slot, so the subscription voice limit is checked before saving.
+Nonempty played-but-not-selected feedback is unsupported (400); an empty array
+is accepted without an RLHF action. Deleting a saved/source voice preserves its
+preview; retrieval stays available until reset. Missing previews/voices/models
+return 404. These IDs, quota, reuse and error rules are local conventions.
+
+Contexts start empty. `api/scenarios/voice-previews.ts` populates media/defaults,
+accessors and counters during startup/reset; reset clears previews and new voices
+and restores quota. Instances isolate state and responses return copies.
+
 ## Run
 
 Requires Node.js 22.22 or newer. Counterfact is pinned to 3.1.0.
@@ -88,8 +131,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 342 now have authored
-behavior. The remaining 95 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 347 now have authored
+behavior. The remaining 90 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -188,8 +231,11 @@ conventions. Authentication and permission enforcement are not simulated.
 
 ## Model discovery
 
-`GET /v1/models` returns a stable three-model catalog containing
-`eleven_multilingual_v2`, `eleven_flash_v2_5`, and `eleven_v3`. Voice fixtures reference an ID
+`GET /v1/models` returns a stable five-model catalog containing
+`eleven_multilingual_v2`, `eleven_flash_v2_5`, `eleven_v3`,
+`eleven_multilingual_ttv_v2` and `eleven_ttv_v3`. The two `ttv` models are
+synthetic preview-design dependencies with text-to-speech capability false.
+Voice fixtures reference an ID
 in this catalog. Responses include capabilities, languages, request limits,
 and rate fields, with defensive copies of the stored model data.
 

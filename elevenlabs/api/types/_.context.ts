@@ -59,6 +59,7 @@ import type { Context as SingleUseTokenContext } from "../routes/single-use-toke
 import type { Context as SpeechEngineContext } from "../routes/speech-engine/_.context";
 import type { Context as TextToDialogueContext } from "../routes/text-to-dialogue/_.context";
 import type { Context as TextToSpeechContext } from "../routes/text-to-speech/_.context";
+import type { Context as TextToVoiceContext } from "../routes/text-to-voice/_.context";
 import type { Context as WorkspaceContext } from "../routes/workspace/_.context";
 import type { Context } from "../routes/_.context";
 interface LoadContextDefinitions {
@@ -233,6 +234,9 @@ interface LoadContextDefinitions {
   loadContext(
     path: "/text-to-speech" | `/text-to-speech/${string}`,
   ): TextToSpeechContext;
+  loadContext(
+    path: "/text-to-voice" | `/text-to-voice/${string}`,
+  ): TextToVoiceContext;
   loadContext(path: "/workspace" | `/workspace/${string}`): WorkspaceContext;
   loadContext(path: "/" | `/${string}`): Context;
   loadContext(path: string): Record<string, unknown>;
