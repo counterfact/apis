@@ -24,6 +24,8 @@ export const resetDictionaries: Scenario = ($) => {
     }];
   });
   $.loadContext("/pronunciation-dictionaries").dictionaries = new Map(records);
+  $.loadContext("/pronunciation-dictionaries").nextDictionaryNumber = 0;
+  $.loadContext("/pronunciation-dictionaries").creationDefaults = { createdBy: "sim-user", timeUnix: 1_735_689_800 };
 };
 
 export const emptyDictionaries: Scenario = ($) => {

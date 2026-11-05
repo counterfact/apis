@@ -34,7 +34,7 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. The remaining 422 operations retain their
+the stateful voices implementation. The remaining 421 operations retain their
 generated random responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
@@ -196,6 +196,20 @@ populate this context. Run `.scenario emptyDictionaries` (or
 `app.scenario("emptyDictionaries", "api")`) to clear it; `reset` restores it.
 Other simulator instances and voice/model/history state remain isolated.
 The collection handler uses the same documented context assertion as history.
+
+`POST /v1/pronunciation-dictionaries/add-from-rules` creates a dictionary from
+alias and phoneme rules. The returned ID and first version are persisted and
+visible in list/detail responses. Empty rule lists are accepted; a rule's
+`string_to_replace` must be non-empty. Malformed bodies return HTTP 400 without
+creating a dictionary. Stored rules are isolated from caller edits.
+
+Created dictionaries use `sim-dictionary-created-1`, then increasing numeric
+suffixes, and a first version ending in `-v1`. Creator and fixed timestamp
+defaults are populated by the dictionary scenario; creation timestamps advance
+one second per allocated ID. `reset` removes created dictionaries and restores
+the ID sequence. These are local simulator conventions. The fictional creator
+has `admin` permission; `workspace_access` is accepted but sharing and permission
+enforcement are not simulated.
 
 ## Development
 
