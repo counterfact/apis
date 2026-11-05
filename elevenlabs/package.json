@@ -1,0 +1,30 @@
+{
+  "name": "@counterfact/elevenlabs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-version Counterfact simulator for the ElevenLabs API",
+  "type": "module",
+  "scripts": {
+    "generate": "counterfact --config counterfact.yaml --generate --no-update-check",
+    "start": "counterfact --config counterfact.yaml --no-update-check",
+    "serve": "counterfact --config counterfact.yaml --serve --no-update-check",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "lint": "tsc --noEmit",
+    "audit:operations": "node scripts/audit-operations.mjs",
+    "probe:operation": "node scripts/probe-operation.mjs",
+    "verify:command": "node scripts/verify-command.mjs",
+    "test:tools": "node --test scripts/test/*.test.mjs"
+  },
+  "dependencies": {
+    "counterfact": "^3.2.2",
+    "saxes": "6.0.0"
+  },
+  "devDependencies": {
+    "@counterfact/runtime": "0.4.2",
+    "@types/node": "^24.0.0",
+    "js-yaml": "5.2.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

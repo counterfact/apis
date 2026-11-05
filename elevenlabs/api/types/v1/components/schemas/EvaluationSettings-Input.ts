@@ -1,0 +1,11 @@
+import type { PromptEvaluationCriteria } from "./PromptEvaluationCriteria.js";
+/**
+ * Settings to evaluate an agent's performance.
+ * Agents are evaluated against a set of criteria, with success being defined as meeting some combination of those criteria.
+ */
+export type EvaluationSettings_Input = {
+  /**
+   * Individual criteria that the agent should be evaluated against. Each criterion is stored as an analysis item attached to the agent (see analysis_items).
+   */
+  criteria?: Array<PromptEvaluationCriteria>;
+};

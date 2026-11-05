@@ -1,0 +1,13 @@
+import type { Routes } from "../../../../../types/index.js";
+type Route =
+  Routes["/convai"]["/agents"]["/{agent_id}"]["/simulate-conversation"]["/stream"];
+export const POST: Route["POST"] = async ($) => {
+  const result = $.context.simulateConversation($.path.agent_id, $.body);
+  if (result.error)
+    return $.x.response
+      .status(result.error === "agent_not_found" ? 404 : 400)
+      .json({ detail: { status: result.error, message: result.error } });
+  return $.x.response
+    .status(200)
+    .match("text/event-stream", $.context.simulationEvents(result.value));
+};

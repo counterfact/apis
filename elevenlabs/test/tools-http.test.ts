@@ -1,0 +1,81 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createDispatcherHarness } from "../test-support/dispatcher.js";
+const path = "/v1/convai/tools";
+
+test("tools Dispatcher reads stable configuration, filters and paginates synthetic execution history", async () => {
+  const app = await createDispatcherHarness();
+  const read = async (url: string) => {
+    const response = await app.request(url);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type")!, /application\/json/);
+    return response.json();
+  };
+  const baseline = await read(path);
+  assert.equal(baseline.tools[0].id, "sim-tool");
+  assert.equal((await read(path + "/sim-tool")).tool_config.name, "display_help");
+  assert.equal((await read(path + "/sim-tool?environment=staging")).tool_config.type, "client");
+  await app.scenario("toolDiscovery");
+  const first = await read(path + "?page_size=1&sort_by=name&sort_direction=asc&types=client");
+  assert.equal(first.tools[0].id, "sim-tool");
+  assert.equal(first.has_more, true);
+  const second = await read(path + `?page_size=1&sort_by=name&sort_direction=asc&cursor=${first.next_cursor}`);
+  assert.equal(second.tools[0].id, "sim-tool-secondary");
+  assert.equal(second.next_cursor, null);
+  assert.equal((await read(path + "?search=display&created_by_user_id=@me&used_by_agent_id=sim-agent")).tools.length, 1);
+  assert.deepEqual((await read(path + "?types=webhook&types=api_integration_webhook")).tools, []);
+  assert.deepEqual((await read(path + "?created_by_user_id=other&show_only_owned_documents=true")).tools, []);
+  const executionPath = path + "/sim-tool/executions";
+  const history = await read(executionPath + "?page_size=1");
+  assert.equal(history.executions[0].id, "sim-execution-2");
+  assert.equal(history.has_more, true);
+  assert.equal((await read(executionPath + `?cursor=${history.next_cursor}`)).executions[0].id, "sim-execution-1");
+  assert.equal((await read(executionPath + "?is_error=true&agent_id=sim-agent&start_time=1735689601&end_time=1735689601")).executions.length, 1);
+  assert.equal((await read(executionPath + "?is_error=false")).executions[0].id, "sim-execution-1");
+  assert.deepEqual((await read(executionPath + "?branch_id=missing")).executions, []);
+  await app.scenario("reset");
+  assert.deepEqual(await read(path), baseline);
+  await app.scenario("emptyTools");
+  assert.deepEqual((await read(path)).tools, []);
+  const other = await createDispatcherHarness();
+  assert.equal((await other.request(path + "/sim-tool")).status, 200);
+});
+
+test("tools Dispatcher follows canonical agent duplication/deletion and guards referenced tool deletion", async () => {
+  const app = await createDispatcherHarness();
+  await app.scenario("toolDiscovery");
+  const deps = async () => (await (await app.request(path + "/sim-tool/dependent-agents")).json()).agents;
+  assert.deepEqual((await deps()).map((a: { id: string }) => a.id), ["sim-agent"]);
+  const duplicate = await app.request("/v1/convai/agents/sim-agent/duplicate", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  assert.equal(duplicate.status, 200);
+  const id = (await duplicate.json()).agent_id;
+  assert.equal((await deps()).length, 2);
+  const page = await app.request(path + "/sim-tool/dependent-agents?page_size=1");
+  assert.equal(page.status, 200);
+  assert.equal((await page.json()).has_more, true);
+  assert.equal((await app.request(path + "/sim-tool", { method: "DELETE" })).status, 409);
+  assert.equal((await app.request(path + "/sim-tool?force=true", { method: "DELETE" })).status, 400);
+  assert.equal((await app.request("/v1/convai/agents/sim-agent", { method: "DELETE" })).status, 204);
+  assert.equal((await deps())[0].id, id);
+  assert.equal((await app.request("/v1/convai/agents/" + id, { method: "DELETE" })).status, 204);
+  assert.deepEqual(await deps(), []);
+  const deleted = await app.request(path + "/sim-tool", { method: "DELETE" });
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(await deleted.json(), {});
+  for (const suffix of ["", "/dependent-agents", "/executions"]) assert.equal((await app.request(path + "/sim-tool" + suffix)).status, 404);
+  assert.equal((await app.request(path + "/sim-tool", { method: "DELETE" })).status, 404);
+  assert.equal((await (await app.request(path)).json()).tools.length, 1);
+  await app.scenario("reset");
+  assert.equal((await (await app.request(path + "/sim-tool/executions")).json()).executions.length, 2);
+});
+
+test("tools Dispatcher rejects invalid queries without changing configuration or execution history", async () => {
+  const app = await createDispatcherHarness();
+  const before = await (await app.request(path)).json();
+  for (const q of ["page_size=0", "page_size=101", "page_size=1.5", "page_size=bad", "cursor=bad", "sort_by=bad", "sort_direction=bad", "types=system"]) assert.equal((await app.request(path + "?" + q)).status, 400, q);
+  for (const q of ["is_error=bad", "start_time=bad", "start_time=1.5", "start_time=2&end_time=1", "cursor=-1", "page_size=101"]) assert.equal((await app.request(path + "/sim-tool/executions?" + q)).status, 400, q);
+  assert.equal((await app.request(path + "/sim-tool/dependent-agents?page_size=0")).status, 400);
+  for (const suffix of ["", "/executions", "/dependent-agents"]) assert.equal((await app.request(path + "/missing" + suffix)).status, 404);
+  assert.deepEqual(await (await app.request(path)).json(), before);
+  assert.equal((await (await app.request(path + "/sim-tool/executions")).json()).executions.length, 2);
+});

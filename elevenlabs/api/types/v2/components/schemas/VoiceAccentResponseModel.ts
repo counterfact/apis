@@ -1,0 +1,21 @@
+/**
+ * @example {"accent":"american","code":"en-american","language":"en","name":"American"}
+ */
+export type VoiceAccentResponseModel = {
+  /**
+   * The accent value used for filtering shared voices via the `accent` query parameter on `GET /v1/shared-voices`.
+   */
+  accent: string;
+  /**
+   * The language code this accent belongs to, e.g. `en`.
+   */
+  language: string;
+  /**
+   * The full accent code, e.g. `en-american`.
+   */
+  code: string;
+  /**
+   * The human-readable accent name, e.g. `American`.
+   */
+  name: string;
+};

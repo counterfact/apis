@@ -1,0 +1,39 @@
+import type { ASTStringNode_Input } from "./ASTStringNode-Input.js";
+import type { ASTNumberNode_Input } from "./ASTNumberNode-Input.js";
+import type { ASTBooleanNode_Input } from "./ASTBooleanNode-Input.js";
+import type { ASTNullNode_Input } from "./ASTNullNode-Input.js";
+import type { ASTLLMNode_Input } from "./ASTLLMNode-Input.js";
+import type { ASTDynamicVariableNode_Input } from "./ASTDynamicVariableNode-Input.js";
+import type { ASTOrOperatorNode_Input } from "./ASTOrOperatorNode-Input.js";
+import type { ASTAndOperatorNode_Input } from "./ASTAndOperatorNode-Input.js";
+import type { ASTEqualsOperatorNode_Input } from "./ASTEqualsOperatorNode-Input.js";
+import type { ASTNotEqualsOperatorNode_Input } from "./ASTNotEqualsOperatorNode-Input.js";
+import type { ASTGreaterThanOperatorNode_Input } from "./ASTGreaterThanOperatorNode-Input.js";
+import type { ASTLessThanOperatorNode_Input } from "./ASTLessThanOperatorNode-Input.js";
+import type { ASTGreaterThanOrEqualsOperatorNode_Input } from "./ASTGreaterThanOrEqualsOperatorNode-Input.js";
+import type { ASTLessThanOrEqualsOperatorNode_Input } from "./ASTLessThanOrEqualsOperatorNode-Input.js";
+import type { ASTAdditionOperatorNode_Input } from "./ASTAdditionOperatorNode-Input.js";
+import type { ASTSubtractionOperatorNode_Input } from "./ASTSubtractionOperatorNode-Input.js";
+import type { ASTMultiplicationOperatorNode_Input } from "./ASTMultiplicationOperatorNode-Input.js";
+import type { ASTDivisionOperatorNode_Input } from "./ASTDivisionOperatorNode-Input.js";
+import type { ASTConditionalOperatorNode_Input } from "./ASTConditionalOperatorNode-Input.js";
+export type ASTNode_Input =
+  | (ASTStringNode_Input & { type: "string_literal" })
+  | (ASTNumberNode_Input & { type: "number_literal" })
+  | (ASTBooleanNode_Input & { type: "boolean_literal" })
+  | (ASTNullNode_Input & { type: "null_literal" })
+  | (ASTLLMNode_Input & { type: "llm" })
+  | (ASTDynamicVariableNode_Input & { type: "dynamic_variable" })
+  | (ASTOrOperatorNode_Input & { type: "or_operator" })
+  | (ASTAndOperatorNode_Input & { type: "and_operator" })
+  | (ASTEqualsOperatorNode_Input & { type: "eq_operator" })
+  | (ASTNotEqualsOperatorNode_Input & { type: "neq_operator" })
+  | (ASTGreaterThanOperatorNode_Input & { type: "gt_operator" })
+  | (ASTLessThanOperatorNode_Input & { type: "lt_operator" })
+  | (ASTGreaterThanOrEqualsOperatorNode_Input & { type: "gte_operator" })
+  | (ASTLessThanOrEqualsOperatorNode_Input & { type: "lte_operator" })
+  | (ASTAdditionOperatorNode_Input & { type: "add_operator" })
+  | (ASTSubtractionOperatorNode_Input & { type: "sub_operator" })
+  | (ASTMultiplicationOperatorNode_Input & { type: "mul_operator" })
+  | (ASTDivisionOperatorNode_Input & { type: "div_operator" })
+  | (ASTConditionalOperatorNode_Input & { type: "conditional_operator" });

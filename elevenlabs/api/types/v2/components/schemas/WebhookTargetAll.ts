@@ -1,0 +1,9 @@
+/**
+ * Deliver the result to all of the workspace's configured flows webhooks.
+ */
+export type WebhookTargetAll = {
+  /**
+   * Send the result to all of the workspace's configured flows webhooks.
+   */
+  type: "all";
+};

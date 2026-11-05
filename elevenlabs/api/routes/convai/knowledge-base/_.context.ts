@@ -1,0 +1,318 @@
+import { copyUpload } from "../../assets/_.context.js";
+import type { RAGDocumentIndexResponseModel as Index } from "../../../types/v1/components/schemas/RAGDocumentIndexResponseModel.js";
+import type { KnowledgeBaseDocumentChunkResponseModel as Chunk } from "../../../types/v1/components/schemas/KnowledgeBaseDocumentChunkResponseModel.js";
+import type { GetKnowledgeBaseTextResponseModel as Text } from "../../../types/v1/components/schemas/GetKnowledgeBaseTextResponseModel.js";
+import type { GetKnowledgeBaseFolderResponseModel as Folder } from "../../../types/v1/components/schemas/GetKnowledgeBaseFolderResponseModel.js";
+import type { GetKnowledgeBaseSummaryTextResponseModel as TextSummary } from "../../../types/v1/components/schemas/GetKnowledgeBaseSummaryTextResponseModel.js";
+import type { GetKnowledgeBaseSummaryFolderResponseModel as FolderSummary } from "../../../types/v1/components/schemas/GetKnowledgeBaseSummaryFolderResponseModel.js";
+import type { StoredAgent } from "../agents/_.context.js";
+import type { GetKnowledgeBaseURLResponseModel as UrlDocument } from "../../../types/v1/components/schemas/GetKnowledgeBaseURLResponseModel.js";
+import type { GetKnowledgeBaseFileResponseModel as FileDocument } from "../../../types/v1/components/schemas/GetKnowledgeBaseFileResponseModel.js";
+import type { GetKnowledgeBaseSummaryURLResponseModel as UrlSummary } from "../../../types/v1/components/schemas/GetKnowledgeBaseSummaryURLResponseModel.js";
+import type { GetKnowledgeBaseSummaryFileResponseModel as FileSummary } from "../../../types/v1/components/schemas/GetKnowledgeBaseSummaryFileResponseModel.js";
+import type { GetCrawlJobResponseModel as Crawl } from "../../../types/v1/components/schemas/GetCrawlJobResponseModel.js";
+import type { GetAgentResponseModel as Agent } from "../../../types/v1/components/schemas/GetAgentResponseModel.js";
+import type { AgentKnowledgeBaseRagChunkResponseModel as RagChunk } from "../../../types/v1/components/schemas/AgentKnowledgeBaseRagChunkResponseModel.js";
+export type Document=Text|Folder|UrlDocument|FileDocument;
+export type SourcePage={name:string;content:string};
+export type StoredCrawl={job:Crawl;urls:string[];documentIds:string[]};
+export type RagMatch={documentId:string;chunkId:string;model:Index["model"];distance:number};
+export type StoredDocument={document:Document;creatorUserId:string};
+const html=(value:string)=>value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!Array.isArray(v);
+export class KnowledgeBaseError extends Error {
+  override name="KnowledgeBaseError";
+  constructor(public status:number,public code:string,message:string){super(message);}
+}
+const invalid=():never=>{throw new KnowledgeBaseError(400,"invalid_knowledge_base_request","Invalid knowledge base request");};
+export class Context {
+  uploadSettings?: {maxBytes:number;maxName:number;sourceUrlPrefix:string};
+  documents=new Map<string,StoredDocument>();
+  sourcePages=new Map<string,SourcePage>();
+  sourceFileUrls=new Map<string,string>();
+  crawls=new Map<string,StoredCrawl>();
+  ragQueries=new Map<string,RagMatch[]>();
+  nextCrawl=1;
+  selectAgent?: (id:string,branchId?:string|null)=>Agent;
+  retrievalDefaults?: {model:Index["model"];maxLength:number;maxChunks:number;maxDistance:number};
+  indexes=new Map<string,Map<Index["model"],{index:Index;chunks:Chunk[]}>>();
+  nextIndexId=1;
+  maxIndexBytes=0;
+  agents:()=>Map<string,StoredAgent>=()=>new Map();
+  nextId=1;
+  nextMutation=0;
+  defaults?:{userId:string;time:number;accessInfo:Text["access_info"]};
+  private settings(){if(!this.defaults)throw new Error("Run knowledge base initialization scenario first");return this.defaults;}
+  private stored(id:string){const r=this.documents.get(id);if(!r)throw new KnowledgeBaseError(404,"knowledge_base_document_not_found","Knowledge base document not found");return r;}
+  private name(v:unknown){if(typeof v!=="string"||!v.trim())return invalid();return v;}
+  private parent(v:unknown){if(v==null)return null;if(typeof v!=="string")return invalid();if(this.stored(v).document.type!=="folder")return invalid();return v;}
+  private unsupportedSync(input:Record<string,unknown>){
+    if(input.enable_auto_sync!=null&&input.enable_auto_sync!==false||input.auto_remove!=null&&input.auto_remove!==false||input.minimum_frequency_days!=null||input.tighten_only!=null&&input.tighten_only!==false)
+      throw new KnowledgeBaseError(400,"knowledge_base_auto_sync_unsupported","Local documents do not support automatic synchronization");
+  }
+  folderPath(id:string){const path:{id:string;name:string}[]=[];let current=this.stored(id).document.folder_parent_id;const visited=new Set<string>();
+    while(current){if(visited.has(current))throw new Error("Knowledge base folder cycle");visited.add(current);const d=this.stored(current).document;path.unshift({id:d.id,name:d.name});current=d.folder_parent_id;}return path;}
+  private descendants(id:string){return [...this.documents.keys()].filter(k=>k!==id&&this.folderPath(k).some(p=>p.id===id));}
+  private refs(agent:StoredAgent){return agent.configuration.conversation_config.agent?.prompt?.knowledge_base??[];}
+  dependentAgents(id:string,mode:"direct"|"transitive"|"all"="all"){
+    const ancestors=new Set(this.folderPath(id).map(p=>p.id));
+    return [...this.agents()].filter(([,a])=>this.refs(a).some(r=>mode!=="transitive"&&r.id===id||mode!=="direct"&&ancestors.has(r.id))).sort(([a],[b])=>a.localeCompare(b)).map(([id,a])=>({type:"available" as const,id,name:a.configuration.name,created_at_unix_secs:a.configuration.metadata.created_at_unix_secs,access_level:"admin" as const}));
+  }
+  getDocument(id:string):Document {
+    const d=structuredClone(this.stored(id).document);d.folder_path=this.folderPath(id);
+    if(d.type==="folder"){d.children_count=[...this.documents.values()].filter(r=>r.document.folder_parent_id===id).length;d.document_count=Math.min(1000,this.descendants(id).filter(k=>this.stored(k).document.type!=="folder").length);}return d;
+  }
+  getContent(id:string){const d=this.stored(id).document;if(d.type==="folder")return invalid();return d.extracted_inner_html;}
+  summary(id:string):TextSummary|FolderSummary|UrlSummary|FileSummary {const d=this.getDocument(id);const {extracted_inner_html:_content,content_format:_format,...base}=d as Text;return {...base,dependent_agents:this.dependentAgents(id)} as TextSummary|FolderSummary|UrlSummary|FileSummary;}
+  summaries(ids:unknown){const values=typeof ids==="string"?[ids]:ids;if(!Array.isArray(values)||values.length<1||values.length>100||values.some(v=>typeof v!=="string"))return invalid();return Object.fromEntries([...new Set(values as string[])].map(id=>[id,this.documents.has(id)?{status:"success" as const,data:this.summary(id)}:{status:"failure" as const,error_code:404,error_status:"knowledge_base_document_not_found",error_message:"Knowledge base document not found"}]));}
+  private create(input:unknown,kind:"text"|"folder"){
+    if(!object(input)||Object.keys(input).some(k=>!(kind==="text"?["text","name","parent_folder_id"]:["name","parent_folder_id","enable_auto_sync","auto_remove","minimum_frequency_days"]).includes(k)))return invalid();
+    if(kind==="text"&&typeof input.text!=="string")return invalid();this.unsupportedSync(input);
+    const parent=this.parent(input.parent_folder_id),name=kind==="text"&&input.name==null?"Untitled text document":this.name(input.name),settings=this.settings(),n=this.nextId++;
+    const time=settings.time+ ++this.nextMutation,id=`sim-kb-created-${n}`;
+    const common={id,name,metadata:{created_at_unix_secs:time,last_updated_at_unix_secs:time,size_bytes:kind==="text"?Buffer.byteLength(input.text as string,"utf8"):0},supported_usages:kind==="text"?["prompt" as const,"auto" as const]:[],access_info:structuredClone(settings.accessInfo),folder_parent_id:parent,folder_path:[]};
+    const document:Document=kind==="text"?{...common,type:"text",extracted_inner_html:html(input.text as string),content_format:"html"}:{...common,type:"folder",children_count:0,document_count:0,auto_sync_info:null};
+    this.documents.set(id,{document,creatorUserId:settings.userId});return {id,name,folder_path:this.folderPath(id)};
+  }
+  private readFile(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["file","name","parent_folder_id"].includes(k)))return invalid();
+    const settings=this.uploadSettings;if(!settings)throw new Error("Run knowledge base initialization scenario first");
+    let file;try{file=copyUpload(input.file,settings.maxBytes,settings.maxName);}catch{return invalid();}
+    if(!/\.(txt|md|markdown)$/i.test(file.filename)||!["text/plain","text/markdown","application/octet-stream"].includes(file.contentType))throw new KnowledgeBaseError(400,"knowledge_base_file_format_unsupported","Only UTF-8 text and Markdown files are supported; PDF, office documents and OCR are unsupported");
+    let content:string;try{content=new TextDecoder("utf-8",{fatal:true}).decode(file.data);}catch{return invalid();}
+    if(!content.trim()||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(content))return invalid();
+    return {file,content,input,settings};
+  }
+  private setSourceFileUrl(id:string,time:number){this.sourceFileUrls.set(id,`${this.uploadSettings!.sourceUrlPrefix}/${encodeURIComponent(id)}?revision=${time}`);}
+  createFile(input:unknown){
+    const {file,content,input:body}=this.readFile(input),parent=this.parent(body.parent_folder_id),name=body.name==null?file.filename:this.name(body.name),settings=this.settings();
+    let id:string;do{id=`sim-kb-created-${this.nextId++}`;}while(this.documents.has(id));const time=settings.time+ ++this.nextMutation;
+    this.documents.set(id,{creatorUserId:settings.userId,document:{id,name,type:"file",filename:file.filename,extracted_inner_html:html(content),content_format:"html",metadata:{created_at_unix_secs:time,last_updated_at_unix_secs:time,size_bytes:file.size},supported_usages:["prompt","auto"],access_info:structuredClone(settings.accessInfo),folder_parent_id:parent}});
+    this.setSourceFileUrl(id,time);return {id,name,folder_path:this.folderPath(id)};
+  }
+  updateFile(id:string,input:unknown){
+    const document=this.stored(id).document;if(document.type!=="file"||!object(input)||Object.keys(input).some(k=>k!=="file"))return invalid();
+    const {file,content}=this.readFile(input),settings=this.settings();const time=settings.time+ ++this.nextMutation;
+    document.filename=file.filename;document.name=file.filename;document.extracted_inner_html=html(content);document.content_format="html";document.metadata.size_bytes=file.size;document.metadata.last_updated_at_unix_secs=time;
+    this.indexes.delete(id);this.setSourceFileUrl(id,time);return this.getDocument(id);
+  }
+  createLegacy(input:unknown,agentId?:unknown){
+    if(agentId!=null)throw new KnowledgeBaseError(400,"knowledge_base_legacy_agent_unsupported","Legacy agent-scoped ingestion is unsupported; use shared documents and explicit agent configuration");
+    if(!object(input)||Object.keys(input).some(k=>!["name","url","file"].includes(k))||Number(input.file!=null)+Number(input.url!=null)!==1)return invalid();
+    return input.file!=null?this.createFile({name:input.name,file:input.file}):this.createUrl({name:input.name,url:input.url});
+  }
+  createText(input:unknown){return this.create(input,"text");}
+  createFolder(input:unknown){return this.create(input,"folder");}
+  updateDocument(id:string,input:unknown={}){
+    const d=this.stored(id).document;if(!object(input)||Object.keys(input).some(k=>!["name","content","enable_auto_sync","auto_remove","minimum_frequency_days","tighten_only"].includes(k)))return invalid();
+    this.unsupportedSync(input);const name=input.name==null?d.name:this.name(input.name);
+    if(input.content!=null&&(typeof input.content!=="string"||d.type!=="text"))return invalid();
+    const content=input.content==null?undefined:html(input.content as string);
+    if(name!==d.name||content!==undefined&&d.type==="text"&&content!==d.extracted_inner_html){d.name=name;if(content!==undefined&&d.type==="text"){if(content!==d.extracted_inner_html)this.indexes.delete(id);d.extracted_inner_html=content;d.metadata.size_bytes=Buffer.byteLength(input.content as string,"utf8");}d.metadata.last_updated_at_unix_secs=this.settings().time+ ++this.nextMutation;}
+    return this.getDocument(id);
+  }
+  private deletionIds(id:string,force:boolean){
+    this.stored(id);if(typeof force!=="boolean")return invalid();const ids=[id,...this.descendants(id)];
+    if(!force&&(ids.length>1||ids.some(k=>this.dependentAgents(k).length)))throw new KnowledgeBaseError(409,"knowledge_base_document_in_use","Document is referenced or folder is not empty");
+    return ids;
+  }
+  deleteDocument(id:string,force:boolean){
+    const ids=this.deletionIds(id,force);
+    const removed=new Set(ids);for(const a of this.agents().values()){const prompt=a.configuration.conversation_config.agent?.prompt;if(prompt?.knowledge_base)prompt.knowledge_base=prompt.knowledge_base.filter(r=>!removed.has(r.id));}
+    for(const k of ids){this.documents.delete(k);this.indexes.delete(k);this.sourceFileUrls.delete(k);}return {};
+  }
+  private documentIds(value:unknown):string[]{
+    if(!Array.isArray(value)||value.length<1||value.length>20||value.some(id=>typeof id!=="string")||new Set(value).size!==value.length)return invalid();
+    return value as string[];
+  }
+  moveDocument(id:string,input:unknown={}){
+    if(!object(input)||Object.keys(input).some(k=>k!=="move_to"))return invalid();
+    this.moveDocuments({document_ids:[id],move_to:input.move_to});
+  }
+  moveDocuments(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["document_ids","move_to"].includes(k)))return invalid();
+    const ids=this.documentIds(input.document_ids),destination=this.parent(input.move_to);
+    const documents=ids.map(id=>this.stored(id).document);
+    if(destination&&documents.some(d=>d.id===destination||this.folderPath(destination).some(p=>p.id===d.id)))return invalid();
+    const changed=documents.filter(d=>d.folder_parent_id!==destination);
+    if(!changed.length)return;
+    const time=this.settings().time+ ++this.nextMutation;
+    for(const d of changed){d.folder_parent_id=destination;d.metadata.last_updated_at_unix_secs=time;}
+  }
+  bulkDelete(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["document_ids","force"].includes(k)))return invalid();
+    const ids=this.documentIds(input.document_ids),force=input.force??false;if(typeof force!=="boolean")return invalid();
+    const outcomes=ids.map(id=>{
+      try{this.deletionIds(id,force);return [id,{status:"success" as const,data:{id}}] as const;}
+      catch(error){if(!(error instanceof Error)||error.name!=="KnowledgeBaseError")throw error;const e=error as KnowledgeBaseError;return [id,{status:"failure" as const,error_code:e.status,error_status:e.code,error_message:e.message}] as const;}
+    });
+    for(const[id,result]of outcomes)if(result.status==="success"&&this.documents.has(id))this.deleteDocument(id,force);
+    return Object.fromEntries(outcomes);
+  }
+  listDependentAgents(ids:unknown,query:Record<string,unknown>={}){
+    const values=this.documentIds(ids);for(const id of values)this.stored(id);
+    const mode=query.dependent_type??"all",size=query.page_size??30;
+    if(!["all","direct","transitive"].includes(mode as string)||typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();
+    const offset=Number(query.cursor??0);if(!Number.isSafeInteger(offset))return invalid();
+    const agents=[...new Map(values.flatMap(id=>this.dependentAgents(id,mode as "all"|"direct"|"transitive")).map(a=>[a.id,a])).values()].sort((a,b)=>a.id.localeCompare(b.id));
+    const has_more=offset+size<agents.length;
+    return {agents:agents.slice(offset,offset+size),branches:[],has_more,next_cursor:has_more?String(offset+size):null};
+  }
+  agentKnowledgeSize(id:string){
+    const agent=this.agents().get(id);if(!agent)throw new KnowledgeBaseError(404,"agent_not_found","Agent not found");
+    const pages=new Set<string>();
+    for(const ref of this.refs(agent)){
+      const d=this.stored(ref.id).document;
+      for(const key of d.type==="folder"?this.descendants(d.id):[d.id])if(this.stored(key).document.type==="text")pages.add(key);
+    }
+    return {number_of_pages:pages.size};
+  }
+  private model(value:unknown):Index["model"] {
+    if(value!=="e5_mistral_7b_instruct"&&value!=="multilingual_e5_large_instruct")return invalid();return value;
+  }
+  private indexPage(query:Record<string,unknown>){
+    const size=query.page_size??30;if(typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();
+    const offset=Number(query.cursor??0);if(!Number.isSafeInteger(offset))return invalid();return {size,offset};
+  }
+  listIndexes(id:string){this.stored(id);return {indexes:structuredClone([...(this.indexes.get(id)?.values()??[])].map(r=>r.index).sort((a,b)=>a.model.localeCompare(b.model)))};}
+  computeIndex(id:string,input:unknown){
+    const document=this.stored(id).document;if(!object(input)||Object.keys(input).some(k=>k!=="model"))return invalid();const model=this.model(input.model);
+    const existing=this.indexes.get(id)?.get(model);if(existing)return structuredClone(existing.index);
+    const index:Index={id:`sim-kb-index-created-${this.nextIndexId++}`,model,status:document.type==="folder"?"cannot_index_folder":"created",progress_percentage:0,document_model_index_usage:{used_bytes:0}};
+    let indexes=this.indexes.get(id);if(!indexes){indexes=new Map();this.indexes.set(id,indexes);}indexes.set(model,{index,chunks:[]});return structuredClone(index);
+  }
+  deleteIndex(id:string,indexId:string){
+    this.stored(id);const indexes=this.indexes.get(id),entry=[...(indexes??[])].find(([,r])=>r.index.id===indexId);
+    if(!entry)throw new KnowledgeBaseError(404,"knowledge_base_index_not_found","Knowledge base index not found");
+    indexes!.delete(entry[0]);if(!indexes!.size)this.indexes.delete(id);return structuredClone(entry[1].index);
+  }
+  batchIndexes(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>k!=="items")||!Array.isArray(input.items)||input.items.length<1||input.items.length>100)return invalid();
+    const ids=new Set<string>();
+    for(const item of input.items){if(!object(item)||Object.keys(item).some(k=>!["document_id","model","create_if_missing"].includes(k))||typeof item.document_id!=="string"||typeof item.create_if_missing!=="boolean"||ids.has(item.document_id))return invalid();this.model(item.model);ids.add(item.document_id);}
+    return Object.fromEntries(input.items.map(item=>{
+      const request=item as {document_id:string;model:Index["model"];create_if_missing:boolean};
+      try{this.stored(request.document_id);const existing=this.indexes.get(request.document_id)?.get(request.model);if(!existing&&!request.create_if_missing)throw new KnowledgeBaseError(404,"knowledge_base_index_not_found","Knowledge base index not found");
+        return [request.document_id,{status:"success" as const,data:existing?structuredClone(existing.index):this.computeIndex(request.document_id,{model:request.model})}];
+      }catch(error){if(!(error instanceof Error)||error.name!=="KnowledgeBaseError")throw error;const e=error as KnowledgeBaseError;return [request.document_id,{status:"failure" as const,error_code:e.status,error_status:e.code,error_message:e.message}];}
+    }));
+  }
+  ragOverview(){
+    const models:Index["model"][]=["e5_mistral_7b_instruct","multilingual_e5_large_instruct"];
+    const usage=models.map(model=>({model,used_bytes:[...this.indexes.values()].reduce((n,indexes)=>n+(indexes.get(model)?.index.document_model_index_usage.used_bytes??0),0)}));
+    return {total_used_bytes:usage.reduce((n,m)=>n+m.used_bytes,0),total_max_bytes:this.maxIndexBytes,models:usage};
+  }
+  listChunks(id:string,query:Record<string,unknown>){
+    this.stored(id);const model=this.model(query.embedding_model),{size,offset}=this.indexPage(query),chunks=this.indexes.get(id)?.get(model)?.chunks??[];
+    return {chunks:structuredClone(chunks.slice(offset,offset+size)),next_cursor:offset+size<chunks.length?String(offset+size):null};
+  }
+  getChunk(id:string,chunkId:string,model?:unknown){
+    this.stored(id);const selected=this.model(model??"e5_mistral_7b_instruct"),chunk=this.indexes.get(id)?.get(selected)?.chunks.find(c=>c.id===chunkId);
+    if(!chunk)throw new KnowledgeBaseError(404,"knowledge_base_chunk_not_found","Knowledge base chunk not found");return structuredClone(chunk);
+  }
+  searchContent(query:Record<string,unknown>){
+    const {size,offset}=this.indexPage(query);if(typeof query.query!=="string"||!query.query.trim())return invalid();
+    const types=query.types==null?null:typeof query.types==="string"?[query.types]:query.types;if(types!==null&&(!Array.isArray(types)||types.some(v=>!["text","folder","file","url"].includes(v))))return invalid();
+    const tokens=query.query.toLowerCase().match(/[\p{L}\p{N}]+/gu)??[];if(!tokens.length)return invalid();
+    const oneEdit=(a:string,b:string)=>{if(Math.abs(a.length-b.length)>1)return false;let i=0,j=0,edits=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++edits>1)return false;if(a.length<=b.length)j++;if(a.length>=b.length)i++;}return edits+(i<a.length||j<b.length?1:0)<=1;};
+    const results=[...this.documents.values()].flatMap(r=>{
+      if(r.document.type==="folder"||types&&!(types as string[]).includes(r.document.type))return [];
+      const content=r.document.extracted_inner_html.replaceAll("&lt;","<").replaceAll("&gt;",">").replaceAll("&quot;",'"').replaceAll("&#39;", "'").replaceAll("&amp;","&");
+      const words:string[]=content.toLowerCase().match(/[\p{L}\p{N}]+/gu)??[];
+      const score=tokens.reduce((sum,t)=>sum+(words.includes(t)?1:t.length>=4&&words.some(w=>oneEdit(t,w))?0.75:0),0)/tokens.length;
+      return score?[{document:this.summary(r.document.id),search_snippet:null,score}]:[];
+    }).sort((a,b)=>b.score-a.score||a.document.id.localeCompare(b.document.id));
+    return {results:results.slice(offset,offset+size),next_cursor:offset+size<results.length?String(offset+size):null};
+  }
+  listDocuments(query:Record<string,unknown>={}){
+    const size=query.page_size??30;if(typeof size!=="number"||!Number.isSafeInteger(size)||size<1||size>100||query.cursor!=null&&(typeof query.cursor!=="string"||!/^\d+$/.test(query.cursor)))return invalid();
+    const offset=Number(query.cursor??0);if(!Number.isSafeInteger(offset))return invalid();
+    for(const k of ["search","created_by_user_id","parent_folder_id","ancestor_folder_id"])if(query[k]!=null&&typeof query[k]!=="string")return invalid();
+    for(const k of ["show_only_owned_documents","folders_first"])if(query[k]!=null&&typeof query[k]!=="boolean")return invalid();
+    const direction=query.sort_direction??"desc",sort=query.sort_by??"created_at";if(!["asc","desc"].includes(direction as string)||!["name","created_at","updated_at","size"].includes(sort as string))return invalid();
+    const types=query.types==null?null:typeof query.types==="string"?[query.types]:query.types;if(types!==null&&(!Array.isArray(types)||types.some(v=>!["text","folder","file","url"].includes(v))))return invalid();
+    const creator=query.created_by_user_id==="@me"?this.settings().userId:query.created_by_user_id??(query.show_only_owned_documents?this.settings().userId:null);
+    const values=[...this.documents.values()].filter(r=>(!types||(types as string[]).includes(r.document.type))&&(!creator||r.creatorUserId===creator)&&(query.search==null||r.document.name.toLowerCase().startsWith((query.search as string).toLowerCase()))&&(query.parent_folder_id==null||r.document.folder_parent_id===query.parent_folder_id)&&(query.ancestor_folder_id==null||this.folderPath(r.document.id).some(p=>p.id===query.ancestor_folder_id)));
+    const value=(d:Document)=>sort==="name"?d.name:sort==="size"?d.metadata.size_bytes:sort==="updated_at"?d.metadata.last_updated_at_unix_secs:d.metadata.created_at_unix_secs;
+    values.sort((a,b)=>{if(query.folders_first&&a.document.type!==b.document.type){if(a.document.type==="folder")return -1;if(b.document.type==="folder")return 1;}const av=value(a.document),bv=value(b.document),cmp=typeof av==="string"?av.localeCompare(bv as string):(av as number)-(bv as number);return (direction==="asc"?1:-1)*cmp||a.document.id.localeCompare(b.document.id);});
+    const has_more=offset+size<values.length;return {documents:values.slice(offset,offset+size).map(r=>this.summary(r.document.id)),has_more,next_cursor:has_more?String(offset+size):null};
+  }
+
+  private sourceUrl(value:unknown){
+    if(typeof value!=="string")return invalid();
+    let url:URL;try{url=new URL(value);}catch{return invalid();}
+    if(!["https:","http:"].includes(url.protocol)||url.username||url.password||url.hash)return invalid();
+    return url.href;
+  }
+  private sourcePage(url:string){
+    const page=this.sourcePages.get(url);
+    if(!page)throw new KnowledgeBaseError(400,"knowledge_base_source_unavailable","No synthetic source fixture is configured for this URL");
+    return page;
+  }
+  createUrl(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["url","name","parent_folder_id","enable_auto_sync","auto_remove","minimum_frequency_days"].includes(k)))return invalid();
+    this.unsupportedSync(input);const url=this.sourceUrl(input.url),page=this.sourcePage(url),parent=this.parent(input.parent_folder_id),name=input.name==null?page.name:this.name(input.name),settings=this.settings();
+    let id:string;do{id=`sim-kb-created-${this.nextId++}`;}while(this.documents.has(id));
+    const time=settings.time+ ++this.nextMutation;
+    this.documents.set(id,{creatorUserId:settings.userId,document:{id,name,type:"url",url,extracted_inner_html:html(page.content),content_format:"html",auto_sync_info:null,
+      metadata:{created_at_unix_secs:time,last_updated_at_unix_secs:time,size_bytes:Buffer.byteLength(page.content,"utf8")},supported_usages:["prompt","auto"],access_info:structuredClone(settings.accessInfo),folder_parent_id:parent}});
+    return {id,name,folder_path:this.folderPath(id)};
+  }
+  refreshUrl(id:string){
+    const document=this.stored(id).document;if(document.type!=="url")return invalid();const page=this.sourcePage(document.url),content=html(page.content);
+    if(document.extracted_inner_html!==content){document.extracted_inner_html=content;document.metadata.size_bytes=Buffer.byteLength(page.content,"utf8");document.metadata.last_updated_at_unix_secs=this.settings().time+ ++this.nextMutation;this.indexes.delete(id);}
+    return this.getDocument(id);
+  }
+  sourceFileUrl(id:string){
+    if(this.stored(id).document.type!=="file")return invalid();const url=this.sourceFileUrls.get(id);
+    if(!url)throw new KnowledgeBaseError(404,"knowledge_base_source_file_unavailable","No synthetic source file URL is configured");
+    return {signed_url:url};
+  }
+  createCrawl(input:unknown){
+    if(!object(input)||Object.keys(input).some(k=>!["url","max_depth","max_pages","pattern","exclude_patterns","sitemap_urls","parent_folder_id","enable_auto_sync","auto_remove","auto_discover","minimum_frequency_days"].includes(k)))return invalid();
+    this.unsupportedSync(input);
+    if(input.auto_discover!=null&&input.auto_discover!==false||input.pattern!=null||input.exclude_patterns!=null&&(!Array.isArray(input.exclude_patterns)||input.exclude_patterns.length)||input.max_depth!=null&&(!Number.isSafeInteger(input.max_depth)||Number(input.max_depth)<0))return invalid();
+    const url=this.sourceUrl(input.url),max=input.max_pages??1000;
+    if(typeof max!=="number"||!Number.isSafeInteger(max)||max<1||max>10000)return invalid();
+    this.sourcePage(url);const parent=this.parent(input.parent_folder_id);
+    let urls:string[];
+    if(input.sitemap_urls!=null){if(!Array.isArray(input.sitemap_urls)||!input.sitemap_urls.length)return invalid();urls=[...new Set(input.sitemap_urls.map(v=>this.sourceUrl(v)))];for(const u of urls)this.sourcePage(u);}
+    else urls=[...this.sourcePages.keys()].filter(u=>new URL(u).origin===new URL(url).origin&&(u===url||new URL(u).pathname.startsWith(new URL(url).pathname.replace(/\/$/,"")+"/"))).sort((a,b)=>a===url?-1:b===url?1:a.localeCompare(b));
+    urls=urls.slice(0,max);
+    // Every request option and source is checked before creating the folder/job.
+    const root=this.createFolder({name:`Crawl: ${this.sourcePages.get(url)!.name}`,parent_folder_id:parent});
+    const time=this.settings().time+ ++this.nextMutation;let id:string;do{id=`sim-kb-crawl-${this.nextCrawl++}`;}while(this.crawls.has(id));
+    const type:Crawl["type"]=input.sitemap_urls==null?"discovery":"sitemap";
+    const job:Crawl={id,type,seed_url:url,pattern:null,exclude_patterns:[],max_pages:max,auto_discover:false,status:"queued",pages_identified:urls.length,pages_scraped:0,pages_skipped:0,pages_failed:0,root_folder_id:root.id,created_at:time,updated_at:time};
+    this.crawls.set(id,{job,urls,documentIds:[]});return {id,type,root_folder_id:root.id,status:"queued",created_at:time,folder_path:this.folderPath(root.id)};
+  }
+  getCrawl(id:string){const value=this.crawls.get(id);if(!value)throw new KnowledgeBaseError(404,"knowledge_base_crawl_not_found","Crawl job not found");return structuredClone(value.job);}
+  listCrawls(query:Record<string,unknown>={}){
+    const {size,offset}=this.indexPage(query);const include=query.include_job_ids==null?[]:typeof query.include_job_ids==="string"?[query.include_job_ids]:query.include_job_ids;
+    if(!Array.isArray(include)||include.some(v=>typeof v!=="string"))return invalid();
+    // All stored jobs are recent and owned locally, so additional IDs add no duplicates.
+    const jobs=[...this.crawls.values()].map(r=>r.job).sort((a,b)=>b.created_at-a.created_at||a.id.localeCompare(b.id));
+    return {crawl_jobs:structuredClone(jobs.slice(offset,offset+size)),next_cursor:offset+size<jobs.length?String(offset+size):null};
+  }
+  cancelCrawl(id:string){
+    const copy=this.getCrawl(id),stored=this.crawls.get(id)!;if(copy.status==="cancelled")return {};const settings=this.settings();
+    const ids=new Set([copy.root_folder_id,...stored.documentIds]);
+    for(const key of ids)if(this.documents.has(key))this.deleteDocument(key,true);
+    stored.job.status="cancelled";stored.job.updated_at=settings.time+ ++this.nextMutation;return {};
+  }
+  queryAgent(id:string,input:unknown,branchId?:string|null){
+    if(!object(input)||Object.keys(input).some(k=>!["query","use_agent_defaults","max_documents_length","max_retrieved_rag_chunks_count"].includes(k))||typeof input.query!=="string"||!input.query.trim()||input.use_agent_defaults!=null&&typeof input.use_agent_defaults!=="boolean")return invalid();
+    for(const key of ["max_documents_length","max_retrieved_rag_chunks_count"])if(input[key]!=null&&(typeof input[key]!=="number"||!Number.isSafeInteger(input[key])||Number(input[key])<0))return invalid();
+    const agent=this.selectAgent?.(id,branchId);if(!agent)throw new KnowledgeBaseError(404,"agent_not_found","Agent not found");
+    const defaults=this.retrievalDefaults;if(!defaults)throw new Error("Run startup or reset");
+    const rag=agent.conversation_config.agent?.prompt?.rag,useDefaults=input.use_agent_defaults!==false;
+    if(useDefaults&&rag?.query_rewrite_prompt_override)throw new KnowledgeBaseError(400,"knowledge_base_query_rewrite_unsupported","Synthetic retrieval does not rewrite queries");
+    const model=this.model(rag?.embedding_model??defaults.model),maxLength=Number(input.max_documents_length??(useDefaults?rag?.max_documents_length:undefined)??defaults.maxLength),maxChunks=Number(input.max_retrieved_rag_chunks_count??(useDefaults?rag?.max_retrieved_rag_chunks_count:undefined)??defaults.maxChunks),maxDistance=useDefaults?rag?.max_vector_distance??defaults.maxDistance:defaults.maxDistance;
+    if(useDefaults&&rag?.enabled!==true)return {retrieval_query:input.query,chunks:[]};
+    const ids=new Set<string>();for(const ref of agent.conversation_config.agent?.prompt?.knowledge_base??[]){if(ref.usage_mode==="prompt"||!this.documents.has(ref.id))continue;for(const key of this.stored(ref.id).document.type==="folder"?this.descendants(ref.id):[ref.id])ids.add(key);}
+    const matches=[...(this.ragQueries.get(input.query)??[])].filter(m=>m.model===model&&ids.has(m.documentId)).sort((a,b)=>a.distance-b.distance||a.documentId.localeCompare(b.documentId)||a.chunkId.localeCompare(b.chunkId));
+    const chunks:RagChunk[]=[];let length=0;
+    for(const match of matches){if(chunks.length>=maxChunks)break;const d=this.documents.get(match.documentId)?.document,index=this.indexes.get(match.documentId)?.get(model),chunk=index?.chunks.find(c=>c.id===match.chunkId);if(!d||d.type==="folder"||index?.index.status!=="succeeded"||!chunk||match.distance>maxDistance)continue;if(length+chunk.content.length>maxLength)break;length+=chunk.content.length;chunks.push({document_id:d.id,document_name:d.name,document_type:d.type,source_url:d.type==="url"?d.url:null,chunk_id:chunk.id,text:chunk.content,vector_distance:match.distance,content_format:d.content_format??"html"});}
+    return {retrieval_query:input.query,chunks:structuredClone(chunks)};
+  }
+}

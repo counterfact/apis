@@ -1,0 +1,14 @@
+export type VoicesNotPermittedWarning = {
+  /**
+   * Identifies this warning; branch on it to read the other fields.
+   */
+  type: "voices_not_permitted";
+  /**
+   * Speakers whose voices were not permitted for cloning. The dub used a replacement voice for each of them; all other speakers are unaffected.
+   */
+  speaker_ids: Array<string>;
+  /**
+   * Human-readable description of the warning, for display. The wording may change at any time, so we recommend branching on `type` instead.
+   */
+  message: string;
+};

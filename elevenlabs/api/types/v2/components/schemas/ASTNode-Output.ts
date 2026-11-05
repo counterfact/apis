@@ -1,0 +1,39 @@
+import type { ASTStringNode_Output } from "./ASTStringNode-Output.js";
+import type { ASTNumberNode_Output } from "./ASTNumberNode-Output.js";
+import type { ASTBooleanNode_Output } from "./ASTBooleanNode-Output.js";
+import type { ASTNullNode_Output } from "./ASTNullNode-Output.js";
+import type { ASTLLMNode_Output } from "./ASTLLMNode-Output.js";
+import type { ASTDynamicVariableNode_Output } from "./ASTDynamicVariableNode-Output.js";
+import type { ASTOrOperatorNode_Output } from "./ASTOrOperatorNode-Output.js";
+import type { ASTAndOperatorNode_Output } from "./ASTAndOperatorNode-Output.js";
+import type { ASTEqualsOperatorNode_Output } from "./ASTEqualsOperatorNode-Output.js";
+import type { ASTNotEqualsOperatorNode_Output } from "./ASTNotEqualsOperatorNode-Output.js";
+import type { ASTGreaterThanOperatorNode_Output } from "./ASTGreaterThanOperatorNode-Output.js";
+import type { ASTLessThanOperatorNode_Output } from "./ASTLessThanOperatorNode-Output.js";
+import type { ASTGreaterThanOrEqualsOperatorNode_Output } from "./ASTGreaterThanOrEqualsOperatorNode-Output.js";
+import type { ASTLessThanOrEqualsOperatorNode_Output } from "./ASTLessThanOrEqualsOperatorNode-Output.js";
+import type { ASTAdditionOperatorNode_Output } from "./ASTAdditionOperatorNode-Output.js";
+import type { ASTSubtractionOperatorNode_Output } from "./ASTSubtractionOperatorNode-Output.js";
+import type { ASTMultiplicationOperatorNode_Output } from "./ASTMultiplicationOperatorNode-Output.js";
+import type { ASTDivisionOperatorNode_Output } from "./ASTDivisionOperatorNode-Output.js";
+import type { ASTConditionalOperatorNode_Output } from "./ASTConditionalOperatorNode-Output.js";
+export type ASTNode_Output =
+  | (ASTStringNode_Output & { type: "string_literal" })
+  | (ASTNumberNode_Output & { type: "number_literal" })
+  | (ASTBooleanNode_Output & { type: "boolean_literal" })
+  | (ASTNullNode_Output & { type: "null_literal" })
+  | (ASTLLMNode_Output & { type: "llm" })
+  | (ASTDynamicVariableNode_Output & { type: "dynamic_variable" })
+  | (ASTOrOperatorNode_Output & { type: "or_operator" })
+  | (ASTAndOperatorNode_Output & { type: "and_operator" })
+  | (ASTEqualsOperatorNode_Output & { type: "eq_operator" })
+  | (ASTNotEqualsOperatorNode_Output & { type: "neq_operator" })
+  | (ASTGreaterThanOperatorNode_Output & { type: "gt_operator" })
+  | (ASTLessThanOperatorNode_Output & { type: "lt_operator" })
+  | (ASTGreaterThanOrEqualsOperatorNode_Output & { type: "gte_operator" })
+  | (ASTLessThanOrEqualsOperatorNode_Output & { type: "lte_operator" })
+  | (ASTAdditionOperatorNode_Output & { type: "add_operator" })
+  | (ASTSubtractionOperatorNode_Output & { type: "sub_operator" })
+  | (ASTMultiplicationOperatorNode_Output & { type: "mul_operator" })
+  | (ASTDivisionOperatorNode_Output & { type: "div_operator" })
+  | (ASTConditionalOperatorNode_Output & { type: "conditional_operator" });

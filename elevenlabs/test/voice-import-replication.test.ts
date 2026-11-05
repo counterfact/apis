@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {Context} from '../api/routes/_.context.js';
+import {createScenarioRunner} from '../test-support/scenarios.js';
+import {createDispatcherHarness} from '../test-support/dispatcher.js';
+import * as scenarios from '../api/scenarios/index.js';
+test('imports canonical voices; replication copies, isolates and resets state',async()=>{
+ const r=await createScenarioRunner();await r.run(scenarios.startup);const c=r.context;
+ assert.equal(new Context().voiceReplicas.size,0);
+ const imported=c.importSharedVoice('sim-public-owner','sim-library-american',{new_name:'Imported',bookmarked:false});
+ assert.equal(c.getVoice(imported.voice_id)?.name,'Imported');assert.equal(c.getVoice(imported.voice_id)?.is_bookmarked,false);assert.equal(c.voiceLibrary!.list().voices.find(v=>v.voice_id===imported.voice_id)!.is_added_by_user,true);assert.equal(c.getSubscription().voice_slots_used,3);
+ assert.throws(()=>c.importSharedVoice('sim-public-owner','sim-library-american',{new_name:'Again',bookmarked:false}),{status:409});
+ const a=c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace'});assert.equal(a.voice_id,'sim-narrator');
+ const b=c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false});assert.notEqual(a.voice_id,b.voice_id);
+ c.voices.get('sim-narrator')!.name='Edited';assert.notEqual(c.voiceReplicas.get('sim-isolated-workspace')!.get(a.voice_id)!.name,'Edited');
+ c.deleteVoice('sim-narrator');assert.ok(c.voiceReplicas.get('sim-isolated-workspace')!.has(a.voice_id));
+ await r.run(scenarios.reset);assert.equal(c.voiceReplicas.size,0);assert.equal(c.voices.size,2);assert.equal(c.nextReplica,0);
+});
+test('atomic missing, unsupported, quota, category, permission and collision failures',async()=>{
+ const r=await createScenarioRunner();await r.run(scenarios.startup);const c=r.context;
+ for(const body of [{new_name:'x',bookmarked:'true'},{new_name:' '},{new_name:'x',extra:true}])assert.throws(()=>c.importSharedVoice('sim-public-owner','sim-library-american',body),{status:400});
+ assert.throws(()=>c.importSharedVoice('wrong','sim-library-american',{new_name:'x',bookmarked:false}),{status:404});
+ c.account!.subscription.voice_limit=2;assert.throws(()=>c.importSharedVoice('sim-public-owner','sim-library-american',{new_name:'x',bookmarked:false}),{status:409});assert.equal(c.voices.size,2);
+ for(const body of [{target_workspace_id:'missing'},{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:'false'},{target_workspace_id:'sim-isolated-workspace',extra:{bad:true}}])assert.throws(()=>c.replicateVoice('sim-narrator',body));
+ assert.throws(()=>c.replicateVoice('missing',{target_workspace_id:'sim-isolated-workspace'}),{status:404});
+ const policy=c.replicationPolicy!;policy.sourceWrite=false;assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace'}),{status:403});policy.sourceWrite=true;
+ const target=c.replicationTargets.get('sim-isolated-workspace')!;target.canWrite=false;assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace'}),{status:403});target.canWrite=true;
+ c.voices.get('sim-narrator')!.category='professional';assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace'}),{status:400});c.voices.get('sim-narrator')!.category='generated';assert.equal(c.nextReplica,0);assert.equal(c.voiceReplicas.size,0);
+ c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace'});assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace'}),{status:409});assert.equal(c.voiceReplicas.get('sim-isolated-workspace')!.size,1);
+ target.billingGroup='other';assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false}),{status:403});target.billingGroup=policy.billingGroup;
+ target.residency=policy.residency;assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false}),{status:400});target.residency='synthetic-eu';
+ policy.central=false;assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false}),{status:403});policy.central=true;
+ c.voices.get('sim-narrator')!.is_owner=false;assert.throws(()=>c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false}),{status:403});c.voices.get('sim-narrator')!.is_owner=true;
+ const copies=c.voiceReplicas.get('sim-isolated-workspace')!;copies.set('sim-replicated-voice-1',structuredClone(c.voices.get('sim-narrator')!));target.canWrite=false;policy.serviceAccount=true;
+ assert.equal(c.replicateVoice('sim-narrator',{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false}).voice_id,'sim-replicated-voice-2');assert.equal(c.voices.size,2);
+});
+test('Dispatcher validates both operations and canonical settings/delete/counts/reset/isolation',async()=>{
+ const h=await createDispatcherHarness();const post=async(path:string,body:unknown,status=200)=>{const response=await h.request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});assert.equal(response.status,status,await response.clone().text());return status===200 ? response.json() : undefined;};
+ const path='/v1/voices/add/sim-public-owner/sim-library-american';await post(path,{new_name:42,bookmarked:false},400);
+ const imported=await post(path,{new_name:'HTTP imported'});assert.equal(imported.voice_id,'sim-library-american');assert.equal((await(await h.request(`/v1/voices/${imported.voice_id}`)).json()).is_bookmarked,true);assert.equal((await(await h.request('/v2/voices?search=HTTP')).json()).voices[0].voice_id,imported.voice_id);
+ await post(`/v1/voices/${imported.voice_id}/settings/edit`,{stability:0.2});assert.equal((await(await h.request(`/v1/voices/${imported.voice_id}/settings`)).json()).stability,0.2);
+ assert.equal((await(await h.request('/v1/user/subscription')).json()).voice_slots_used,3);await post(path,{new_name:'Again',bookmarked:false},409);
+ const replicate='/v1/voices/sim-narrator/replicate-to-isolated-environment';await post(replicate,{target_workspace_id:'sim-isolated-workspace'});await post(replicate,{target_workspace_id:'sim-isolated-workspace'},409);await post(replicate,{target_workspace_id:'sim-isolated-workspace',preserve_voice_id:false});await post('/v1/voices/missing/replicate-to-isolated-environment',{target_workspace_id:'sim-isolated-workspace'},404);await post(replicate,{target_workspace_id:42},400);
+ const other=await createDispatcherHarness();assert.equal((await other.request(`/v1/voices/${imported.voice_id}`)).status,404);assert.equal((await h.request(`/v1/voices/${imported.voice_id}`,{method:'DELETE'})).status,200);assert.equal((await h.request(`/v1/voices/${imported.voice_id}`)).status,404);
+ const library=(await(await h.request('/v1/shared-voices')).json()).voices.find((v:{voice_id:string})=>v.voice_id===imported.voice_id);assert.equal(library.is_added_by_user,false);assert.equal(library.is_bookmarked,false);
+ await h.scenario('reset');await post(replicate,{target_workspace_id:'sim-isolated-workspace'});assert.equal((await(await h.request('/v1/user/subscription')).json()).voice_slots_used,2);
+});

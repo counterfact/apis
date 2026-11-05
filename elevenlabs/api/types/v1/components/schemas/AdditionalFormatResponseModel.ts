@@ -1,0 +1,22 @@
+export type AdditionalFormatResponseModel = {
+  /**
+   * The requested format.
+   */
+  requested_format: string;
+  /**
+   * The file extension of the additional format.
+   */
+  file_extension: string;
+  /**
+   * The content type of the additional format.
+   */
+  content_type: string;
+  /**
+   * Whether the content is base64 encoded.
+   */
+  is_base64_encoded: boolean;
+  /**
+   * The content of the additional format.
+   */
+  content: string;
+};

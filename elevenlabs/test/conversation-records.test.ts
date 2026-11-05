@@ -1,0 +1,139 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createDispatcherHarness } from "../test-support/dispatcher.js";
+import { createScenarioRunner } from "../test-support/scenarios.js";
+import * as scenarios from "../api/scenarios/index.js";
+const path = "/v1/convai/conversations";
+const id = "sim-conversation";
+const reference = "https://simulator.zendesk.com/agent/tickets/12345";
+
+test("conversation Dispatcher list, detail, resolution, summaries and SIP pages are coherent", async () => {
+  const app = await createDispatcherHarness();
+  const get = async (suffix: string) => { const response = await app.request(path + suffix); assert.equal(response.status, 200); return response.json(); };
+  const baseline = await get("");
+  assert.deepEqual(baseline.conversations.map((c: {conversation_id: string}) => c.conversation_id), ["sim-conversation", "sim-conversation-old"]);
+  assert.equal(baseline.conversations[0].transcript_summary, undefined);
+  const page = await get("?page_size=1&summary_mode=include");
+  assert.equal(page.conversations[0].transcript_summary, "Synthetic support question answered.");
+  assert.equal(page.has_more, true);
+  assert.equal((await get("?page_size=1&cursor=" + page.next_cursor)).conversations[0].conversation_id, "sim-conversation-old");
+  assert.deepEqual((await get("?cursor=99")).conversations, []);
+  assert.equal((await get("?agent_id=missing")).conversations.length, 0);
+  assert.equal((await get("?agent_id=sim-agent&text_only=true&main_languages=en")).conversations.length, 1);
+  assert.equal((await get("?call_start_after_unix=1735689601")).conversations.length, 1);
+  assert.equal((await get("?call_duration_max_secs=10")).conversations.length, 1);
+  const detail = await get("/" + id);
+  assert.equal(detail.conversation_id, id);
+  assert.equal(detail.metadata.feedback.overall_score, null);
+  assert.equal(detail.transcript.length, 3);
+  assert.deepEqual(await get("/resolve?agent_id=sim-agent&reference=" + encodeURIComponent(reference)), detail);
+  assert.equal((await app.request(path + "/resolve?agent_id=other&reference=" + encodeURIComponent(reference))).status, 404);
+  assert.equal((await app.request(path + "/resolve?agent_id=sim-agent&reference=" + encodeURIComponent("https://example.invalid/no"))).status, 400);
+  const summary = await get("/" + id + "/summary");
+  assert.equal(summary.message_count, 2);
+  assert.deepEqual(summary.messages, [{role: "user", message: "How can I get help?"}, {role: "agent", message: "Here is synthetic support information."}]);
+  const omitted = await get("/" + id + "/summary?max_messages=1");
+  assert.equal(omitted.messages, null);
+  assert.equal(omitted.messages_omitted, true);
+  const sip = await get("/" + id + "/sip-messages?page_size=1");
+  assert.equal(sip.sip_messages[0].call_id, "sim-conversation-call-2");
+  assert.equal(sip.has_more, true);
+  assert.equal((await get("/" + id + "/sip-messages?cursor=" + sip.next_cursor)).sip_messages.length, 1);
+  assert.equal((await get("/sim-conversation-old/sip-messages")).sip_messages.length, 0);
+  for (const query of ["page_size=0", "cursor=bad", "call_duration_min_secs=20&call_duration_max_secs=10", "text_only=bad", "evaluation_params=x:success"]) assert.equal((await app.request(path + "?" + query)).status, 400);
+  assert.equal((await app.request(path + "/" + id + "?format=opentelemetry")).status, 400);
+  assert.equal((await app.request(path + "/" + id + "/summary?max_messages=0")).status, 400);
+});
+
+test("conversation Dispatcher feedback and canonical tags persist atomically, deletion and reset isolate state", async () => {
+  const app = await createDispatcherHarness();
+  const second = await createDispatcherHarness();
+  const send = (suffix: string, method: string, body?: unknown) => app.request(path + suffix, {method, ...(body === undefined ? {} : {headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})});
+  const detail = async () => (await app.request(path + "/" + id)).json();
+  const baseline = await detail();
+  for (const feedback of ["like", "like", "dislike", null]) {
+    assert.equal((await send("/" + id + "/feedback", "POST", {feedback})).status, 200);
+    const stored = (await detail()).metadata.feedback;
+    assert.equal(stored.overall_score, feedback);
+    assert.equal(stored.likes, feedback === "like" ? 1 : 0);
+    assert.equal(stored.dislikes, feedback === "dislike" ? 1 : 0);
+  }
+  assert.equal((await send("/" + id + "/feedback", "POST", {feedback: "wrong"})).status, 400);
+  assert.equal((await send("/" + id + "/feedback", "POST", {rating: 5})).status, 400);
+  for (let n = 0; n < 2; n++) assert.equal((await send("/" + id + "/tags", "POST", {tag_ids: ["sim-tag", "sim-tag"]})).status, 204);
+  assert.deepEqual((await detail()).tag_ids, ["sim-tag"]);
+  const filtered = await (await app.request(path + "?tag_ids=sim-tag")).json();
+  assert.equal(filtered.conversations.length, 1);
+  assert.equal((await send("/" + id + "/tags", "POST", {tag_ids: ["sim-tag", "missing"]})).status, 404);
+  assert.deepEqual((await detail()).tag_ids, ["sim-tag"]);
+  const created = await (await app.request("/v1/convai/tags", {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({title:"New synthetic tag"})})).json();
+  assert.equal((await send("/" + id + "/tags", "POST", {tag_ids: [created.tag_id]})).status, 204);
+  await app.request("/v1/convai/tags/" + created.tag_id, {method: "DELETE"});
+  assert.deepEqual((await detail()).tag_ids, ["sim-tag"]);
+  for (let n = 0; n < 2; n++) assert.equal((await send("/" + id + "/tags/sim-tag", "DELETE")).status, 204);
+  assert.deepEqual((await detail()).tag_ids, []);
+  await app.request("/v1/convai/agents/sim-agent", {method: "DELETE"});
+  assert.equal((await detail()).agent_name, baseline.agent_name);
+  assert.equal((await send("/" + id, "DELETE")).status, 200);
+  for (const suffix of ["/" + id, "/" + id + "/summary", "/" + id + "/sip-messages", "/resolve?agent_id=sim-agent&reference=" + encodeURIComponent(reference)]) assert.equal((await send(suffix, "GET")).status, 404);
+  for (const suffix of ["/" + id, "/" + id + "/tags/sim-tag"]) assert.equal((await send(suffix, "DELETE")).status, 404);
+  assert.equal((await send("/" + id + "/feedback", "POST", {feedback: "like"})).status, 404);
+  assert.equal((await send("/" + id + "/tags", "POST", {tag_ids: ["sim-tag"]})).status, 404);
+  assert.deepEqual(await (await second.request(path + "/" + id)).json(), baseline);
+  await app.scenario("emptyConversations");
+  assert.deepEqual((await (await app.request(path)).json()).conversations, []);
+  await app.scenario("reset");
+  assert.deepEqual(await detail(), baseline);
+});
+
+test("conversation Context starts empty, copies data and validates state transitions", async () => {
+  const { Context } = await import("../api/routes/convai/conversations/_.context.js");
+  const context = new Context();
+  assert.deepEqual(context.listConversations().conversations, []);
+  assert.throws(() => context.getConversation("missing"));
+  const runner = await createScenarioRunner();
+  await runner.run(scenarios.startup);
+  const seeded = runner.loadContext("/convai/conversations");
+  const baseline = seeded.getConversation(id);
+  const copy = seeded.getConversation(id);
+  copy.transcript[0].message = "changed";
+  copy.metadata.feedback!.likes = 9;
+  assert.deepEqual(seeded.getConversation(id), baseline);
+  seeded.setFeedback(id, {feedback: "like"});
+  seeded.setFeedback(id, {});
+  assert.equal(seeded.getConversation(id).metadata.feedback!.overall_score, "like");
+  assert.throws(() => seeded.setFeedback(id, {feedback: "wrong"}));
+  assert.throws(() => seeded.setFeedback(id, {feedback: ["like"]}));
+  assert.throws(() => seeded.listConversations({tag_ids:[1]} as never));
+  assert.throws(() => seeded.assignTags(id, {tag_ids:["sim-tag", "missing"]}));
+  assert.deepEqual(seeded.getConversation(id).tag_ids, []);
+  assert.throws(() => seeded.assignTags(id, {tag_ids:[]}));
+  assert.throws(() => seeded.assignTags(id, {tag_ids:Array(51).fill("sim-tag")}));
+  seeded.assignTags(id, {tag_ids:["sim-tag"]});
+  const tags = runner.loadContext("/convai/tags");
+  tags.tags.get("sim-tag")!.workspace_id = "other-workspace";
+  assert.throws(() => seeded.assignTags(id, {tag_ids:["sim-tag"]}));
+  tags.tags.get("sim-tag")!.workspace_id = "sim-workspace";
+  seeded.removeTag(id, "sim-tag");
+  seeded.deleteConversation(id);
+  assert.equal(seeded.listConversations().conversations.length, 1);
+  await runner.run(scenarios.reset);
+  assert.deepEqual(seeded.getConversation(id), baseline);
+});
+
+
+test("conversation Context requires typed filters and preserves string cursor pagination", async () => {
+  const runner = await createScenarioRunner();
+  await runner.run(scenarios.startup);
+  const c = runner.loadContext("/convai/conversations");
+  for (const key of ["call_start_before_unix", "call_start_after_unix", "call_duration_min_secs", "call_duration_max_secs", "rating_min", "rating_max", "page_size"]) {
+    assert.throws(() => c.listConversations({ [key]: "1" } as never), { code: "invalid_conversation_request" });
+  }
+  for (const key of ["text_only", "has_feedback_comment"]) {
+    for (const value of ["true", "false"]) assert.throws(() => c.listConversations({ [key]: value } as never), { code: "invalid_conversation_request" });
+  }
+  const first = c.listConversations({ page_size: 1 });
+  assert.equal(first.next_cursor, "1");
+  assert.equal(c.listConversations({ cursor: first.next_cursor }).conversations.length, 1);
+  assert.throws(() => c.listConversations({ cursor: "9007199254740992" }), { code: "invalid_conversation_request" });
+});

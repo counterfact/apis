@@ -1,0 +1,9 @@
+/**
+ * The new revision after a source edit that returns no segment, such as a delete.
+ */
+export type DubbingTranscriptRevisionResponse = {
+  /**
+   * The project's source-transcript revision after this edit.
+   */
+  revision: number;
+};

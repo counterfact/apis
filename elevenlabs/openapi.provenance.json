@@ -1,0 +1,30 @@
+{
+  "source": "https://api.elevenlabs.io/openapi.json",
+  "retrievedOn": "2026-11-04",
+  "sourceSha256": "62597a1c4c44e7a83367ada78d503781627b93cacab9f2a34a6b595e72c17dd5",
+  "openapi": "3.1.0",
+  "sourceVersion": "1.0",
+  "sourcePaths": 331,
+  "sourceOperations": 438,
+  "excludedPaths": {
+    "/docs": "Unversioned documentation redirect; not a V1 or V2 API operation."
+  },
+  "files": [
+    {
+      "file": "openapi.v1.yaml",
+      "version": "v1",
+      "prefix": "/v1",
+      "sha256": "f353720b8ac5483347933e33be2537f88063443dfdbc77292c319e6def9c5449",
+      "paths": 329,
+      "operations": 436
+    },
+    {
+      "file": "openapi.v2.yaml",
+      "version": "v2",
+      "prefix": "/v2",
+      "sha256": "58f6ce14c44cbcce3e1771b751ff4bdd7635e15a21d99d458714523d7a630238",
+      "paths": 1,
+      "operations": 1
+    }
+  ]
+}

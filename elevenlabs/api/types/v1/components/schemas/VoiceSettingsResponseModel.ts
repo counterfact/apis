@@ -1,0 +1,34 @@
+/**
+ * @example {"similarity_boost":1,"speed":1,"stability":1,"style":0,"use_speaker_boost":true}
+ */
+export type VoiceSettingsResponseModel = {
+  /**
+   * Determines how stable the voice is and the randomness between each generation. Lower values introduce broader emotional range for the voice. Higher values can result in a monotonous voice with limited emotion.
+   * @default 0.5
+   */
+  stability?: number | null;
+  /**
+   * This setting boosts the similarity to the original speaker. Using this setting requires a slightly higher computational load, which in turn increases latency.
+   * @default true
+   */
+  use_speaker_boost?: boolean | null;
+  /**
+   * Determines how closely the AI should adhere to the original voice when attempting to replicate it.
+   * @default 0.75
+   */
+  similarity_boost?: number | null;
+  /**
+   * Determines the style exaggeration of the voice. This setting attempts to amplify the style of the original speaker. It does consume additional computational resources and might increase latency if set to anything other than 0.
+   * @default 0
+   */
+  style?: number | null;
+  /**
+   * Adjusts the speed of the voice. A value of 1.0 is the default speed, while values less than 1.0 slow down the speech, and values greater than 1.0 speed it up.
+   * @default 1
+   */
+  speed?: number | null;
+  /**
+   * Controls how closely the output matches your professional voice clone samples (0–1). Lower values sound more versatile, while higher values preserve more of the original voice characteristics. We recommend 0 for most use cases, but if you do run into issues 0.5 could be a good fallback. Applies only to professional voice clones fine-tuned for the selected v4 model.
+   */
+  clone_strength?: number | null;
+};

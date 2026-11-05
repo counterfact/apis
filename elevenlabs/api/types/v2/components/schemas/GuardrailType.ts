@@ -1,0 +1,18 @@
+export type GuardrailType =
+  | "custom"
+  | "prompt_injection"
+  | "self_harm_intent"
+  | "violence_graphic"
+  | "sexual"
+  | "violence"
+  | "harassment"
+  | "sexual_minors"
+  | "self_harm"
+  | "self_harm_instructions"
+  | "harassment_threatening"
+  | "hate"
+  | "hate_threatening"
+  | "profanity"
+  | "religion_or_politics"
+  | "medical_and_legal"
+  | "guardrail";

@@ -1,0 +1,26 @@
+{
+  "formatVersion": 1,
+  "runtime": {
+    "counterfact": "3.2.2",
+    "@counterfact/runtime": "0.4.2"
+  },
+  "coverage": {
+    "contractOperations": 437,
+    "authoredOperations": 437,
+    "generatedOperations": 0,
+    "multipartBlocked": 0,
+    "multipartRequiredBody": 0,
+    "multipartOptionalBody": 0,
+    "recursiveJsonBlocked": 0,
+    "unclassified": 0,
+    "versions": {
+      "v1": 436,
+      "v2": 1
+    },
+    "excluded": {
+      "GET /docs": "Unversioned documentation redirect; outside both API versions."
+    }
+  },
+  "evidenceDocument": "BLOCKED_OPERATIONS.md",
+  "operations": []
+}

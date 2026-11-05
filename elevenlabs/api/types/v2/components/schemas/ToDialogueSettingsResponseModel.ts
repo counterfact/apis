@@ -1,0 +1,19 @@
+/**
+ * @example {"stability":0.5}
+ */
+export type ToDialogueSettingsResponseModel = {
+  /**
+   * Determines how stable the voice is and the randomness between each generation. Lower values introduce broader emotional range for the voice. Higher values can result in a monotonous voice with limited emotion.
+   * @default 0.5
+   */
+  stability?: number | null;
+  /**
+   * Determines how strongly the model is guided while generating. Higher values make the model adhere more closely to the voice, at the cost of variation. Not supported by every model.
+   * @default 0.75
+   */
+  similarity?: number | null;
+  /**
+   * Controls how closely the output matches your professional voice clone samples (0–1). Lower values sound more versatile, while higher values preserve more of the original voice characteristics. We recommend 0 for most use cases, but if you do run into issues 0.5 could be a good fallback. Applies only to professional voice clones fine-tuned for the selected v4 model.
+   */
+  clone_strength?: number | null;
+};

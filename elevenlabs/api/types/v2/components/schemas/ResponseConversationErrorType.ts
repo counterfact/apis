@@ -1,0 +1,23 @@
+/**
+ * User-facing error types exposed on the public API.
+ */
+export type ResponseConversationErrorType =
+  | "system_error"
+  | "call_initialization_error"
+  | "line_busy"
+  | "no_answer"
+  | "call_rejected"
+  | "blocked_by_user"
+  | "agent_configuration_error"
+  | "invalid_client_request"
+  | "permission_error"
+  | "entitlement_exceeded"
+  | "client_disconnected"
+  | "llm_error"
+  | "speech_error"
+  | "tool_error"
+  | "integration_error"
+  | "guardrail_triggered"
+  | "safety_violation"
+  | "max_duration_exceeded"
+  | "post_processing_error";

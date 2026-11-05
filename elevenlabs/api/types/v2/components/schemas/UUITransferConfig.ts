@@ -1,0 +1,24 @@
+/**
+ * User-to-User Information envelope for SIP REFER transfers (RFC 7433).
+ *
+ * Outbound payloads are hex-encoded (the only encoding RFC 7433 defines). The
+ * protocol discriminator axis lets per-platform formats (Talkdesk, Genesys, ...)
+ * be expressed by configuration rather than scattered transfer flags. Further
+ * axes (ASCII encoding, header name, purpose/content parameters) can be added
+ * here without touching the transfer model.
+ */
+export type UUITransferConfig = {
+  /**
+   * UUI payload to send on SIP REFER transfers. Supports inline dynamic variables and is hex-encoded at transfer time.
+   */
+  data: string;
+  /**
+   * Optional one-octet protocol discriminator (two hex digits, e.g. '00'). Required by platforms such as Genesys Cloud, which otherwise strip the first octet of the payload. Leave unset for platforms like Talkdesk that expect a bare hex payload.
+   */
+  protocol_discriminator?: string | null;
+  /**
+   * How to attach protocol_discriminator. 'prefix' prepends the octet to the hex payload (User-to-User=XX<hex>;encoding=hex). 'pd_parameter' sends it as a separate parameter (User-to-User=<hex>;pd=XX;encoding=hex). Ignored when protocol_discriminator is unset.
+   * @default "prefix"
+   */
+  protocol_discriminator_mode?: "prefix" | "pd_parameter";
+};

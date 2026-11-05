@@ -1,0 +1,32 @@
+{
+  "checkedOn": "2026-11-04",
+  "result": {
+    "model": "jev-1.14.0",
+    "answers": {
+      "language_any": {
+        "type": "noul",
+        "noul": 0.98
+      },
+      "use_cases_any": {
+        "type": "noul",
+        "noul": 0.96
+      },
+      "gender_uses_label": {
+        "type": "noul",
+        "noul": 0.98
+      },
+      "language_uses_verified_languages": {
+        "type": "noul",
+        "noul": 0.02
+      },
+      "case_insensitive_specified": {
+        "type": "noul",
+        "noul": 0.06
+      }
+    },
+    "usage": {
+      "input_tokens": 560,
+      "output_tokens": 100
+    }
+  }
+}
