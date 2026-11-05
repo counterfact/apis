@@ -158,8 +158,8 @@ per-file hashes, operation counts, and exclusion.
 The versions share generated handlers under `api/routes`, shared context and
 scenarios, version-specific schemas under `api/types/v1` and `api/types/v2`,
 and combined route types. The generation baseline is committed separately from
-the stateful voices implementation. Of 437 operations, 384 now have authored
-behavior. The remaining 53 operations retain their generated responses. This simulator does not synthesize speech.
+the stateful voices implementation. Of 437 operations, 386 now have authored
+behavior. The remaining 51 operations retain their generated responses. This simulator does not synthesize speech.
 
 Swagger UI is at http://localhost:3100/counterfact/swagger/api/?version=v1
 and http://localhost:3100/counterfact/swagger/api/?version=v2.
@@ -2717,3 +2717,33 @@ Reset clears processing/media maps and restores the baseline catalog/gates.
 Contexts start with empty containers, scenarios own fixtures and completion, reads
 copy metadata/media, and simulator instances isolate all state. These fixture IDs,
 challenge format, gates, statuses and transitions are local conventions.
+
+## Shared voice import and isolated replicas
+
+`POST /v1/voices/add/{public_user_id}/{voice_id}` imports a fictional catalog
+voice under its existing ID and the requested nonblank name. Owner and voice IDs
+must match the shared catalog. `bookmarked` defaults to true; both true and false
+persist on canonical voice reads and shared-library projections. Imported voices
+are nonowned, occupy one slot under the existing simulator convention, and share
+V1/V2 discovery, settings and deletion behavior. Import uses copied catalog
+metadata and default settings, with no samples, audio or provider request.
+Duplicate IDs and exhausted slots return 409 without changing state. Deletion
+clears shared-library added/bookmark projections; catalog records remain intact.
+
+`POST /v1/voices/{voice_id}/replicate-to-isolated-environment` captures copied
+canonical voice metadata/settings into a separate target-workspace map. It does
+not create a real workspace or transfer media. Startup/reset define the synthetic
+`sim-isolated-workspace`, billing group, distinct residency and write permission;
+source policy permits owned generated/cloned voices from the central environment.
+Human callers require target write permission; the synthetic service-account
+policy exempts that target check. Missing targets/voices return 404, forbidden
+permissions/billing groups return 403, and unsupported categories or same-residency
+targets return 400. Queued training and target ID collisions return 409 atomically.
+
+Omitted/true `preserve_voice_id` retains the source ID; false allocates
+`sim-replicated-voice-N` IDs while skipping collisions. Replicas are independent
+snapshots: source edits/deletion do not change them, and they do not consume source
+voice slots. No target HTTP API or authentication is simulated. Unknown options
+and invalid values return 400. Empty context containers, scenario-owned policies,
+reset and separate instances keep all state local and isolated. These ID, slot,
+permission and status conventions describe this bounded simulation.

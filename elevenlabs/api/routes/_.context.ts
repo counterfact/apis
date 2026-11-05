@@ -18,7 +18,63 @@ export const defaultSettings = (): VoiceSettingsResponseModel => ({
   speed: 1,
 });
 
+export class VoiceTransferError extends Error {
+  override name = "VoiceTransferError";
+  constructor(public status: number, public code: string) { super(code); }
+}
+const transferFail = (status: number, code: string): never => { throw new VoiceTransferError(status, code); };
+const transferObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+const transferText = (value: unknown): value is string => typeof value === "string" && !!value.trim();
 export class Context {
+  voiceReplicas = new Map<string, Map<string, VoiceResponseModel>>();
+  replicationTargets = new Map<string, { billingGroup: string; residency: string; canWrite: boolean }>();
+  replicationPolicy?: { central: boolean; sourceWrite: boolean; serviceAccount: boolean; billingGroup: string; residency: string; categories: string[] };
+  transferDefaults?: { time: number; settings: VoiceSettingsResponseModel };
+  nextReplica = 0;
+
+  importSharedVoice(owner: string, id: string, input: unknown) {
+    if (!transferObject(input) || Object.keys(input).some(k => !["new_name", "bookmarked"].includes(k)) || !transferText(input.new_name) || input.new_name.length > 255 || input.bookmarked !== undefined && typeof input.bookmarked !== "boolean")
+      return transferFail(400, "unsupported_shared_voice_options");
+    const source = this.voiceLibrary?.records.get(id)?.value;
+    if (!source || source.public_owner_id !== owner) return transferFail(404, "shared_voice_not_found");
+    if (this.voices.has(id)) return transferFail(409, "voice_already_exists");
+    if (this.voices.size >= this.getSubscription().voice_limit) return transferFail(409, "voice_limit_exceeded");
+    if (!this.transferDefaults) throw new Error("Run startup or reset");
+    const voice: VoiceResponseModel = {
+      voice_id: id, name: input.new_name, description: source.description,
+      category: source.category, labels: {language: source.language ?? "", accent: source.accent, gender: source.gender, age: source.age, use_case: source.use_case},
+      verified_languages: structuredClone(source.verified_languages), samples: [],
+      settings: structuredClone(this.transferDefaults.settings), available_for_tiers: [],
+      high_quality_base_model_ids: [], is_owner: false, is_legacy: false,
+      created_at_unix: this.transferDefaults.time, preview_url: null, is_bookmarked: input.bookmarked ?? true,
+    };
+    this.voices.set(id, voice);
+    return {voice_id: id};
+  }
+
+  replicateVoice(id: string, input: unknown) {
+    if (!transferObject(input) || Object.keys(input).some(k => !["target_workspace_id", "preserve_voice_id"].includes(k)) || !transferText(input.target_workspace_id) || input.preserve_voice_id !== undefined && typeof input.preserve_voice_id !== "boolean")
+      return transferFail(400, "invalid_replication_options");
+    const source = this.voices.get(id);
+    if (!source) return transferFail(404, "voice_not_found");
+    const policy = this.replicationPolicy;
+    if (!policy) throw new Error("Run startup or reset");
+    const target = this.replicationTargets.get(input.target_workspace_id);
+    if (!target) return transferFail(404, "target_workspace_not_found");
+    if (!policy.central || !policy.sourceWrite || source.is_owner !== true || target.billingGroup !== policy.billingGroup || !policy.serviceAccount && !target.canWrite)
+      return transferFail(403, "voice_replication_forbidden");
+    if (target.residency === policy.residency || !policy.categories.includes(source.category)) return transferFail(400, "voice_replication_unsupported");
+    if (this.voiceSamples?.training.get(id)?.status === "queued") return transferFail(409, "voice_training_pending");
+    const existing = this.voiceReplicas.get(input.target_workspace_id);
+    let next = this.nextReplica, replicaId = id;
+    if (input.preserve_voice_id === false) do { replicaId = `sim-replicated-voice-${++next}`; } while (existing?.has(replicaId));
+    if (existing?.has(replicaId)) return transferFail(409, "target_voice_already_exists");
+    const snapshot = structuredClone(source); snapshot.voice_id = replicaId;
+    const records = existing ?? new Map<string, VoiceResponseModel>();
+    records.set(replicaId, snapshot); this.voiceReplicas.set(input.target_workspace_id, records); this.nextReplica = next;
+    return {voice_id: replicaId};
+  }
+
   voiceSamples?: import("./voices/pvc/_.context.js").Context;
   voiceLibrary?: import("./shared-voices/_.context.js").Context;
   voices = new Map<string, VoiceResponseModel>();

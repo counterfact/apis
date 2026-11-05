@@ -22,6 +22,7 @@ const strings = (v: unknown): string[] | undefined => {
   return result;
 };
 export class Context {
+  canonicalVoices?: () => ReadonlyMap<string, import("../../types/v1/components/schemas/VoiceResponseModel.js").VoiceResponseModel>;
   records = new Map<string, LibraryVoice>();
   accentRecords = new Map<string, { value: Accent; models: string[] }>();
   modelIds = new Set<string>();
@@ -119,7 +120,11 @@ export class Context {
       end = start + Number(size),
       values = rows.slice(start, end);
     return {
-      voices: structuredClone(values.map((r) => r.value)),
+      voices: structuredClone(values.map((r) => {
+        const imported = this.canonicalVoices?.().get(r.value.voice_id);
+        return {...r.value, is_added_by_user: imported?.is_owner === false,
+          is_bookmarked: imported?.is_owner === false ? imported.is_bookmarked ?? false : false};
+      })),
       has_more: end < rows.length,
       total_count: rows.length,
       last_sort_id: values.at(-1)?.value.voice_id ?? null,

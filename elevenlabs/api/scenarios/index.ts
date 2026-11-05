@@ -1,3 +1,4 @@
+import { resetVoiceTransfers } from "./voice-transfers.js";
 import {resetDubbingProcessing} from "./dubbing-processing.js";
 export {completeDubbingProcessing} from "./dubbing-processing.js";
 import {resetBoundedMusic} from "./bounded-music.js";
@@ -112,6 +113,7 @@ export { emptyModels } from "./models.js";
 export { quotaExhausted } from "./account.js";
 
 export const reset: Scenario = ($) => {
+  resetVoiceTransfers($);
   emptySyntheticCredentials($);
   resetTestInvocations($);
   resetStoredTranscripts($);

@@ -5,6 +5,7 @@ export const emptyVoiceLibrary: Scenario = ($) => {
   c.accentRecords = new Map();
   c.modelIds = new Set();
   $.context.voiceLibrary = c;
+  c.canonicalVoices = () => $.context.voices;
 };
 export const resetVoiceLibrary: Scenario = ($) => {
   emptyVoiceLibrary($);
