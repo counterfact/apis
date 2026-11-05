@@ -2,7 +2,8 @@
 
 This branch uses Counterfact 3.2.1. Earlier notes below describing multipart,
 recursive-schema, version-routing, query-conversion or optional-body runtime
-failures are historical. Those runtime fixes are installed; generated operations
+failures are historical. Most fixes are installed; six agent-configuration operations still have the
+shared-schema memory blocker reported in Counterfact #2626. Generated operations
 are being implemented in separate slices. See COUNTERFACT_ISSUES.md for upgrade
 status and run `npm run audit:operations` for current operation counts.
 
@@ -2933,3 +2934,18 @@ restores the shared baseline, current-user default and canonical ledger accessor
 Contexts start empty, fixtures belong to scenarios, and responses and instances
 are independent. These bucket, scope, limits and error rules are local simulator
 conventions for this deprecated endpoint.
+
+
+## Voice uploads after the 3.2.1 upgrade
+
+POST `/v1/voices/add` creates an owned cloned voice in the canonical collection.
+POST `/v1/voices/{voice_id}/edit` atomically edits metadata and appends samples;
+professional voices use their separate PVC workflow. Uploaded MPEG bytes are
+copied into canonical sample storage and work with existing read/delete routes.
+Requests support at most 20 nonempty declared MPEG files totaling 10 MiB.
+No acoustic cloning, noise removal or metadata moderation is performed.
+
+POST `/v1/similar-voices` requires an audio file and returns deterministic,
+scenario-owned synthetic distance rankings against current library records.
+It supports threshold and top_k filtering, with defaults 2 and 10. It performs
+no acoustic inference. Reset restores counters, fixture distances and samples.

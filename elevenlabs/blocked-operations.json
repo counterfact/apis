@@ -1,16 +1,16 @@
 {
   "formatVersion": 1,
   "runtime": {
-    "counterfact": "3.1.0",
-    "@counterfact/runtime": "0.3.2"
+    "counterfact": "3.2.1",
+    "@counterfact/runtime": "0.4.1"
   },
   "coverage": {
     "contractOperations": 437,
-    "authoredOperations": 394,
-    "generatedOperations": 43,
-    "multipartBlocked": 30,
-    "multipartRequiredBody": 25,
-    "multipartOptionalBody": 5,
+    "authoredOperations": 397,
+    "generatedOperations": 40,
+    "multipartBlocked": 27,
+    "multipartRequiredBody": 23,
+    "multipartOptionalBody": 4,
     "recursiveJsonBlocked": 13,
     "unclassified": 0,
     "versions": {
@@ -40,7 +40,7 @@
         "multipart/form-data": "#/components/schemas/Body_Upload_asset_v1_assets_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -59,7 +59,7 @@
         "multipart/form-data": "#/components/schemas/Body_Audio_Isolation_v1_audio_isolation_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -78,7 +78,7 @@
         "multipart/form-data": "#/components/schemas/Body_Audio_Isolation_Stream_v1_audio_isolation_stream_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -97,7 +97,7 @@
         "multipart/form-data": "#/components/schemas/Body_Creates_Audio_Native_enabled_project__v1_audio_native_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -116,7 +116,7 @@
         "multipart/form-data": "#/components/schemas/Body_Update_audio_native_Project_content_v1_audio_native__project_id__content_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Optional wire body, but update requires article file; absent body cannot perform a content update."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -126,7 +126,7 @@
       "routeFile": "api/routes/convai/agent-testing/{test_id}.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -135,7 +135,7 @@
         "application/json": null
       },
       "evidence": "agent-test-guarded-abort",
-      "reason": "Exact-template guarded PUT probe aborted with SIGABRT before its synchronous handler-entry marker ran; the saved evidence does not establish the abort cause."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -145,7 +145,7 @@
       "routeFile": "api/routes/convai/agent-testing/create.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -154,7 +154,7 @@
         "application/json": null
       },
       "evidence": "agent-test-guarded-abort",
-      "reason": "Guarded recursive request probe aborted with SIGABRT and heap exhaustion before a result; see agent-test evidence limitations."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -164,7 +164,7 @@
       "routeFile": "api/routes/convai/agents/{agent_id}.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -173,7 +173,7 @@
         "application/json": "#/components/schemas/Body_Patches_an_Agent_settings_v1_convai_agents__agent_id__patch"
       },
       "evidence": "agent-tool-recursive-requests",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -192,7 +192,7 @@
         "multipart/form-data": "#/components/schemas/Body_Post_Agent_avatar_v1_convai_agents__agent_id__avatar_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -202,7 +202,7 @@
       "routeFile": "api/routes/convai/agents/{agent_id}/branches.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -211,7 +211,7 @@
         "application/json": "#/components/schemas/Body_Create_a_new_branch_v1_convai_agents__agent_id__branches_post"
       },
       "evidence": "additional-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md.",
       "syntheticProbeBody": {
         "parent_version_id": "probe",
         "name": "Probe",
@@ -226,7 +226,7 @@
       "routeFile": "api/routes/convai/agents/{agent_id}/drafts.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -235,7 +235,7 @@
         "application/json": "#/components/schemas/Body_Create_agent_draft_v1_convai_agents__agent_id__drafts_post"
       },
       "evidence": "additional-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md.",
       "syntheticProbeBody": {
         "conversation_config": {},
         "platform_settings": {},
@@ -267,7 +267,7 @@
         "multipart/form-data": "#/components/schemas/Body_Post_Agent_hold_audio_v1_convai_agents__agent_id__hold_audio_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -277,7 +277,7 @@
       "routeFile": "api/routes/convai/agents/{agent_id}/run-tests.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -286,7 +286,7 @@
         "application/json": "#/components/schemas/RunAgentTestsRequestModel"
       },
       "evidence": "invocation-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -296,7 +296,7 @@
       "routeFile": "api/routes/convai/agents/{agent_id}/simulate-conversation.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -305,7 +305,7 @@
         "application/json": "#/components/schemas/Body_Simulates_a_conversation_v1_convai_agents__agent_id__simulate_conversation_post"
       },
       "evidence": "additional-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md.",
       "syntheticProbeBody": {
         "simulation_specification": {
           "simulated_user_config": {}
@@ -320,7 +320,7 @@
       "routeFile": "api/routes/convai/agents/{agent_id}/simulate-conversation/stream.ts",
       "generatedKind": "empty",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -329,7 +329,7 @@
         "application/json": "#/components/schemas/Body_Simulates_a_conversation__Stream__v1_convai_agents__agent_id__simulate_conversation_stream_post"
       },
       "evidence": "additional-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md.",
       "syntheticProbeBody": {
         "simulation_specification": {
           "simulated_user_config": {}
@@ -344,7 +344,7 @@
       "routeFile": "api/routes/convai/agents/create.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -353,7 +353,7 @@
         "application/json": "#/components/schemas/Body_Create_Agent_v1_convai_agents_create_post"
       },
       "evidence": "agent-tool-recursive-requests",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -372,7 +372,7 @@
         "multipart/form-data": "#/components/schemas/Body_Upload_file_v1_convai_conversations__conversation_id__files_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -391,7 +391,7 @@
         "multipart/form-data": "#/components/schemas/Body_Add_to_knowledge_base_v1_convai_knowledge_base_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Optional wire body, but document creation requires URL or file; absent body supplies neither."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -410,7 +410,7 @@
         "multipart/form-data": "#/components/schemas/Body_Update_file_document_v1_convai_knowledge_base__documentation_id__update_file_patch"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -429,7 +429,7 @@
         "multipart/form-data": "#/components/schemas/Body_Create_file_document_v1_convai_knowledge_base_file_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -439,7 +439,7 @@
       "routeFile": "api/routes/convai/test-invocations/{test_invocation_id}/resubmit.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -448,7 +448,7 @@
         "application/json": "#/components/schemas/ResubmitTestsRequestModel"
       },
       "evidence": "invocation-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -458,7 +458,7 @@
       "routeFile": "api/routes/convai/tools.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -467,7 +467,7 @@
         "application/json": "#/components/schemas/ToolRequestModel"
       },
       "evidence": "agent-tool-recursive-requests",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -477,7 +477,7 @@
       "routeFile": "api/routes/convai/tools/{tool_id}.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -486,7 +486,7 @@
         "application/json": "#/components/schemas/ToolRequestModel"
       },
       "evidence": "agent-tool-recursive-requests",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal."
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md."
     },
     {
       "version": "v1",
@@ -505,7 +505,7 @@
         "multipart/form-data": "#/components/schemas/Body_Dub_a_video_or_an_audio_file_v1_dubbing_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Optional wire body, but dubbing creation requires uploaded media or a source URL; absent body supplies neither."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -524,7 +524,7 @@
         "multipart/form-data": "#/components/schemas/Body_Create_Dubbing_Project_v1_dubbing_project_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Optional wire body, but dubbing creation requires uploaded media or a source URL; absent body supplies neither."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -534,7 +534,7 @@
       "routeFile": "api/routes/flows/templates/{template_id}/runs.ts",
       "generatedKind": "random",
       "blocker": "recursive-json-request",
-      "issue": 2613,
+      "issue": 2626,
       "requestMedia": [
         "application/json"
       ],
@@ -543,7 +543,7 @@
         "application/json": "#/components/schemas/TemplateRunCreateRequest"
       },
       "evidence": "additional-exact-template-probes",
-      "reason": "Exact-template request validation fails with RangeError before the handler runs; finite JSON input does not avoid recursive schema traversal.",
+      "reason": "Implementation backlog after upgrade; some shared agent configuration schemas still exhaust memory before handler entry. See current bounded probe results in COUNTERFACT_ISSUES.md.",
       "syntheticProbeBody": {
         "inputs": {}
       }
@@ -565,7 +565,7 @@
         "multipart/form-data": "#/components/schemas/Body_Create_forced_alignment_v1_forced_alignment_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -584,7 +584,7 @@
         "multipart/form-data": "#/components/schemas/Body_Create_Music_Finetune_v1_music_finetunes_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -603,7 +603,7 @@
         "multipart/form-data": "#/components/schemas/Body_Stem_separation_v1_music_stem_separation_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -622,7 +622,7 @@
         "multipart/form-data": "#/components/schemas/Body_Upload_music_v1_music_upload_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -641,7 +641,7 @@
         "multipart/form-data": "#/components/schemas/Body_Video_to_Music_v1_music_video_to_music_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -660,7 +660,7 @@
         "multipart/form-data": "#/components/schemas/Body_Register_media_v1_productions_orders__order_id__media_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -679,26 +679,7 @@
         "multipart/form-data": "#/components/schemas/Body_Add_a_pronunciation_dictionary_v1_pronunciation_dictionaries_add_from_file_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
-    },
-    {
-      "version": "v1",
-      "method": "POST",
-      "path": "/v1/similar-voices",
-      "operationId": "get_similar_library_voices",
-      "routeFile": "api/routes/similar-voices.ts",
-      "generatedKind": "random",
-      "blocker": "multipart-input",
-      "issue": 2607,
-      "requestMedia": [
-        "multipart/form-data"
-      ],
-      "requestBodyRequired": false,
-      "requestSchemaRefs": {
-        "multipart/form-data": "#/components/schemas/Body_Get_similar_library_voices_v1_similar_voices_post"
-      },
-      "evidence": "multipart-parser",
-      "reason": "Optional wire body, but similarity requires supplied audio_file; absent body supplies no audio."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -717,7 +698,7 @@
         "multipart/form-data": "#/components/schemas/Body_Speech_to_Text_v1_speech_to_text_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -736,7 +717,7 @@
         "multipart/form-data": "#/components/schemas/Body_Create_Studio_project_v1_studio_projects_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -755,7 +736,7 @@
         "multipart/form-data": "#/components/schemas/Body_Voice_Changer_v1_voice_changer__voice_id__post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -774,45 +755,7 @@
         "multipart/form-data": "#/components/schemas/Body_Voice_Changer_Streaming_v1_voice_changer__voice_id__stream_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
-    },
-    {
-      "version": "v1",
-      "method": "POST",
-      "path": "/v1/voices/{voice_id}/edit",
-      "operationId": "edit_voice",
-      "routeFile": "api/routes/voices/{voice_id}/edit.ts",
-      "generatedKind": "random",
-      "blocker": "multipart-input",
-      "issue": 2607,
-      "requestMedia": [
-        "multipart/form-data"
-      ],
-      "requestBodyRequired": true,
-      "requestSchemaRefs": {
-        "multipart/form-data": "#/components/schemas/Body_Edit_voice_v1_voices__voice_id__edit_post"
-      },
-      "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
-    },
-    {
-      "version": "v1",
-      "method": "POST",
-      "path": "/v1/voices/add",
-      "operationId": "add_voice",
-      "routeFile": "api/routes/voices/add.ts",
-      "generatedKind": "random",
-      "blocker": "multipart-input",
-      "issue": 2607,
-      "requestMedia": [
-        "multipart/form-data"
-      ],
-      "requestBodyRequired": true,
-      "requestSchemaRefs": {
-        "multipart/form-data": "#/components/schemas/Body_Add_voice_v1_voices_add_post"
-      },
-      "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -831,7 +774,7 @@
         "multipart/form-data": "#/components/schemas/Body_Verify_PVC_voice_captcha_v1_voices_pvc__voice_id__captcha_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -850,7 +793,7 @@
         "multipart/form-data": "#/components/schemas/Body_Add_samples_to_PVC_voice_v1_voices_pvc__voice_id__samples_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     },
     {
       "version": "v1",
@@ -869,7 +812,7 @@
         "multipart/form-data": "#/components/schemas/Body_Request_manual_verification_v1_voices_pvc__voice_id__verification_post"
       },
       "evidence": "multipart-parser",
-      "reason": "Required multipart input; installed runtime uses default koa-bodyparser without multipart support."
+      "reason": "Multipart runtime support is installed; this operation awaits its focused implementation slice."
     }
   ]
 }

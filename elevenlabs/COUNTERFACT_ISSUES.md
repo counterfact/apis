@@ -3,20 +3,37 @@
 The simulator now pins Counterfact 3.2.1 and runtime 0.4.1. Regeneration fixes
 collection context bindings and supplies MultipartFile request types. Nullable
 primitive and array query conversion, optional bodies, version availability,
-initial module identity and recursive request validation are fixed upstream.
+initial module identity are fixed upstream. Several recursive request schemas now
+validate, but agent configuration graphs can still exhaust memory (see #2626).
 The affected collection casts and query coercion workarounds have been removed.
 Stable error tags remain a valid application convention, rather than a runtime
 requirement. The Dispatcher harness remains the project's deliberate integration
 test boundary; it is not a compatibility workaround.
 
-The reports below are historical evidence for 3.1.0 / 0.3.2, not current blockers.
+The original reports below are historical evidence for 3.1.0 / 0.3.2.
 The remaining generated handlers are an implementation backlog after the upgrade.
 Use the operation audit for current counts. Actual multipart parser behavior is
 owned by Counterfact; simulator tests supply the public MultipartFile shape.
 
-## Remaining scalar numeric coercion limitation
+## Current schema expansion blocker — #2626
 
-Runtime 0.4.1 still uses parseInt/parseFloat for scalar numeric parameters.
+[Counterfact #2626](https://github.com/counterfact/api-simulator/issues/2626)
+contains a public synthetic shared-schema graph reproducer: depth 5 reaches its
+handler and returns 200; depth 22 exhausts a 256 MB heap after document load and
+before handler entry. A bounded full-contract agent-create probe also exhausts
+512 MB. This is a remaining 0.4.1 limitation, not the old cycle traversal error.
+
+Exact-template probes on 0.4.1 return 200 for valid input and 400 for invalid
+controls for tools POST/PATCH, agent-test create/PUT, both conversation simulation
+routes and Flows template run creation. Agent create/PATCH, branch and draft
+creation, run-tests and resubmit abort before their handlers under the 256 MB
+probe limit. Keep these six operations generated pending an upstream fix; do not
+run them unbounded in the normal test suite or disable request validation.
+
+## Remaining scalar numeric coercion limitation — #2627
+
+[Counterfact #2627](https://github.com/counterfact/api-simulator/issues/2627)
+records remaining lossy scalar numeric parsing in runtime 0.4.1.
 For example, `aggregation_bucket_size=3600junk` arrives as 3600. Nullable numeric
 conversion is fixed, but strict lexical rejection is not promised here. The old
 nullable-string workaround could reject those spellings before conversion; it
