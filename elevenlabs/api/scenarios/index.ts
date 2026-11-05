@@ -1,3 +1,4 @@
+import { resetAudioTransformations } from "./audio-transformations.js";
 import { resetConversationSimulation } from "./conversation-simulation.js";
 import { resetVoiceUploads } from "./voice-uploads.js";
 import { resetAgentTopics } from "./agent-topics.js";
@@ -174,6 +175,7 @@ export const reset: Scenario = ($) => {
   resetHistory($);
   resetAccount($);
   resetBoundedSpeech($);
+  resetAudioTransformations($);
   productionMediaSources($);
   historyAudioFixtures($);
   resetBoundedSound($);

@@ -5,7 +5,7 @@ import { reset, startup } from "../api/scenarios/index.js";
 import { runScenario } from "../test-support/scenarios.js";
 import { createDispatcherHarness } from "../test-support/dispatcher.js";
 
-const expectedIds = ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v3", "eleven_multilingual_ttv_v2", "eleven_ttv_v3", "eleven_text_to_sound_v2", "music_v1"];
+const expectedIds = ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_v3", "eleven_multilingual_ttv_v2", "eleven_ttv_v3", "eleven_text_to_sound_v2", "eleven_english_sts_v2", "music_v1"];
 
 test("model catalog starts empty, isolates returned objects, and reset restores fixtures", async () => {
   const context = new Context();
@@ -16,7 +16,7 @@ test("model catalog starts empty, isolates returned objects, and reset restores 
   models[0].languages[0].name = "Changed outside context";
   models[0].model_rates.character_cost_multiplier = 99;
   models.pop();
-  assert.equal(context.listModels().length, 7);
+  assert.equal(context.listModels().length, 8);
   assert.equal(context.listModels()[0].languages[0].name, "English");
   assert.equal(context.listModels()[0].model_rates.character_cost_multiplier, 1);
   context.models.clear();
@@ -43,6 +43,8 @@ test("Dispatched model discovery is deterministic, reflects scenario state, and 
   );
   assert.deepEqual(await getModels(), models);
   assert.equal(models[0].can_do_text_to_speech, true);
+  assert.equal(models[6].can_do_voice_conversion, true);
+  assert.equal(models[6].can_do_text_to_speech, false);
   assert.equal(models[1].maximum_text_length_per_request, 40000);
   assert.deepEqual(
     models[0].languages.map(

@@ -50,6 +50,7 @@ import type { Context as WorkspaceWebhooksContext } from "../routes/workspace/we
 import type { Context as WorkspacesApiKeysContext } from "../routes/workspaces/api-keys/_.context";
 import type { Context as AssetsContext } from "../routes/assets/_.context";
 import type { Context as AudioEffectsContext } from "../routes/audio-effects/_.context";
+import type { Context as AudioIsolationContext } from "../routes/audio-isolation/_.context";
 import type { Context as AudioNativeContext } from "../routes/audio-native/_.context";
 import type { Context as DubbingContext } from "../routes/dubbing/_.context";
 import type { Context as FlowsContext } from "../routes/flows/_.context";
@@ -65,6 +66,7 @@ import type { Context as TextToDialogueContext } from "../routes/text-to-dialogu
 import type { Context as TextToSpeechContext } from "../routes/text-to-speech/_.context";
 import type { Context as TextToVoiceContext } from "../routes/text-to-voice/_.context";
 import type { Context as UsageContext } from "../routes/usage/_.context";
+import type { Context as VoiceChangerContext } from "../routes/voice-changer/_.context";
 import type { Context as WorkspaceContext } from "../routes/workspace/_.context";
 import type { Context } from "../routes/_.context";
 interface LoadContextDefinitions {
@@ -218,6 +220,9 @@ interface LoadContextDefinitions {
     path: "/audio-effects" | `/audio-effects/${string}`,
   ): AudioEffectsContext;
   loadContext(
+    path: "/audio-isolation" | `/audio-isolation/${string}`,
+  ): AudioIsolationContext;
+  loadContext(
     path: "/audio-native" | `/audio-native/${string}`,
   ): AudioNativeContext;
   loadContext(path: "/dubbing" | `/dubbing/${string}`): DubbingContext;
@@ -253,6 +258,9 @@ interface LoadContextDefinitions {
     path: "/text-to-voice" | `/text-to-voice/${string}`,
   ): TextToVoiceContext;
   loadContext(path: "/usage" | `/usage/${string}`): UsageContext;
+  loadContext(
+    path: "/voice-changer" | `/voice-changer/${string}`,
+  ): VoiceChangerContext;
   loadContext(path: "/workspace" | `/workspace/${string}`): WorkspaceContext;
   loadContext(path: "/" | `/${string}`): Context;
   loadContext(path: string): Record<string, unknown>;
